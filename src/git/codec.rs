@@ -21,11 +21,12 @@ impl codec::Decoder for GitCodec {
             || length == 1 // delim-pkt
             || length == 2 // response-end-pkt
         {
+            eprintln!("pkt: {}", length);
             src.advance(4);
             return self.decode(src);
         }
 
-        if length > 65520 || length <= 4 {
+        if length > 65520 || length < 4 {
             return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "protocol abuse").into());
         }
 
@@ -62,7 +63,20 @@ mod test {
         assert_eq!(res, None);
 
         bytes.write_char('\n').unwrap();
+        bytes.write_str("0002").unwrap();
+        bytes.write_str("0004").unwrap();
+        bytes.write_str("0005a").unwrap();
+
         let res = codec.decode(&mut bytes).unwrap();
         assert_eq!(res.as_deref(), Some("agent=git/2.32.0".as_bytes()));
+
+        let res = codec.decode(&mut bytes).unwrap();
+        assert_eq!(res.as_deref(), Some("".as_bytes()));
+
+        let res = codec.decode(&mut bytes).unwrap();
+        assert_eq!(res.as_deref(), Some("a".as_bytes()));
+
+        let res = codec.decode(&mut bytes).unwrap();
+        assert_eq!(res.as_deref(), None);
     }
 }

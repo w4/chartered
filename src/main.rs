@@ -85,13 +85,13 @@ impl server::Handler for Handler {
             session.close(channel);
         } else {
             // TODO: check GIT_PROTOCOL=version=2 set
-            session.data(channel, PktLine(b"version 2\n").into());
-            session.data(channel, PktLine(b"agent=chartered/0.1.0\n").into());
-            session.data(channel, PktLine(b"ls-refs=unborn\n").into());
-            session.data(channel, PktLine(b"fetch=shallow wait-for-done\n").into());
-            session.data(channel, PktLine(b"server-option\n").into());
-            session.data(channel, PktLine(b"object-info\n").into());
-            session.data(channel, CryptoVec::from_slice(git::END_OF_MESSAGE));
+            session.data(channel, PktLine::Data(b"version 2\n").into());
+            session.data(channel, PktLine::Data(b"agent=chartered/0.1.0\n").into());
+            session.data(channel, PktLine::Data(b"ls-refs=unborn\n").into());
+            session.data(channel, PktLine::Data(b"fetch=shallow wait-for-done\n").into());
+            session.data(channel, PktLine::Data(b"server-option\n").into());
+            session.data(channel, PktLine::Data(b"object-info\n").into());
+            session.data(channel, PktLine::Flush.into());
         }
 
         futures::future::ready(Ok((self, session)))
@@ -112,11 +112,30 @@ impl server::Handler for Handler {
         self.finished_auth(server::Auth::Accept)
     }
 
-    fn data(mut self, _channel: ChannelId, data: &[u8], session: Session) -> Self::FutureUnit {
+    fn data(mut self, channel: ChannelId, data: &[u8], mut session: Session) -> Self::FutureUnit {
         self.input_bytes.extend_from_slice(data);
+
+        let mut ls_refs = false;
 
         while let Some(frame) = self.codec.decode(&mut self.input_bytes).unwrap() {
             eprintln!("data: {:x?}", frame);
+
+            if frame.as_ref() == "command=ls-refs".as_bytes() {
+                ls_refs = true;
+            }
+        }
+
+        // echo -ne "0014command=ls-refs\n0014agent=git/2.321\n00010008peel000bsymrefs000aunborn0014ref-prefix HEAD\n0000"
+        // GIT_PROTOCOL=version=2 ssh -o SendEnv=GIT_PROTOCOL git@github.com git-upload-pack '/w4/chartered.git'
+        // ''.join([('{:04x}'.format(len(v) + 5)), v, "\n"])
+        // echo -ne "0012command=fetch\n0001000ethin-pack\n0010no-progress\n0010include-tag\n000eofs-delta\n0032want 1a1b25ae7c87a0e87b7a9aa478a6bc4331c6b954\n0009done\n"
+        // sends a 000dpackfile back
+        // https://shafiul.github.io/gitbook/7_the_packfile.html
+        if ls_refs {
+            session.data(channel, PktLine::Data(b"1a1b25ae7c87a0e87b7a9aa478a6bc4331c6b954 HEAD symref-target:refs/heads/master\n").into());
+            session.data(channel, PktLine::Flush.into());
+
+            // next command will be a fetch like above
         }
 
         futures::future::ready(Ok((self, session)))

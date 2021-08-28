@@ -1,17 +1,30 @@
 pub mod codec;
+pub mod packfile;
 
 use thrussh::CryptoVec;
 
-pub const END_OF_MESSAGE: &'static [u8] = b"0000";
-
-pub struct PktLine<'a>(pub &'a [u8]);
+pub enum PktLine<'a> {
+    Data(&'a [u8]),
+    Flush,
+    Delimiter,
+    ResponseEnd,
+}
 
 impl PktLine<'_> {
     // todo: encode to connection's `bytes::BytesMut`
     pub fn encode(&self) -> Vec<u8> {
         let mut v = Vec::new();
-        v.extend_from_slice(format!("{:04x}", self.0.len() + 4).as_ref());
-        v.extend_from_slice(self.0);
+
+        match self {
+            Self::Data(data) => {
+                v.extend_from_slice(format!("{:04x}", data.len() + 4).as_ref());
+                v.extend_from_slice(data);    
+            },
+            Self::Flush => v.extend_from_slice(b"0000"),
+            Self::Delimiter => v.extend_from_slice(b"0001"),
+            Self::ResponseEnd => v.extend_from_slice(b"0002"),
+        }
+
         v
     }
 }
@@ -24,7 +37,7 @@ impl From<PktLine<'_>> for CryptoVec {
 
 impl<'a> From<&'a str> for PktLine<'a> {
     fn from(val: &'a str) -> Self {
-        PktLine(val.as_bytes())
+        PktLine::Data(val.as_bytes())
     }
 }
 
