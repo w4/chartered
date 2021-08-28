@@ -1,3 +1,5 @@
+pub mod codec;
+
 use thrussh::CryptoVec;
 
 pub const END_OF_MESSAGE: &'static [u8] = b"0000";

@@ -7,6 +7,9 @@ use std::sync::{Arc};
 use thrussh::server::{Auth, Session};
 use thrussh::*;
 use thrussh_keys::*;
+use bytes::BytesMut;
+use crate::git::codec::GitCodec;
+use tokio_util::codec::Decoder;
 
 #[tokio::main]
 async fn main() {
@@ -26,13 +29,20 @@ async fn main() {
 struct Server;
 
 impl server::Server for Server {
-    type Handler = Self;
-    fn new(&mut self, _: Option<std::net::SocketAddr>) -> Self {
-        self.clone()
+    type Handler = Handler;
+
+    fn new(&mut self, _: Option<std::net::SocketAddr>) -> Self::Handler {
+        Handler::default()
     }
 }
 
-impl server::Handler for Server {
+#[derive(Default)]
+struct Handler {
+    codec: GitCodec,
+    input_bytes: BytesMut,
+}
+
+impl server::Handler for Handler {
     type Error = anyhow::Error;
     type FutureAuth = futures::future::Ready<Result<(Self, server::Auth), anyhow::Error>>;
     type FutureUnit = futures::future::Ready<Result<(Self, Session), anyhow::Error>>;
@@ -102,8 +112,13 @@ impl server::Handler for Server {
         self.finished_auth(server::Auth::Accept)
     }
 
-    fn data(self, _channel: ChannelId, data: &[u8], session: Session) -> Self::FutureUnit {
-        eprintln!("got data: {:x?}", data);
+    fn data(mut self, _channel: ChannelId, data: &[u8], session: Session) -> Self::FutureUnit {
+        self.input_bytes.extend_from_slice(data);
+
+        while let Some(frame) = self.codec.decode(&mut self.input_bytes).unwrap() {
+            eprintln!("data: {:x?}", frame);
+        }
+
         futures::future::ready(Ok((self, session)))
     }
 

@@ -189,11 +189,13 @@ dependencies = [
  "anyhow",
  "async-trait",
  "axum",
+ "bytes",
  "env_logger",
  "futures",
  "thrussh",
  "thrussh-keys",
  "tokio",
+ "tokio-util",
  "tower",
  "tower-http",
 ]
