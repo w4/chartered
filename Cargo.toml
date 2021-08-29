@@ -21,3 +21,5 @@ tokio-util = { version = "0.6", features = ["codec"] }
 bytes = "1"
 flate2 = "1.0"
 sha-1 = "0.9"
+const-sha1 = "0.2"
+crc = "2"

@@ -2,10 +2,10 @@ pub mod git;
 
 use crate::git::PktLine;
 
-use git::codec::GitCodec;
 use bytes::BytesMut;
 use futures::future::Future;
 use git::codec::Encoder;
+use git::codec::GitCodec;
 use std::{fmt::Write, pin::Pin, sync::Arc};
 use thrussh::server::{Auth, Session};
 use thrussh::*;
@@ -165,15 +165,27 @@ impl server::Handler for Handler {
             }
 
             if fetch {
-                git::packfile::PackFile {
-                    entries: vec![
-                        git::packfile::PackFileEntry {
-                            entry_type: git::packfile::PackFileEntryType::Commit,
-                            data: vec![0, 1, 2, 3, 4],
-                            sha1: [0; 20],
-                        }
-                    ]
-                }.encode_to(&mut self.output_bytes).unwrap();
+                let packfile = git::packfile::PackFile::new(vec![git::packfile::PackFileEntry::new(
+                    git::packfile::PackFileEntryType::Blob,
+                    b"testing this is a test cool test",
+                )?]);
+
+                {
+                    let mut buf = BytesMut::new();
+                    let packfile_index = git::packfile::PackFileIndex {
+                        packfile: &packfile,
+                    };
+                    packfile_index.encode_to(&mut buf)?;
+                    self.write(PktLine::Data(buf.as_ref()))?;
+                }
+
+                {
+                    let mut buf = BytesMut::new();
+                    packfile.encode_to(&mut buf)?;
+                    self.write(PktLine::Data(buf.as_ref()))?;
+                }
+
+                self.write(PktLine::Flush)?;
 
                 self.flush(&mut session, channel);
             }
