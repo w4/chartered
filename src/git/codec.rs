@@ -1,5 +1,20 @@
+use bytes::{Buf, Bytes, BytesMut};
 use tokio_util::codec;
-use bytes::{Bytes, Buf};
+
+use super::PktLine;
+
+pub struct Encoder {
+    // buf: BytesMut,
+}
+
+impl codec::Encoder<PktLine<'_>> for Encoder {
+    type Error = anyhow::Error;
+
+    fn encode(&mut self, item: PktLine<'_>, dst: &mut BytesMut) -> Result<(), Self::Error> {
+        item.encode_to(dst)?;
+        Ok(())
+    }
+}
 
 #[derive(Default)]
 pub struct GitCodec;
@@ -19,7 +34,8 @@ impl codec::Decoder for GitCodec {
 
         if length == 0 // flush-pkt
             || length == 1 // delim-pkt
-            || length == 2 // response-end-pkt
+            || length == 2
+        // response-end-pkt
         {
             eprintln!("pkt: {}", length);
             src.advance(4);
@@ -27,7 +43,9 @@ impl codec::Decoder for GitCodec {
         }
 
         if length > 65520 || length < 4 {
-            return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "protocol abuse").into());
+            return Err(
+                std::io::Error::new(std::io::ErrorKind::InvalidData, "protocol abuse").into(),
+            );
         }
 
         if src.len() < length {
@@ -48,9 +66,9 @@ impl codec::Decoder for GitCodec {
 
 #[cfg(test)]
 mod test {
-    use tokio_util::codec::Decoder;
     use bytes::BytesMut;
     use std::fmt::Write;
+    use tokio_util::codec::Decoder;
 
     #[test]
     fn decode() {

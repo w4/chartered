@@ -1,7 +1,8 @@
 pub mod codec;
 pub mod packfile;
 
-use thrussh::CryptoVec;
+use bytes::BytesMut;
+use std::fmt::Write;
 
 pub enum PktLine<'a> {
     Data(&'a [u8]),
@@ -11,29 +12,26 @@ pub enum PktLine<'a> {
 }
 
 impl PktLine<'_> {
-    // todo: encode to connection's `bytes::BytesMut`
-    pub fn encode(&self) -> Vec<u8> {
-        let mut v = Vec::new();
-
+    pub fn encode_to(&self, buf: &mut BytesMut) -> Result<(), anyhow::Error> {
         match self {
             Self::Data(data) => {
-                v.extend_from_slice(format!("{:04x}", data.len() + 4).as_ref());
-                v.extend_from_slice(data);    
-            },
-            Self::Flush => v.extend_from_slice(b"0000"),
-            Self::Delimiter => v.extend_from_slice(b"0001"),
-            Self::ResponseEnd => v.extend_from_slice(b"0002"),
+                write!(buf, "{:04x}", data.len() + 4)?;
+                buf.extend_from_slice(&data);
+            }
+            Self::Flush => buf.extend_from_slice(b"0000"),
+            Self::Delimiter => buf.extend_from_slice(b"0001"),
+            Self::ResponseEnd => buf.extend_from_slice(b"0002"),
         }
 
-        v
+        Ok(())
     }
 }
 
-impl From<PktLine<'_>> for CryptoVec {
-    fn from(val: PktLine<'_>) -> Self {
-        Self::from(val.encode())
-    }
-}
+// impl From<PktLine<'_>> for CryptoVec {
+//     fn from(val: PktLine<'_>) -> Self {
+//         Self::from(val.encode())
+//     }
+// }
 
 impl<'a> From<&'a str> for PktLine<'a> {
     fn from(val: &'a str) -> Self {
@@ -43,9 +41,12 @@ impl<'a> From<&'a str> for PktLine<'a> {
 
 #[cfg(test)]
 mod test {
+    use bytes::BytesMut;
+
     #[test]
     fn test_pkt_line() {
-        let encoded = super::PktLine(b"agent=git/2.32.0\n").encode();
-        assert_eq!(encoded, b"0015agent=git/2.32.0\n");
+        let mut buffer = BytesMut::new();
+        super::PktLine::Data(b"agent=git/2.32.0\n").encode_to(&mut buffer).unwrap();
+        assert_eq!(buffer.as_ref(), b"0015agent=git/2.32.0\n");
     }
 }
