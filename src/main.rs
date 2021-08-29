@@ -2,7 +2,7 @@ pub mod git;
 
 use crate::git::PktLine;
 
-use crate::git::codec::GitCodec;
+use git::codec::GitCodec;
 use bytes::BytesMut;
 use futures::future::Future;
 use git::codec::Encoder;
@@ -140,12 +140,15 @@ impl server::Handler for Handler {
 
         Box::pin(async move {
             let mut ls_refs = false;
+            let mut fetch = false;
 
             while let Some(frame) = self.codec.decode(&mut self.input_bytes)? {
                 eprintln!("data: {:x?}", frame);
 
                 if frame.as_ref() == "command=ls-refs".as_bytes() {
                     ls_refs = true;
+                } else if frame.as_ref() == "command=fetch".as_bytes() {
+                    fetch = true;
                 }
             }
 
@@ -159,8 +162,20 @@ impl server::Handler for Handler {
                 self.write(PktLine::Data(b"1a1b25ae7c87a0e87b7a9aa478a6bc4331c6b954 HEAD symref-target:refs/heads/master\n"))?;
                 self.write(PktLine::Flush)?;
                 self.flush(&mut session, channel);
+            }
 
-                // next command will be a fetch like above
+            if fetch {
+                git::packfile::PackFile {
+                    entries: vec![
+                        git::packfile::PackFileEntry {
+                            entry_type: git::packfile::PackFileEntryType::Commit,
+                            data: vec![0, 1, 2, 3, 4],
+                            sha1: [0; 20],
+                        }
+                    ]
+                }.encode_to(&mut self.output_bytes).unwrap();
+
+                self.flush(&mut session, channel);
             }
 
             Ok((self, session))
