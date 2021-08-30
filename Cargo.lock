@@ -194,7 +194,9 @@ dependencies = [
  "crc",
  "env_logger",
  "flate2",
+ "format-bytes",
  "futures",
+ "hex",
  "sha-1",
  "thrussh",
  "thrussh-keys",
@@ -358,6 +360,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "format-bytes"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e244f30e6c9389f9df0c65fe09a81bcd766c766fca74f0f12d0dae34de33a608"
+dependencies = [
+ "format-bytes-macros",
+ "proc-macro-hack",
+]
+
+[[package]]
+name = "format-bytes-macros"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "63987e7c19e6a14fc925a32b82c5d4805c7ca6de815fbdb79c457354ff060e45"
+dependencies = [
+ "proc-macro-hack",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "futures"
 version = "0.3.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -480,6 +504,12 @@ checksum = "62b467343b94ba476dcb2500d242dadbb39557df889310ac77c5d99100aaac33"
 dependencies = [
  "libc",
 ]
+
+[[package]]
+name = "hex"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
 name = "hmac"

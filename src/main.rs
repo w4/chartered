@@ -2,8 +2,8 @@ pub mod git;
 
 use crate::git::PktLine;
 
-use bytes::BytesMut;
 use bytes::BufMut;
+use bytes::BytesMut;
 use futures::future::Future;
 use git::codec::Encoder;
 use git::codec::GitCodec;
@@ -152,9 +152,52 @@ impl server::Handler for Handler {
                 } else if frame.as_ref() == "command=fetch".as_bytes() {
                     fetch = true;
                 } else if frame.as_ref() == "done".as_bytes() {
+                    fetch = false;
                     done = true;
                 }
             }
+
+            // echo -ne "0012command=fetch\n0001000ethin-pack\n0010include-tag\n000eofs-delta\n0032want d24d8020163b5fee57c9babfd0c595b8c90ba253\n0009done\n"
+            // echo -ne
+
+            let tree_bytes = format_bytes::format_bytes!(
+                b"100644 test\0{}",
+                const_sha1::sha1(&const_sha1::ConstBuffer::from_slice(
+                    "blob 33\0testing this is a test cool test!".as_bytes()
+                ))
+                .bytes()
+            );
+
+            let tree = format_bytes::format_bytes!(
+                b"tree {}\0{}",
+                tree_bytes.len().to_string().as_bytes(),
+                tree_bytes
+            );
+
+            let tree_hash = hex::encode(sha1::Sha1::digest(&tree));
+
+            let commit_bytes = format!(
+                "tree {}
+author Jordan Doyle <jordan@doyle.la> 1630244577 +0100
+committer Jordan Doyle <jordan@doyle.la> 1630244577 +0100
+
+test",
+                tree_hash
+            );
+
+            let commit = format!("commit {}\0{}", commit_bytes.len(), commit_bytes);
+
+            let commit_hash = hex::encode(sha1::Sha1::digest(commit.as_bytes()));
+
+            use sha1::Digest;
+            println!(
+                "commit hash: {} - tree hash: {} - file hash: {}",
+                commit_hash,
+                tree_hash,
+                const_sha1::sha1(&const_sha1::ConstBuffer::from_slice(
+                    "blob 33\0testing this is a test cool test!".as_bytes()
+                ))
+            );
 
             // echo -ne "0014command=ls-refs\n0014agent=git/2.321\n00010008peel000bsymrefs000aunborn0014ref-prefix HEAD\n0000"
             // GIT_PROTOCOL=version=2 ssh -o SendEnv=GIT_PROTOCOL git@github.com git-upload-pack '/w4/chartered.git'
@@ -163,7 +206,9 @@ impl server::Handler for Handler {
             // sends a 000dpackfile back
             // https://shafiul.github.io/gitbook/7_the_packfile.html
             if ls_refs {
-                self.write(PktLine::Data(b"1a1b25ae7c87a0e87b7a9aa478a6bc4331c6b954 HEAD symref-target:refs/heads/master\n"))?;
+                self.write(PktLine::Data(
+                    format!("{} HEAD symref-target:refs/heads/master\n", commit_hash).as_bytes(),
+                ))?;
                 self.write(PktLine::Flush)?;
                 self.flush(&mut session, channel);
             }
@@ -180,10 +225,30 @@ impl server::Handler for Handler {
             if done {
                 self.write(PktLine::Data(b"packfile\n"))?;
 
-                let packfile = git::packfile::PackFile::new(vec![git::packfile::PackFileEntry::new(
-                    git::packfile::PackFileEntryType::Blob,
-                    b"testing this is a test cool test!",
-                )?]);
+                {
+                    let mut buf = BytesMut::new();
+                    buf.put_u8(2); // sideband, 1 = msg
+                    buf.extend_from_slice(b"Hello from chartered!\n");
+                    self.write(PktLine::Data(buf.as_ref()))?;
+                    self.flush(&mut session, channel);
+                }
+
+                // fatal: bad object 4ff484817ca2f1a10183da210a6e74f29764857d
+                // error: ssh://127.0.0.1:2233/ did not send all necessary objects
+                let packfile = git::packfile::PackFile::new(vec![
+                    git::packfile::PackFileEntry::new(
+                        git::packfile::PackFileEntryType::Commit,
+                        commit_bytes.as_bytes(),
+                    )?,
+                    git::packfile::PackFileEntry::new(
+                        git::packfile::PackFileEntryType::Tree,
+                        &tree_bytes,
+                    )?,
+                    git::packfile::PackFileEntry::new(
+                        git::packfile::PackFileEntryType::Blob,
+                        b"testing this is a test cool test!",
+                    )?,
+                ]);
 
                 // {
                 //     let mut buf = BytesMut::new();
@@ -198,14 +263,26 @@ impl server::Handler for Handler {
 
                 {
                     let mut buf = BytesMut::new();
-                    buf.put_u8(1);
+                    buf.put_u8(1); // sideband, 1 = continue
                     packfile.encode_to(&mut buf)?;
                     self.write(PktLine::Data(buf.as_ref()))?;
                 }
 
-                self.write(PktLine::Flush)?;
+                // {
+                //     let mut buf = BytesMut::new();
+                //     buf.put_u8(2); // sideband, 1 = msg
+                //     buf.extend_from_slice(
+                //         b"Total 3 (delta 0), reused 0 (delta 0), pack-reused 0\n",
+                //     );
+                //     self.write(PktLine::Data(buf.as_ref()))?;
+                //     self.flush(&mut session, channel);
+                // }
 
+                self.write(PktLine::Flush)?;
                 self.flush(&mut session, channel);
+                session.exit_status_request(channel, 0);
+                session.eof(channel);
+                session.close(channel);
             }
 
             Ok((self, session))

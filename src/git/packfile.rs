@@ -1,9 +1,9 @@
 use bytes::{BufMut, BytesMut};
 use const_sha1::{sha1, ConstBuffer};
 use flate2::{write::ZlibEncoder, Compression};
+use sha1::{Digest, Sha1};
 use std::convert::TryInto;
 use std::io::Write as IoWrite;
-use sha1::{Sha1, Digest};
 
 // The offset/sha1[] tables are sorted by sha1[] values (this is to
 // allow binary search of this table), and fanout[] table points at
@@ -173,14 +173,14 @@ pub struct PackFileEntry {
     entry_type: PackFileEntryType,
     compressed_data: Vec<u8>,
     compressed_crc32: u32,
-    uncompressed_sha1: [u8; 20],
+    pub uncompressed_sha1: [u8; 20],
     uncompressed_size: usize,
 }
 
 impl PackFileEntry {
     pub fn new(entry_type: PackFileEntryType, data: &[u8]) -> Result<Self, anyhow::Error> {
         let mut e = ZlibEncoder::new(Vec::new(), Compression::default());
-        e.write_all(&data)?;
+        e.write_all(data)?;
         let compressed_data = e.finish()?;
 
         let compressed_crc32 = crc::Crc::<u32>::new(&crc::CRC_32_CKSUM).checksum(&compressed_data);

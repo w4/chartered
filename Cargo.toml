@@ -23,3 +23,7 @@ flate2 = "1.0"
 sha-1 = "0.9"
 const-sha1 = "0.2"
 crc = "2"
+
+
+format-bytes = "0.1"
+hex = "0.4"
