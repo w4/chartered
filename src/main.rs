@@ -1,26 +1,32 @@
+#![deny(clippy::pedantic)]
+#[allow(clippy::missing_errors_doc)]
+
 pub mod git;
 
-use crate::git::PktLine;
+use crate::git::{
+    codec::{Encoder, GitCodec},
+    packfile::{Commit, CommitUserInfo, PackFileEntry, TreeItem, TreeItemKind},
+    PktLine,
+};
 
-use bytes::BufMut;
-use bytes::BytesMut;
+use bytes::{BytesMut};
 use futures::future::Future;
-use git::codec::Encoder;
-use git::codec::GitCodec;
 use std::{fmt::Write, pin::Pin, sync::Arc};
-use thrussh::server::{Auth, Session};
-use thrussh::*;
-use thrussh_keys::*;
+use thrussh::{
+    ChannelId, CryptoVec, server::{self, Auth, Session},
+};
+use thrussh_keys::key;
 use tokio_util::codec::{Decoder, Encoder as TokioEncoder};
 
 #[tokio::main]
+#[allow(clippy::semicolon_if_nothing_returned)] // broken clippy lint
 async fn main() {
     env_logger::init();
 
     let mut config = thrussh::server::Config::default();
     config
         .keys
-        .push(thrussh_keys::key::KeyPair::generate_ed25519().unwrap());
+        .push(key::KeyPair::generate_ed25519().unwrap());
     let config = Arc::new(config);
     thrussh::server::run(config, "127.0.0.1:2233", Server)
         .await
@@ -54,14 +60,16 @@ impl Handler {
         session.data(
             channel,
             CryptoVec::from_slice(self.output_bytes.split().as_ref()),
-        )
+        );
     }
 }
+
+type AsyncHandlerFn = Pin<Box<dyn Future<Output = Result<(Handler, Session), <Handler as server::Handler>::Error>> + Send>>;
 
 impl server::Handler for Handler {
     type Error = anyhow::Error;
     type FutureAuth = futures::future::Ready<Result<(Self, server::Auth), anyhow::Error>>;
-    type FutureUnit = Pin<Box<dyn Future<Output = Result<(Self, Session), Self::Error>> + Send>>;
+    type FutureUnit = AsyncHandlerFn;
     type FutureBool = futures::future::Ready<Result<(Self, Session, bool), anyhow::Error>>;
 
     fn finished_auth(self, auth: Auth) -> Self::FutureAuth {
@@ -158,45 +166,33 @@ impl server::Handler for Handler {
             }
 
             // echo -ne "0012command=fetch\n0001000ethin-pack\n0010include-tag\n000eofs-delta\n0032want d24d8020163b5fee57c9babfd0c595b8c90ba253\n0009done\n"
-            // echo -ne
 
-            let tree_bytes = format_bytes::format_bytes!(
-                b"100644 test\0{}",
-                const_sha1::sha1(&const_sha1::ConstBuffer::from_slice(
-                    "blob 33\0testing this is a test cool test!".as_bytes()
-                ))
-                .bytes()
-            );
+            let file = PackFileEntry::Blob(b"this is some text inside my cool test file!");
 
-            let tree = format_bytes::format_bytes!(
-                b"tree {}\0{}",
-                tree_bytes.len().to_string().as_bytes(),
-                tree_bytes
-            );
+            let tree = PackFileEntry::Tree(vec![TreeItem {
+                kind: TreeItemKind::File,
+                name: "test",
+                hash: file.hash()?,
+            }]);
 
-            let tree_hash = hex::encode(sha1::Sha1::digest(&tree));
+            let commit_user = CommitUserInfo {
+                name: "Jordan Doyle",
+                email: "jordan@doyle.la",
+                time: chrono::Utc::now(),
+            };
 
-            let commit_bytes = format!(
-                "tree {}
-author Jordan Doyle <jordan@doyle.la> 1630244577 +0100
-committer Jordan Doyle <jordan@doyle.la> 1630244577 +0100
+            let commit = PackFileEntry::Commit(Commit {
+                tree: tree.hash()?,
+                author: commit_user,
+                committer: commit_user,
+                message: "cool commit",
+            });
 
-test",
-                tree_hash
-            );
-
-            let commit = format!("commit {}\0{}", commit_bytes.len(), commit_bytes);
-
-            let commit_hash = hex::encode(sha1::Sha1::digest(commit.as_bytes()));
-
-            use sha1::Digest;
             println!(
                 "commit hash: {} - tree hash: {} - file hash: {}",
-                commit_hash,
-                tree_hash,
-                const_sha1::sha1(&const_sha1::ConstBuffer::from_slice(
-                    "blob 33\0testing this is a test cool test!".as_bytes()
-                ))
+                hex::encode(&commit.hash()?),
+                hex::encode(&tree.hash()?),
+                hex::encode(&file.hash()?),
             );
 
             // echo -ne "0014command=ls-refs\n0014agent=git/2.321\n00010008peel000bsymrefs000aunborn0014ref-prefix HEAD\n0000"
@@ -207,7 +203,11 @@ test",
             // https://shafiul.github.io/gitbook/7_the_packfile.html
             if ls_refs {
                 self.write(PktLine::Data(
-                    format!("{} HEAD symref-target:refs/heads/master\n", commit_hash).as_bytes(),
+                    format!(
+                        "{} HEAD symref-target:refs/heads/master\n",
+                        hex::encode(&commit.hash()?)
+                    )
+                    .as_bytes(),
                 ))?;
                 self.write(PktLine::Flush)?;
                 self.flush(&mut session, channel);
@@ -225,61 +225,14 @@ test",
             if done {
                 self.write(PktLine::Data(b"packfile\n"))?;
 
-                {
-                    let mut buf = BytesMut::new();
-                    buf.put_u8(2); // sideband, 1 = msg
-                    buf.extend_from_slice(b"Hello from chartered!\n");
-                    self.write(PktLine::Data(buf.as_ref()))?;
-                    self.flush(&mut session, channel);
-                }
+                self.write(PktLine::SidebandMsg(b"Hello from chartered!\n"))?;
+                self.flush(&mut session, channel);
 
-                // fatal: bad object 4ff484817ca2f1a10183da210a6e74f29764857d
-                // error: ssh://127.0.0.1:2233/ did not send all necessary objects
-                let packfile = git::packfile::PackFile::new(vec![
-                    git::packfile::PackFileEntry::new(
-                        git::packfile::PackFileEntryType::Commit,
-                        commit_bytes.as_bytes(),
-                    )?,
-                    git::packfile::PackFileEntry::new(
-                        git::packfile::PackFileEntryType::Tree,
-                        &tree_bytes,
-                    )?,
-                    git::packfile::PackFileEntry::new(
-                        git::packfile::PackFileEntryType::Blob,
-                        b"testing this is a test cool test!",
-                    )?,
-                ]);
-
-                // {
-                //     let mut buf = BytesMut::new();
-                //     buf.put_u8(1);
-                //     git::packfile::PackFileIndex {
-                //         packfile: &packfile,
-                //     }
-                //     .encode_to(&mut buf)?;
-                //     self.write(PktLine::Data(buf.as_ref()))?;
-                //     self.write(PktLine::Flush)?;
-                // }
-
-                {
-                    let mut buf = BytesMut::new();
-                    buf.put_u8(1); // sideband, 1 = continue
-                    packfile.encode_to(&mut buf)?;
-                    self.write(PktLine::Data(buf.as_ref()))?;
-                }
-
-                // {
-                //     let mut buf = BytesMut::new();
-                //     buf.put_u8(2); // sideband, 1 = msg
-                //     buf.extend_from_slice(
-                //         b"Total 3 (delta 0), reused 0 (delta 0), pack-reused 0\n",
-                //     );
-                //     self.write(PktLine::Data(buf.as_ref()))?;
-                //     self.flush(&mut session, channel);
-                // }
-
+                let packfile = git::packfile::PackFile::new(vec![commit, tree, file]);
+                self.write(PktLine::SidebandData(packfile))?;
                 self.write(PktLine::Flush)?;
                 self.flush(&mut session, channel);
+
                 session.exit_status_request(channel, 0);
                 session.eof(channel);
                 session.close(channel);

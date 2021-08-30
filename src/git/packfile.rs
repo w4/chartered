@@ -1,89 +1,10 @@
 use bytes::{BufMut, BytesMut};
-use const_sha1::{sha1, ConstBuffer};
 use flate2::{write::ZlibEncoder, Compression};
-use sha1::{Digest, Sha1};
-use std::convert::TryInto;
-use std::io::Write as IoWrite;
-
-// The offset/sha1[] tables are sorted by sha1[] values (this is to
-// allow binary search of this table), and fanout[] table points at
-// the offset/sha1[] table in a specific way (so that part of the
-// latter table that covers all hashes that start with a given byte
-// can be found to avoid 8 iterations of the binary search).
-pub struct PackFileIndex<'a> {
-    pub packfile: &'a PackFile,
-}
-
-impl<'a> PackFileIndex<'a> {
-    pub fn encode_to(self, original_buf: &mut BytesMut) -> Result<(), anyhow::Error> {
-        // split the buffer so we can hash only what we're currently generating at the
-        // end of this function
-        let mut buf = original_buf.split_off(original_buf.len());
-
-        buf.extend_from_slice(b"\xfftOc"); // magic header
-        buf.put_u32(2); // version
-
-        // calculate total `PackFileEntry` hashes beginning with the same first byte
-        let mut totals_by_first_byte = [0u32; 256];
-        for entry in &self.packfile.entries {
-            totals_by_first_byte[entry.uncompressed_sha1[0] as usize] += 1;
-        }
-
-        // calculate fanout value by taking cumulative totals of first byte counts
-        let mut cumulative = 0;
-        for i in 0..256usize {
-            cumulative += totals_by_first_byte[i];
-            buf.put_u32(cumulative);
-        }
-
-        // write all the sha hashes out, this needs to be sorted by the hash which should've
-        // been done by `PackFile::new()`
-        for entry in &self.packfile.entries {
-            buf.extend_from_slice(&entry.uncompressed_sha1);
-        }
-
-        for entry in &self.packfile.entries {
-            buf.put_u32(entry.compressed_crc32);
-        }
-
-        let mut offset = PackFile::header_size();
-
-        // encode offsets into the packfile
-        for entry in &self.packfile.entries {
-            offset += entry.compressed_data.len();
-
-            let mut offset_be = offset.to_be();
-
-            while offset_be != 0 {
-                // read 7 LSBs from the `offset_be` and push them off for the next iteration
-                let mut val = (offset_be & 0b1111111) as u8;
-                offset_be >>= 7;
-
-                if offset_be != 0 {
-                    // MSB set to 1 implies there's more offset_be bytes to come, otherwise
-                    // the data starts after this byte
-                    val |= 1 << 7;
-                }
-
-                buf.put_u8(val);
-            }
-        }
-
-        // push a copy of the hash that appears at the end of the packfile
-        buf.extend_from_slice(&self.packfile.hash);
-
-        // hash of the whole buffer we've just generated for the index
-        let mut hasher = Sha1::new();
-        hasher.update(&buf);
-        let result = hasher.finalize();
-        buf.extend_from_slice(result.as_ref());
-
-        // put the buffer we've just generated back into the mutable buffer we were passed
-        original_buf.unsplit(buf);
-
-        Ok(())
-    }
-}
+use sha1::{
+    digest::{generic_array::GenericArray, FixedOutputDirty},
+    Digest, Sha1,
+};
+use std::{convert::TryInto, fmt::Write, io::Write as IoWrite};
 
 // The packfile itself is a very simple format. There is a header, a
 // series of packed objects (each with it's own header and body) and
@@ -91,39 +12,41 @@ impl<'a> PackFileIndex<'a> {
 // which is sort of used to make sure you're getting the start of the
 // packfile correctly. This is followed by a 4-byte packfile version
 // number and then a 4-byte number of entries in that file.
-pub struct PackFile {
-    entries: Vec<PackFileEntry>,
-    hash: [u8; 20],
+pub struct PackFile<'a> {
+    entries: Vec<PackFileEntry<'a>>,
 }
 
-impl PackFile {
-    pub fn new(mut entries: Vec<PackFileEntry>) -> Self {
-        entries.sort_unstable_by_key(|v| v.uncompressed_sha1[0]);
-        let hash_buffer = entries.iter().fold(ConstBuffer::new(), |acc, curr| {
-            acc.push_slice(&curr.uncompressed_sha1)
-        });
-
-        Self {
-            entries,
-            hash: sha1(&hash_buffer).bytes(),
-        }
+impl<'a> PackFile<'a> {
+    #[must_use]
+    pub fn new(entries: Vec<PackFileEntry<'a>>) -> Self {
+        Self { entries }
     }
 
+    #[must_use]
     pub const fn header_size() -> usize {
-        4 + std::mem::size_of::<u32>() + std::mem::size_of::<u32>()
+        "PACK".len() + std::mem::size_of::<u32>() + std::mem::size_of::<u32>()
+    }
+
+    #[must_use]
+    pub const fn footer_size() -> usize {
+        20
     }
 
     pub fn encode_to(&self, original_buf: &mut BytesMut) -> Result<(), anyhow::Error> {
         let mut buf = original_buf.split_off(original_buf.len());
+        buf.reserve(Self::header_size() + Self::footer_size());
 
+        // header
         buf.extend_from_slice(b"PACK"); // magic header
         buf.put_u32(2); // version
-        buf.put_u32(self.entries.len().try_into().unwrap()); // number of entries in the packfile
+        buf.put_u32(self.entries.len().try_into()?); // number of entries in the packfile
 
+        // body
         for entry in &self.entries {
             entry.encode_to(&mut buf)?;
         }
 
+        // footer
         buf.extend_from_slice(&sha1::Sha1::digest(&buf[..]));
 
         original_buf.unsplit(buf);
@@ -132,7 +55,110 @@ impl PackFile {
     }
 }
 
-pub enum PackFileEntryType {
+pub struct Commit<'a> {
+    pub tree: GenericArray<u8, <Sha1 as FixedOutputDirty>::OutputSize>, // [u8; 20], but sha-1 returns a GenericArray
+    // pub parent: [u8; 20],
+    pub author: CommitUserInfo<'a>,
+    pub committer: CommitUserInfo<'a>,
+    // pub gpgsig: &str,
+    pub message: &'a str,
+}
+
+impl Commit<'_> {
+    fn encode_to(&self, out: &mut BytesMut) -> Result<(), anyhow::Error> {
+        let mut tree_hex = [0_u8; 20 * 2];
+        hex::encode_to_slice(self.tree, &mut tree_hex)?;
+
+        out.write_str("tree ")?;
+        out.extend_from_slice(&tree_hex);
+        out.write_char('\n')?;
+
+        writeln!(out, "author {}", self.author.encode())?;
+        writeln!(out, "committer {}", self.committer.encode())?;
+        write!(out, "\n{}", self.message)?;
+
+        Ok(())
+    }
+
+    #[must_use]
+    pub fn size(&self) -> usize {
+        let mut len = 0;
+        len += "tree ".len() + (self.tree.len() * 2) + "\n".len();
+        len += "author ".len() + self.author.size() + "\n".len();
+        len += "committer ".len() + self.committer.size() + "\n".len();
+        len += "\n".len() + self.message.len();
+        len
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct CommitUserInfo<'a> {
+    pub name: &'a str,
+    pub email: &'a str,
+    pub time: chrono::DateTime<chrono::Utc>,
+}
+
+impl CommitUserInfo<'_> {
+    fn encode(&self) -> String {
+        // TODO: remove `format!`, `format_args!`?
+        format!(
+            "{} <{}> {} +0000",
+            self.name,
+            self.email,
+            self.time.timestamp()
+        )
+    }
+
+    #[must_use]
+    pub fn size(&self) -> usize {
+        let timestamp_len = itoa::Buffer::new().format(self.time.timestamp()).len();
+
+        self.name.len()
+            + "< ".len()
+            + self.email.len()
+            + "> ".len()
+            + timestamp_len
+            + " +0000".len()
+    }
+}
+
+pub enum TreeItemKind {
+    File,
+    Directory,
+}
+
+impl TreeItemKind {
+    #[must_use]
+    pub const fn mode(&self) -> &'static str {
+        match self {
+            Self::File => "100644",
+            Self::Directory => "0000",
+        }
+    }
+}
+
+pub struct TreeItem<'a> {
+    pub kind: TreeItemKind,
+    pub name: &'a str,
+    pub hash: GenericArray<u8, <Sha1 as FixedOutputDirty>::OutputSize>, // [u8; 20] - but we have to deal with GenericArrays
+}
+
+// `[mode] [name]\0[hash]`
+impl TreeItem<'_> {
+    fn encode_to(&self, out: &mut BytesMut) -> Result<(), anyhow::Error> {
+        out.write_str(self.kind.mode())?;
+        write!(out, " {}\0", self.name)?;
+        out.extend_from_slice(&self.hash);
+        Ok(())
+    }
+
+    #[must_use]
+    pub fn size(&self) -> usize {
+        self.kind.mode().len() + " ".len() + self.name.len() + "\0".len() + self.hash.len()
+    }
+}
+
+pub enum PackFileEntry<'a> {
     // jordan@Jordans-MacBook-Pro-2 0d % printf "\x1f\x8b\x08\x00\x00\x00\x00\x00" | cat - f5/473259d9674ed66239766a013f96a3550374e3 | gzip -dc
     // commit 1068tree 0d586b48bc42e8591773d3d8a7223551c39d453c
     // parent c2a862612a14346ae95234f26efae1ee69b5b7a9
@@ -156,73 +182,41 @@ pub enum PackFileEntryType {
     // -----END PGP SIGNATURE-----
     //
     // test
-    Commit,
+    Commit(Commit<'a>),
     // jordan@Jordans-MacBook-Pro-2 0d % printf "\x1f\x8b\x08\x00\x00\x00\x00\x00" | cat - 0d/586b48bc42e8591773d3d8a7223551c39d453c | gzip -dc
     // tree 20940000 .cargo���CYy��Ve�������100644 .gitignore�K��_ow�]����4�n�ݺ100644 Cargo.lock�7�3-�?/��
     // kt��c0C�100644 Cargo.toml�6�&(��]\8@�SHA�]f40000 src0QW��ƅ���b[�!�S&N�100644 test�G2Y�gN�b9vj?��Ut�
-    Tree,
+    Tree(Vec<TreeItem<'a>>),
     // jordan@Jordans-MacBook-Pro-2 objects % printf "\x1f\x8b\x08\x00\x00\x00\x00\x00" | cat - f5/473259d9674ed66239766a013f96a3550374e3| gzip -dc
     // blob 23try and find me in .git
-    Blob,
+    Blob(&'a [u8]),
     // Tag,
     // OfsDelta,
     // RefDelta,
 }
 
-pub struct PackFileEntry {
-    entry_type: PackFileEntryType,
-    compressed_data: Vec<u8>,
-    compressed_crc32: u32,
-    pub uncompressed_sha1: [u8; 20],
-    uncompressed_size: usize,
-}
-
-impl PackFileEntry {
-    pub fn new(entry_type: PackFileEntryType, data: &[u8]) -> Result<Self, anyhow::Error> {
-        let mut e = ZlibEncoder::new(Vec::new(), Compression::default());
-        e.write_all(data)?;
-        let compressed_data = e.finish()?;
-
-        let compressed_crc32 = crc::Crc::<u32>::new(&crc::CRC_32_CKSUM).checksum(&compressed_data);
-
-        Ok(Self {
-            entry_type,
-            compressed_data,
-            compressed_crc32,
-            uncompressed_sha1: sha1(&ConstBuffer::new().push_slice(data)).bytes(),
-            uncompressed_size: data.len(),
-        })
-    }
-
-    // fn size_of_data_be(&self) -> usize {
-    //     self.uncompressed_size.to_be()
-    // }
-
-    // The object header is a series of one or more 1 byte (8 bit) hunks
-    // that specify the type of object the following data is, and the size
-    // of the data when expanded. Each byte is really 7 bits of data, with
-    // the first bit being used to say if that hunk is the last one or not
-    // before the data starts. If the first bit is a 1, you will read another
-    // byte, otherwise the data starts next. The first 3 bits in the first
-    // byte specifies the type of data, according to the table below.
+impl PackFileEntry<'_> {
     fn write_header(&self, buf: &mut BytesMut) {
-        let mut size = self.uncompressed_size;
+        let mut size = self.uncompressed_size();
 
         // write header
         {
-            let mut val = 0b10000000u8;
+            let mut val = 0b1000_0000_u8;
 
-            val |= match self.entry_type {
-                PackFileEntryType::Commit => 0b001,
-                PackFileEntryType::Tree => 0b010,
-                PackFileEntryType::Blob => 0b011,
-                // PackFileEntryType::Tag => 0b100,
-                // PackFileEntryType::OfsDelta => 0b110,
-                // PackFileEntryType::RefDelta => 0b111,
+            val |= match self {
+                Self::Commit(_) => 0b001,
+                Self::Tree(_) => 0b010,
+                Self::Blob(_) => 0b011,
+                // Self::Tag => 0b100,
+                // Self::OfsDelta => 0b110,
+                // Self::RefDelta => 0b111,
             } << 4;
 
             // pack the 4 LSBs of the size into the header
-            val |= (size & 0b1111) as u8;
+            #[allow(clippy::cast_possible_truncation)] // value is masked
+            {
+                val |= (size & 0b1111) as u8;
+            }
             size >>= 4;
 
             buf.put_u8(val);
@@ -231,7 +225,8 @@ impl PackFileEntry {
         // write size bytes
         while size != 0 {
             // read 7 LSBs from the `size` and push them off for the next iteration
-            let mut val = (size & 0b1111111) as u8;
+            #[allow(clippy::cast_possible_truncation)] // value is masked
+            let mut val = (size & 0b111_1111) as u8;
             size >>= 7;
 
             if size != 0 {
@@ -244,10 +239,84 @@ impl PackFileEntry {
         }
     }
 
-    pub fn encode_to(&self, buf: &mut BytesMut) -> Result<(), anyhow::Error> {
-        self.write_header(buf);
-        buf.extend_from_slice(&self.compressed_data);
+    pub fn encode_to(&self, original_out: &mut BytesMut) -> Result<(), anyhow::Error> {
+        self.write_header(original_out); // TODO: this needs space reserving for it
+
+        // todo is there a way to stream through the zlibencoder so we don't have to
+        // have this intermediate bytesmut and vec?
+        let mut out = BytesMut::new();
+
+        let size = self.uncompressed_size();
+        original_out.reserve(size);
+        // the data ends up getting compressed but we'll need at least this many bytes
+        out.reserve(size);
+
+        match self {
+            Self::Commit(commit) => {
+                commit.encode_to(&mut out)?;
+            }
+            Self::Tree(items) => {
+                for item in items {
+                    item.encode_to(&mut out)?;
+                }
+            }
+            Self::Blob(data) => {
+                out.extend_from_slice(data);
+            }
+        }
+
+        debug_assert_eq!(out.len(), size);
+
+        let mut e = ZlibEncoder::new(Vec::new(), Compression::default());
+        e.write_all(&out)?;
+        let compressed_data = e.finish()?;
+
+        original_out.extend_from_slice(&compressed_data);
 
         Ok(())
+    }
+
+    #[must_use]
+    pub fn uncompressed_size(&self) -> usize {
+        match self {
+            Self::Commit(commit) => commit.size(),
+            Self::Tree(items) => items.iter().map(TreeItem::size).sum(),
+            Self::Blob(data) => data.len(),
+        }
+    }
+
+    // wen const generics for RustCrypto? :-(
+    pub fn hash(
+        &self,
+    ) -> Result<GenericArray<u8, <Sha1 as FixedOutputDirty>::OutputSize>, anyhow::Error> {
+        let size = self.uncompressed_size();
+
+        let file_prefix = match self {
+            Self::Commit(_) => "commit",
+            Self::Tree(_) => "tree",
+            Self::Blob(_) => "blob",
+        };
+
+        let size_len = itoa::Buffer::new().format(size).len();
+
+        let mut out =
+            BytesMut::with_capacity(file_prefix.len() + " ".len() + size_len + "\n".len() + size);
+
+        write!(out, "{} {}\0", file_prefix, size)?;
+        match self {
+            Self::Commit(commit) => {
+                commit.encode_to(&mut out)?;
+            }
+            Self::Tree(items) => {
+                for item in items {
+                    item.encode_to(&mut out)?;
+                }
+            }
+            Self::Blob(blob) => {
+                out.extend_from_slice(blob);
+            }
+        }
+
+        Ok(sha1::Sha1::digest(&out))
     }
 }

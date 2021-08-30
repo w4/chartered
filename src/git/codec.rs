@@ -1,3 +1,5 @@
+#![allow(clippy::module_name_repetitions)]
+
 use bytes::{Buf, Bytes, BytesMut};
 use tokio_util::codec;
 
@@ -28,7 +30,7 @@ impl codec::Decoder for GitCodec {
             return Ok(None);
         }
 
-        let mut length_bytes = [0u8; 4];
+        let mut length_bytes = [0_u8; 4];
         length_bytes.copy_from_slice(&src[..4]);
         let length = u16::from_str_radix(std::str::from_utf8(&length_bytes)?, 16)? as usize;
 
@@ -42,7 +44,7 @@ impl codec::Decoder for GitCodec {
             return self.decode(src);
         }
 
-        if length > 65520 || length < 4 {
+        if !(4..=65520).contains(&length) {
             return Err(
                 std::io::Error::new(std::io::ErrorKind::InvalidData, "protocol abuse").into(),
             );

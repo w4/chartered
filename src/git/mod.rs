@@ -1,11 +1,19 @@
 pub mod codec;
 pub mod packfile;
 
-use bytes::BytesMut;
+use bytes::{BufMut, BytesMut};
 use std::fmt::Write;
+
+use self::packfile::PackFile;
 
 pub enum PktLine<'a> {
     Data(&'a [u8]),
+    /// Similar to a data packet, but used during packfile sending to indicate this
+    /// packet is a block of data by appending a byte containing the u8 `1`.
+    SidebandData(PackFile<'a>),
+    /// Similar to a data packet, but used during packfile sending to indicate this
+    /// packet is a status message by appending a byte containing the u8 `2`.
+    SidebandMsg(&'a [u8]),
     Flush,
     Delimiter,
     ResponseEnd,
@@ -16,7 +24,24 @@ impl PktLine<'_> {
         match self {
             Self::Data(data) => {
                 write!(buf, "{:04x}", data.len() + 4)?;
-                buf.extend_from_slice(&data);
+                buf.extend_from_slice(data);
+            }
+            Self::SidebandData(packfile) => {
+                // split the buf off so the cost of counting the bytes to put in the
+                // data line prefix is just the cost of `unsplit` (an atomic decrement)
+                let mut data_buf = buf.split_off(buf.len());
+
+                data_buf.put_u8(1); // sideband, 1 = data
+                packfile.encode_to(&mut data_buf)?;
+
+                // write into the buf not the data buf so it's at the start of the msg
+                write!(buf, "{:04x}", data_buf.len() + 4)?;
+                buf.unsplit(data_buf);
+            }
+            Self::SidebandMsg(msg) => {
+                write!(buf, "{:04x}", msg.len() + 4 + 1)?;
+                buf.put_u8(2); // sideband, 2 = msg
+                buf.extend_from_slice(msg);
             }
             Self::Flush => buf.extend_from_slice(b"0000"),
             Self::Delimiter => buf.extend_from_slice(b"0001"),
@@ -26,12 +51,6 @@ impl PktLine<'_> {
         Ok(())
     }
 }
-
-// impl From<PktLine<'_>> for CryptoVec {
-//     fn from(val: PktLine<'_>) -> Self {
-//         Self::from(val.encode())
-//     }
-// }
 
 impl<'a> From<&'a str> for PktLine<'a> {
     fn from(val: &'a str) -> Self {
