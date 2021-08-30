@@ -3,6 +3,7 @@ pub mod git;
 use crate::git::PktLine;
 
 use bytes::BytesMut;
+use bytes::BufMut;
 use futures::future::Future;
 use git::codec::Encoder;
 use git::codec::GitCodec;
@@ -141,6 +142,7 @@ impl server::Handler for Handler {
         Box::pin(async move {
             let mut ls_refs = false;
             let mut fetch = false;
+            let mut done = false;
 
             while let Some(frame) = self.codec.decode(&mut self.input_bytes)? {
                 eprintln!("data: {:x?}", frame);
@@ -149,13 +151,15 @@ impl server::Handler for Handler {
                     ls_refs = true;
                 } else if frame.as_ref() == "command=fetch".as_bytes() {
                     fetch = true;
+                } else if frame.as_ref() == "done".as_bytes() {
+                    done = true;
                 }
             }
 
             // echo -ne "0014command=ls-refs\n0014agent=git/2.321\n00010008peel000bsymrefs000aunborn0014ref-prefix HEAD\n0000"
             // GIT_PROTOCOL=version=2 ssh -o SendEnv=GIT_PROTOCOL git@github.com git-upload-pack '/w4/chartered.git'
             // ''.join([('{:04x}'.format(len(v) + 5)), v, "\n"])
-            // echo -ne "0012command=fetch\n0001000ethin-pack\n0010no-progress\n0010include-tag\n000eofs-delta\n0032want 1a1b25ae7c87a0e87b7a9aa478a6bc4331c6b954\n0009done\n"
+            // echo -ne "0012command=fetch\n0001000ethin-pack\n0010no-progress\n0010include-tag\n000eofs-delta\n0032want f6046cf6372e0d8ab845f6dec1602c303a66ee91\n"
             // sends a 000dpackfile back
             // https://shafiul.github.io/gitbook/7_the_packfile.html
             if ls_refs {
@@ -165,22 +169,36 @@ impl server::Handler for Handler {
             }
 
             if fetch {
+                self.write(PktLine::Data(b"acknowledgments\n"))?;
+                self.write(PktLine::Data(b"ready\n"))?;
+                self.write(PktLine::Delimiter)?;
+                // self.write(PktLine::Data(b"shallow-info\n"))?;
+                // self.write(PktLine::Data(b"unshallow\n"))?;
+                done = true;
+            }
+
+            if done {
+                self.write(PktLine::Data(b"packfile\n"))?;
+
                 let packfile = git::packfile::PackFile::new(vec![git::packfile::PackFileEntry::new(
                     git::packfile::PackFileEntryType::Blob,
-                    b"testing this is a test cool test",
+                    b"testing this is a test cool test!",
                 )?]);
 
-                {
-                    let mut buf = BytesMut::new();
-                    let packfile_index = git::packfile::PackFileIndex {
-                        packfile: &packfile,
-                    };
-                    packfile_index.encode_to(&mut buf)?;
-                    self.write(PktLine::Data(buf.as_ref()))?;
-                }
+                // {
+                //     let mut buf = BytesMut::new();
+                //     buf.put_u8(1);
+                //     git::packfile::PackFileIndex {
+                //         packfile: &packfile,
+                //     }
+                //     .encode_to(&mut buf)?;
+                //     self.write(PktLine::Data(buf.as_ref()))?;
+                //     self.write(PktLine::Flush)?;
+                // }
 
                 {
                     let mut buf = BytesMut::new();
+                    buf.put_u8(1);
                     packfile.encode_to(&mut buf)?;
                     self.write(PktLine::Data(buf.as_ref()))?;
                 }

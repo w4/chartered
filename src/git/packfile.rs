@@ -3,6 +3,7 @@ use const_sha1::{sha1, ConstBuffer};
 use flate2::{write::ZlibEncoder, Compression};
 use std::convert::TryInto;
 use std::io::Write as IoWrite;
+use sha1::{Sha1, Digest};
 
 // The offset/sha1[] tables are sorted by sha1[] values (this is to
 // allow binary search of this table), and fanout[] table points at
@@ -15,13 +16,11 @@ pub struct PackFileIndex<'a> {
 
 impl<'a> PackFileIndex<'a> {
     pub fn encode_to(self, original_buf: &mut BytesMut) -> Result<(), anyhow::Error> {
-        use sha1::{Sha1, Digest};
-
         // split the buffer so we can hash only what we're currently generating at the
         // end of this function
-        let mut buf = original_buf.split();
+        let mut buf = original_buf.split_off(original_buf.len());
 
-        buf.extend_from_slice(&[255u8, 116u8, 79u8, 99u8]); // magic header
+        buf.extend_from_slice(b"\xfftOc"); // magic header
         buf.put_u32(2); // version
 
         // calculate total `PackFileEntry` hashes beginning with the same first byte
@@ -114,16 +113,20 @@ impl PackFile {
         4 + std::mem::size_of::<u32>() + std::mem::size_of::<u32>()
     }
 
-    pub fn encode_to(self, buf: &mut BytesMut) -> Result<(), anyhow::Error> {
+    pub fn encode_to(&self, original_buf: &mut BytesMut) -> Result<(), anyhow::Error> {
+        let mut buf = original_buf.split_off(original_buf.len());
+
         buf.extend_from_slice(b"PACK"); // magic header
         buf.put_u32(2); // version
         buf.put_u32(self.entries.len().try_into().unwrap()); // number of entries in the packfile
 
         for entry in &self.entries {
-            entry.encode_to(buf)?;
+            entry.encode_to(&mut buf)?;
         }
 
-        buf.extend_from_slice(&self.hash);
+        buf.extend_from_slice(&sha1::Sha1::digest(&buf[..]));
+
+        original_buf.unsplit(buf);
 
         Ok(())
     }
@@ -191,9 +194,9 @@ impl PackFileEntry {
         })
     }
 
-    fn size_of_data_be(&self) -> usize {
-        self.uncompressed_size.to_be()
-    }
+    // fn size_of_data_be(&self) -> usize {
+    //     self.uncompressed_size.to_be()
+    // }
 
     // The object header is a series of one or more 1 byte (8 bit) hunks
     // that specify the type of object the following data is, and the size
@@ -203,7 +206,7 @@ impl PackFileEntry {
     // byte, otherwise the data starts next. The first 3 bits in the first
     // byte specifies the type of data, according to the table below.
     fn write_header(&self, buf: &mut BytesMut) {
-        let mut size = self.size_of_data_be();
+        let mut size = self.uncompressed_size;
 
         // write header
         {
