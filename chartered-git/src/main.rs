@@ -177,21 +177,17 @@ impl server::Handler for Handler {
             }"#,
             );
 
-            let ch_ar_tree = PackFileEntry::Tree(vec![
-                TreeItem {
-                    kind: TreeItemKind::File,
-                    name: "charteredtest",
-                    hash: test_crate_file.hash()?,
-                }
-            ]);
+            let ch_ar_tree = PackFileEntry::Tree(vec![TreeItem {
+                kind: TreeItemKind::File,
+                name: "charteredtest",
+                hash: test_crate_file.hash()?,
+            }]);
 
-            let ch_tree = PackFileEntry::Tree(vec![
-                TreeItem {
-                    kind: TreeItemKind::Directory,
-                    name: "ar",
-                    hash: ch_ar_tree.hash()?,
-                }
-            ]);
+            let ch_tree = PackFileEntry::Tree(vec![TreeItem {
+                kind: TreeItemKind::Directory,
+                name: "ar",
+                hash: ch_ar_tree.hash()?,
+            }]);
 
             let root_tree = PackFileEntry::Tree(vec![
                 TreeItem {
