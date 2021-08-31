@@ -1,0 +1,2 @@
+[registries]
+chartered = { index = "ssh://127.0.0.1:2233/" }

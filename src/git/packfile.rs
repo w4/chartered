@@ -132,7 +132,7 @@ impl TreeItemKind {
     pub const fn mode(&self) -> &'static str {
         match self {
             Self::File => "100644",
-            Self::Directory => "0000",
+            Self::Directory => "40000",
         }
     }
 }

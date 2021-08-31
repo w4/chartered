@@ -1,6 +1,5 @@
 #![deny(clippy::pedantic)]
 #[allow(clippy::missing_errors_doc)]
-
 pub mod git;
 
 use crate::git::{
@@ -9,11 +8,12 @@ use crate::git::{
     PktLine,
 };
 
-use bytes::{BytesMut};
+use bytes::BytesMut;
 use futures::future::Future;
 use std::{fmt::Write, pin::Pin, sync::Arc};
 use thrussh::{
-    ChannelId, CryptoVec, server::{self, Auth, Session},
+    server::{self, Auth, Session},
+    ChannelId, CryptoVec,
 };
 use thrussh_keys::key;
 use tokio_util::codec::{Decoder, Encoder as TokioEncoder};
@@ -24,9 +24,7 @@ async fn main() {
     env_logger::init();
 
     let mut config = thrussh::server::Config::default();
-    config
-        .keys
-        .push(key::KeyPair::generate_ed25519().unwrap());
+    config.keys.push(key::KeyPair::generate_ed25519().unwrap());
     let config = Arc::new(config);
     thrussh::server::run(config, "127.0.0.1:2233", Server)
         .await
@@ -64,7 +62,11 @@ impl Handler {
     }
 }
 
-type AsyncHandlerFn = Pin<Box<dyn Future<Output = Result<(Handler, Session), <Handler as server::Handler>::Error>> + Send>>;
+type AsyncHandlerFn = Pin<
+    Box<
+        dyn Future<Output = Result<(Handler, Session), <Handler as server::Handler>::Error>> + Send,
+    >,
+>;
 
 impl server::Handler for Handler {
     type Error = anyhow::Error;
@@ -167,13 +169,42 @@ impl server::Handler for Handler {
 
             // echo -ne "0012command=fetch\n0001000ethin-pack\n0010include-tag\n000eofs-delta\n0032want d24d8020163b5fee57c9babfd0c595b8c90ba253\n0009done\n"
 
-            let file = PackFileEntry::Blob(b"this is some text inside my cool test file!");
+            let test_crate_file = PackFileEntry::Blob(br#"{"name":"charteredtest","vers":"1.0.0","deps":[],"cksum":"7b821735f0211fd00032a9892d1bf2323c9d05d9c59b9303eb382f5ec1898bfc","features":{},"yanked":false,"links":null}"#);
+            let config_file = PackFileEntry::Blob(
+                br#"{
+                "dl": "http://127.0.0.1:8888/api/v1/crates",
+                "api": "http://127.0.0.1:8888"
+            }"#,
+            );
 
-            let tree = PackFileEntry::Tree(vec![TreeItem {
-                kind: TreeItemKind::File,
-                name: "test",
-                hash: file.hash()?,
-            }]);
+            let ch_ar_tree = PackFileEntry::Tree(vec![
+                TreeItem {
+                    kind: TreeItemKind::File,
+                    name: "charteredtest",
+                    hash: test_crate_file.hash()?,
+                }
+            ]);
+
+            let ch_tree = PackFileEntry::Tree(vec![
+                TreeItem {
+                    kind: TreeItemKind::Directory,
+                    name: "ar",
+                    hash: ch_ar_tree.hash()?,
+                }
+            ]);
+
+            let root_tree = PackFileEntry::Tree(vec![
+                TreeItem {
+                    kind: TreeItemKind::Directory,
+                    name: "ch",
+                    hash: ch_tree.hash()?,
+                },
+                TreeItem {
+                    kind: TreeItemKind::File,
+                    name: "config.json",
+                    hash: config_file.hash()?,
+                },
+            ]);
 
             let commit_user = CommitUserInfo {
                 name: "Jordan Doyle",
@@ -182,32 +213,22 @@ impl server::Handler for Handler {
             };
 
             let commit = PackFileEntry::Commit(Commit {
-                tree: tree.hash()?,
+                tree: root_tree.hash()?,
                 author: commit_user,
                 committer: commit_user,
                 message: "cool commit",
             });
 
-            println!(
-                "commit hash: {} - tree hash: {} - file hash: {}",
-                hex::encode(&commit.hash()?),
-                hex::encode(&tree.hash()?),
-                hex::encode(&file.hash()?),
-            );
-
-            // echo -ne "0014command=ls-refs\n0014agent=git/2.321\n00010008peel000bsymrefs000aunborn0014ref-prefix HEAD\n0000"
+            // echo -ne "0014command=ls-refs\n0014agent=git/2.321\n00010009peel\n000csymrefs\n000bunborn\n0014ref-prefix HEAD\n0019ref-prefix refs/HEAD\n001eref-prefix refs/tags/HEAD\n001fref-prefix refs/heads/HEAD\n0021ref-prefix refs/remotes/HEAD\n0026ref-prefix refs/remotes/HEAD/HEAD\n001aref-prefix refs/tags/\n0000"
             // GIT_PROTOCOL=version=2 ssh -o SendEnv=GIT_PROTOCOL git@github.com git-upload-pack '/w4/chartered.git'
             // ''.join([('{:04x}'.format(len(v) + 5)), v, "\n"])
             // echo -ne "0012command=fetch\n0001000ethin-pack\n0010no-progress\n0010include-tag\n000eofs-delta\n0032want f6046cf6372e0d8ab845f6dec1602c303a66ee91\n"
             // sends a 000dpackfile back
             // https://shafiul.github.io/gitbook/7_the_packfile.html
             if ls_refs {
+                let commit_hash = hex::encode(&commit.hash()?);
                 self.write(PktLine::Data(
-                    format!(
-                        "{} HEAD symref-target:refs/heads/master\n",
-                        hex::encode(&commit.hash()?)
-                    )
-                    .as_bytes(),
+                    format!("{} HEAD symref-target:refs/heads/master\n", commit_hash).as_bytes(),
                 ))?;
                 self.write(PktLine::Flush)?;
                 self.flush(&mut session, channel);
@@ -228,7 +249,14 @@ impl server::Handler for Handler {
                 self.write(PktLine::SidebandMsg(b"Hello from chartered!\n"))?;
                 self.flush(&mut session, channel);
 
-                let packfile = git::packfile::PackFile::new(vec![commit, tree, file]);
+                let packfile = git::packfile::PackFile::new(vec![
+                    commit,
+                    test_crate_file,
+                    ch_tree,
+                    ch_ar_tree,
+                    config_file,
+                    root_tree,
+                ]);
                 self.write(PktLine::SidebandData(packfile))?;
                 self.write(PktLine::Flush)?;
                 self.flush(&mut session, channel);
