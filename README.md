@@ -14,6 +14,8 @@ next steps:
 - ~serve cargo manifest over git (how does git handle 'force pushes' from server -> client? lets see how they like it for once, i'm sick of people picking on servers all the time)~ **turns out, very well - they've helpfully included the --force flag in their `git fetch` call so we can serve a completely different commit on every pull if we wanted to and not have to worry about conflicts**
 - serve .crate files over http using auth tokens we generated while serving the manifest
 
+[open tasks](https://github.com/w4/chartered/issues)
+
 #### open q's
 
 maybe it'd be better to use git directly and create an index on the filesystem just for the user? seems less fun though
