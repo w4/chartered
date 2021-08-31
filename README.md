@@ -11,7 +11,7 @@ next steps:
 
 - ~reverse engineer & create tokio codec for the git protocol~ **now successfully generating a repo, tree & blob in memory git clients can understand!**
 - clean up all the hacked-together code and package it all up into a nice library for generating git commit objects etc
-- ~serve cargo manifest over git (how does git handle 'force pushes' from server -> client? lets see how they like it for once, i'm sick of people picking on servers all the time)~ **turns out, very well - they've helpfully included the --force flag in their `cargo fetch` call so we can serve a completely different commit on every pull if we wanted to and not have to worry about conflicts**
+- ~serve cargo manifest over git (how does git handle 'force pushes' from server -> client? lets see how they like it for once, i'm sick of people picking on servers all the time)~ **turns out, very well - they've helpfully included the --force flag in their `git fetch` call so we can serve a completely different commit on every pull if we wanted to and not have to worry about conflicts**
 - serve .crate files over http using auth tokens we generated while serving the manifest
 
 #### open q's
