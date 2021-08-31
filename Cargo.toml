@@ -3,4 +3,5 @@ members = [
     "chartered-git",
     "chartered-web",
     "chartered-fs",
+    "chartered-db",
 ]

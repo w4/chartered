@@ -52,8 +52,12 @@ async fn main() {
         }))
         .into_inner();
 
+    let pool = chartered_db::init();
+
     let app = Router::new()
-        .route("/", get(hello_world))
+        .route("/", get(|| async move {
+            format!("{:#?}", chartered_db::get_crate_versions(pool, "cool-test-crate".to_string()).await)
+        }))
         .nest("/a/:key/api/v1", api_authenticated)
         .layer(middleware_stack);
 
