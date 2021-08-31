@@ -1,0 +1,25 @@
+[package]
+name = "chartered-git"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1"
+async-trait = "0"
+bytes = "1"
+chrono = "0.4"
+const-sha1 = "0.2"
+crc = "2"
+env_logger = "0.9"
+flate2 = "1.0"
+format-bytes = "0.1"
+futures = "0.3"
+hex = "0.4"
+itoa = "0.4"
+sha-1 = "0.9"
+thrussh = "0.33"
+thrussh-keys = "0.21"
+tokio = { version = "1", features = ["full"] }
+tokio-util = { version = "0.6", features = ["codec"] }

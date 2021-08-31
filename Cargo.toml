@@ -1,31 +1,5 @@
-[package]
-name = "chartered"
-version = "0.1.0"
-edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-axum = "0.2"
-tokio = { version = "1", features = ["full"] }
-tower = { version = "0.4", features = ["util", "filter"] }
-tower-http = { version = "0.1", features = ["trace"] }
-
-async-trait = "0"
-thrussh = "0.33"
-futures = "0.3"
-thrussh-keys = "0.21"
-anyhow = "1"
-env_logger = "0.9"
-tokio-util = { version = "0.6", features = ["codec"] }
-bytes = "1"
-flate2 = "1.0"
-sha-1 = "0.9"
-const-sha1 = "0.2"
-crc = "2"
-chrono = "0.4"
-itoa = "0.4"
-
-
-format-bytes = "0.1"
-hex = "0.4"
+[workspace]
+members = [
+    "chartered-git",
+    "chartered-web",
+]
