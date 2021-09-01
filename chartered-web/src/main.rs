@@ -28,7 +28,7 @@ macro_rules! axum_box_after_every_route {
 #[tokio::main]
 async fn main() {
     let api_authenticated = axum_box_after_every_route!(Router::new()
-        .route("/crates/new", put(hello_world))
+        .route("/crates/new", put(endpoints::cargo_api::publish))
         .route("/crates/search", get(hello_world))
         .route("/crates/:crate/owners", get(hello_world))
         .route("/crates/:crate/owners", put(hello_world))
@@ -55,9 +55,15 @@ async fn main() {
     let pool = chartered_db::init();
 
     let app = Router::new()
-        .route("/", get(|| async move {
-            format!("{:#?}", chartered_db::get_crate_versions(pool, "cool-test-crate".to_string()).await)
-        }))
+        .route(
+            "/",
+            get(|| async move {
+                format!(
+                    "{:#?}",
+                    chartered_db::get_crate_versions(pool, "cool-test-crate".to_string()).await
+                )
+            }),
+        )
         .nest("/a/:key/api/v1", api_authenticated)
         .layer(middleware_stack);
 

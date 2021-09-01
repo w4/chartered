@@ -28,12 +28,12 @@ where
         let mut inner = std::mem::replace(&mut self.0, clone);
 
         Box::pin(async move {
-            if true {
-                return Ok(Response::builder()
-                    .status(StatusCode::UNAUTHORIZED)
-                    .body(ResBody::default())
-                    .unwrap());
-            }
+            // if true {
+            //     return Ok(Response::builder()
+            //         .status(StatusCode::UNAUTHORIZED)
+            //         .body(ResBody::default())
+            //         .unwrap());
+            // }
 
             let res: Response<ResBody> = inner.call(req).await?;
 

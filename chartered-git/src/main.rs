@@ -172,8 +172,8 @@ impl server::Handler for Handler {
             let test_crate_file = PackFileEntry::Blob(br#"{"name":"charteredtest","vers":"1.0.0","deps":[],"cksum":"7b821735f0211fd00032a9892d1bf2323c9d05d9c59b9303eb382f5ec1898bfc","features":{},"yanked":false,"links":null}"#);
             let config_file = PackFileEntry::Blob(
                 br#"{
-                "dl": "http://127.0.0.1:8888/api/v1/crates",
-                "api": "http://127.0.0.1:8888"
+                "dl": "http://127.0.0.1:8888/a/abc/api/v1/crates",
+                "api": "http://127.0.0.1:8888/a/abc"
             }"#,
             );
 

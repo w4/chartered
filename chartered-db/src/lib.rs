@@ -1,20 +1,15 @@
+pub mod schema;
+
 #[macro_use]
 extern crate diesel;
 
-pub mod schema;
-
+use diesel::{Associations, Identifiable, Queryable, insert_into, insert_or_ignore_into, prelude::*, r2d2::{ConnectionManager, Pool}};
+use schema::{crate_versions, crates};
 use std::sync::Arc;
 
-use self::diesel::prelude::*;
-use diesel::{
-    r2d2::{ConnectionManager, Pool},
-    Associations, Identifiable, Queryable,
-};
+pub type ConnectionPool = Arc<Pool<ConnectionManager<diesel::SqliteConnection>>>;
 
-use schema::crate_versions;
-use schema::crates;
-
-pub fn init() -> Arc<Pool<ConnectionManager<diesel::SqliteConnection>>> {
+pub fn init() -> ConnectionPool {
     Arc::new(Pool::new(ConnectionManager::new("chartered.db")).unwrap())
 }
 
@@ -34,10 +29,7 @@ pub struct CrateVersion {
     yanked: bool,
 }
 
-pub async fn get_crate_versions(
-    conn: Arc<Pool<ConnectionManager<diesel::SqliteConnection>>>,
-    crate_name: String,
-) -> Vec<CrateVersion> {
+pub async fn get_crate_versions(conn: ConnectionPool, crate_name: String) -> Vec<CrateVersion> {
     use crate::schema::crates::dsl::*;
 
     tokio::task::spawn_blocking(move || {
@@ -52,6 +44,40 @@ pub async fn get_crate_versions(
             .expect("no crate versions");
 
         selected_crate_versions
+    })
+    .await
+    .unwrap()
+}
+
+pub async fn publish_crate(
+    conn: ConnectionPool,
+    crate_name: String,
+    version_string: String,
+    file_identifier: chartered_fs::FileReference,
+) {
+    use crate::schema::{crate_versions::dsl::*, crates::dsl::*};
+
+    tokio::task::spawn_blocking(move || {
+        let conn = conn.get().unwrap();
+
+        insert_or_ignore_into(crates)
+            .values(name.eq(&crate_name))
+            .execute(&conn)
+            .unwrap();
+
+        let selected_crate = crates
+            .filter(name.eq(crate_name))
+            .first::<Crate>(&conn)
+            .unwrap();
+
+        insert_into(crate_versions)
+            .values((
+                crate_id.eq(selected_crate.id),
+                version.eq(version_string),
+                filesystem_object.eq(file_identifier.to_string()),
+            ))
+            .execute(&conn)
+            .unwrap();
     })
     .await
     .unwrap()
