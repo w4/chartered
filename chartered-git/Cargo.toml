@@ -6,6 +6,8 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+chartered-db = { path = "../chartered-db" }
+
 anyhow = "1"
 async-trait = "0"
 bytes = "1"
@@ -18,6 +20,8 @@ format-bytes = "0.1"
 futures = "0.3"
 hex = "0.4"
 itoa = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 sha-1 = "0.9"
 thrussh = "0.33"
 thrussh-keys = "0.21"

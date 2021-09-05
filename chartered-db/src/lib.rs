@@ -3,9 +3,15 @@ pub mod schema;
 #[macro_use]
 extern crate diesel;
 
-use diesel::{Associations, Identifiable, Queryable, insert_into, insert_or_ignore_into, prelude::*, r2d2::{ConnectionManager, Pool}};
+use diesel::{
+    insert_into, insert_or_ignore_into,
+    prelude::*,
+    r2d2::{ConnectionManager, Pool},
+    Associations, Identifiable, Queryable,
+};
+use itertools::Itertools;
 use schema::{crate_versions, crates};
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 pub type ConnectionPool = Arc<Pool<ConnectionManager<diesel::SqliteConnection>>>;
 
@@ -13,20 +19,20 @@ pub fn init() -> ConnectionPool {
     Arc::new(Pool::new(ConnectionManager::new("chartered.db")).unwrap())
 }
 
-#[derive(Identifiable, Queryable, PartialEq, Debug)]
+#[derive(Identifiable, Queryable, PartialEq, Eq, Hash, Debug)]
 pub struct Crate {
-    id: i32,
-    name: String,
+    pub id: i32,
+    pub name: String,
 }
 
 #[derive(Identifiable, Queryable, Associations, PartialEq, Debug)]
 #[belongs_to(Crate)]
 pub struct CrateVersion {
-    id: i32,
-    crate_id: i32,
-    version: String,
-    filesystem_object: String,
-    yanked: bool,
+    pub id: i32,
+    pub crate_id: i32,
+    pub version: String,
+    pub filesystem_object: String,
+    pub yanked: bool,
 }
 
 pub async fn get_crate_versions(conn: ConnectionPool, crate_name: String) -> Vec<CrateVersion> {
@@ -39,11 +45,25 @@ pub async fn get_crate_versions(conn: ConnectionPool, crate_name: String) -> Vec
             .filter(name.eq(crate_name))
             .first::<Crate>(&conn)
             .expect("no crate");
-        let selected_crate_versions = CrateVersion::belonging_to(&selected_crate)
-            .load::<CrateVersion>(&conn)
-            .expect("no crate versions");
 
-        selected_crate_versions
+        CrateVersion::belonging_to(&selected_crate)
+            .load::<CrateVersion>(&conn)
+            .expect("no crate versions")
+    })
+    .await
+    .unwrap()
+}
+
+pub async fn get_crates(conn: ConnectionPool) -> HashMap<Crate, Vec<CrateVersion>> {
+    tokio::task::spawn_blocking(move || {
+        let conn = conn.get().unwrap();
+
+        let crate_versions = crates::table
+            .inner_join(crate_versions::table)
+            .load(&conn)
+            .unwrap();
+
+        crate_versions.into_iter().into_grouping_map().collect()
     })
     .await
     .unwrap()

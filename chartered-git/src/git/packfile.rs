@@ -55,6 +55,7 @@ impl<'a> PackFile<'a> {
     }
 }
 
+#[derive(Debug)]
 pub struct Commit<'a> {
     pub tree: GenericArray<u8, <Sha1 as FixedOutputDirty>::OutputSize>, // [u8; 20], but sha-1 returns a GenericArray
     // pub parent: [u8; 20],
@@ -122,6 +123,7 @@ impl CommitUserInfo<'_> {
     }
 }
 
+#[derive(Debug)]
 pub enum TreeItemKind {
     File,
     Directory,
@@ -137,6 +139,7 @@ impl TreeItemKind {
     }
 }
 
+#[derive(Debug)]
 pub struct TreeItem<'a> {
     pub kind: TreeItemKind,
     pub name: &'a str,
@@ -158,6 +161,7 @@ impl TreeItem<'_> {
     }
 }
 
+#[derive(Debug)]
 pub enum PackFileEntry<'a> {
     // jordan@Jordans-MacBook-Pro-2 0d % printf "\x1f\x8b\x08\x00\x00\x00\x00\x00" | cat - f5/473259d9674ed66239766a013f96a3550374e3 | gzip -dc
     // commit 1068tree 0d586b48bc42e8591773d3d8a7223551c39d453c
