@@ -16,6 +16,7 @@ pub struct PublishCrateResponseWarnings {
 
 pub async fn handle(body: Bytes) -> axum::response::Json<PublishCrateResponse> {
     use chartered_fs::FileSystem;
+    use sha2::{Digest, Sha256};
 
     let (_, (metadata_bytes, crate_bytes)) = parse(body.as_ref()).unwrap();
 
@@ -28,6 +29,7 @@ pub async fn handle(body: Bytes) -> axum::response::Json<PublishCrateResponse> {
         metadata.name.to_string(),
         metadata.vers.to_string(),
         file_ref,
+        hex::encode(Sha256::digest(crate_bytes)),
     )
     .await;
 
@@ -82,4 +84,3 @@ pub struct MetadataDependency<'a> {
     registry: &'a str,
     explicit_name_in_toml: Option<&'a str>,
 }
-

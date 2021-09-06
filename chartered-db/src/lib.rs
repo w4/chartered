@@ -33,6 +33,7 @@ pub struct CrateVersion {
     pub version: String,
     pub filesystem_object: String,
     pub yanked: bool,
+    pub checksum: String,
 }
 
 pub async fn get_crate_versions(conn: ConnectionPool, crate_name: String) -> Vec<CrateVersion> {
@@ -49,6 +50,31 @@ pub async fn get_crate_versions(conn: ConnectionPool, crate_name: String) -> Vec
         CrateVersion::belonging_to(&selected_crate)
             .load::<CrateVersion>(&conn)
             .expect("no crate versions")
+    })
+    .await
+    .unwrap()
+}
+
+pub async fn get_specific_crate_version(
+    conn: ConnectionPool,
+    crate_name: String,
+    crate_version: String,
+) -> Option<CrateVersion> {
+    use crate::schema::{crate_versions::dsl::*, crates::dsl::*};
+
+    tokio::task::spawn_blocking(move || {
+        let conn = conn.get().unwrap();
+
+        let selected_crate = crates
+            .filter(name.eq(crate_name))
+            .first::<Crate>(&conn)
+            .expect("no crate");
+
+        CrateVersion::belonging_to(&selected_crate)
+            .filter(version.eq(crate_version))
+            .get_result::<CrateVersion>(&conn)
+            .optional()
+            .expect("no crate version")
     })
     .await
     .unwrap()
@@ -74,6 +100,7 @@ pub async fn publish_crate(
     crate_name: String,
     version_string: String,
     file_identifier: chartered_fs::FileReference,
+    file_checksum: String,
 ) {
     use crate::schema::{crate_versions::dsl::*, crates::dsl::*};
 
@@ -95,6 +122,7 @@ pub async fn publish_crate(
                 crate_id.eq(selected_crate.id),
                 version.eq(version_string),
                 filesystem_object.eq(file_identifier.to_string()),
+                checksum.eq(file_checksum),
             ))
             .execute(&conn)
             .unwrap();

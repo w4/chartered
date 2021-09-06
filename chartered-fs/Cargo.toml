@@ -7,5 +7,9 @@ edition = "2018"
 
 [dependencies]
 async-trait = "0.1"
-tokio = { version = "1", features = ["fs"] }
-uuid = { version = "0.8", features = ["v4"] }
+serde = { version = "1", features = ["derive"] }
+tokio = { version = "1", features = ["fs", "io-util"] }
+uuid = { version = "0.8", features = ["v4", "serde"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt", "macros"] }

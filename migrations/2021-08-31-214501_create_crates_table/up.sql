@@ -9,9 +9,7 @@ CREATE TABLE crate_versions (
     version VARCHAR(255) NOT NULL,
     filesystem_object VARCHAR(255) NOT NULL,
     yanked BOOLEAN NOT NULL DEFAULT FALSE,
+    checksum VARCHAR(255) NOT NULL,
     UNIQUE (crate_id, version),
     FOREIGN KEY (crate_id) REFERENCES crates (id)
 );
-
-INSERT INTO crates VALUES (1, "cool-test-crate");
-INSERT INTO crate_versions VALUES (1, 1, "1.0.0", "cool-object", FALSE);

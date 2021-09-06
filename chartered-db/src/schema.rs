@@ -5,6 +5,7 @@ table! {
         version -> Text,
         filesystem_object -> Text,
         yanked -> Bool,
+        checksum -> Text,
     }
 }
 
@@ -17,4 +18,7 @@ table! {
 
 joinable!(crate_versions -> crates (crate_id));
 
-allow_tables_to_appear_in_same_query!(crate_versions, crates,);
+allow_tables_to_appear_in_same_query!(
+    crate_versions,
+    crates,
+);

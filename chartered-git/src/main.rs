@@ -297,7 +297,7 @@ async fn fetch_tree(
                 name: &crate_def.name,
                 vers: &version.version,
                 deps: &[],
-                cksum: "cool-checksum-dude",
+                cksum: &version.checksum,
                 features: BTreeMap::new(),
                 yanked: version.yanked,
                 links: None,
