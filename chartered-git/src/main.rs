@@ -78,6 +78,13 @@ impl Handler {
             CryptoVec::from_slice(self.output_bytes.split().as_ref()),
         );
     }
+
+    fn user(&self) -> Result<&chartered_db::users::User, anyhow::Error> {
+        match self.user {
+            Some(ref user) => Ok(user),
+            None => anyhow::bail!("user not set after auth"),
+        }
+    }
 }
 
 type AsyncHandlerFn = Pin<
@@ -115,7 +122,8 @@ impl server::Handler for Handler {
 
     fn shell_request(mut self, channel: ChannelId, mut session: Session) -> Self::FutureUnit {
         Box::pin(async move {
-            write!(&mut self.output_bytes, "Hi there! You've successfully authenticated, but chartered does not provide shell access.\r\n")?;
+            let username = self.user()?.username.clone(); // todo
+            write!(&mut self.output_bytes, "Hi there, {}! You've successfully authenticated, but chartered does not provide shell access.\r\n", username)?;
             self.flush(&mut session, channel);
             session.close(channel);
             Ok((self, session))

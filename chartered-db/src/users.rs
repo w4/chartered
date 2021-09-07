@@ -7,8 +7,8 @@ use std::sync::Arc;
 
 #[derive(Identifiable, Queryable, Associations, PartialEq, Eq, Hash, Debug)]
 pub struct User {
-    id: i32,
-    username: String,
+    pub id: i32,
+    pub username: String,
 }
 
 impl User {
@@ -37,6 +37,8 @@ impl User {
     ) -> Result<Option<User>> {
         use crate::schema::user_ssh_keys::dsl::*;
 
+        eprintln!("looking up by ssh key: {:x?}", given_ssh_key);
+
         tokio::task::spawn_blocking(move || {
             let conn = conn.get().unwrap();
 
@@ -54,24 +56,24 @@ impl User {
 #[derive(Identifiable, Queryable, Associations, PartialEq, Eq, Hash, Debug)]
 #[belongs_to(User)]
 pub struct UserApiKey {
-    id: i32,
-    user_id: i32,
-    api_key: String,
+    pub id: i32,
+    pub user_id: i32,
+    pub api_key: String,
 }
 
 #[derive(Identifiable, Queryable, Associations, PartialEq, Eq, Hash, Debug)]
 #[belongs_to(User)]
 pub struct UserCratePermission {
-    id: i32,
-    user_id: i32,
-    crate_id: i32,
-    permissions: i32,
+    pub id: i32,
+    pub user_id: i32,
+    pub crate_id: i32,
+    pub permissions: i32,
 }
 
 #[derive(Identifiable, Queryable, Associations, PartialEq, Eq, Hash, Debug)]
 #[belongs_to(User)]
 pub struct UserSshKey {
-    id: i32,
-    user_id: i32,
-    ssh_key: Vec<u8>,
+    pub id: i32,
+    pub user_id: i32,
+    pub ssh_key: Vec<u8>,
 }
