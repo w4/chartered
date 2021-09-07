@@ -44,7 +44,7 @@ table! {
 table! {
     users (id) {
         id -> Integer,
-        username -> Integer,
+        username -> Text,
     }
 }
 

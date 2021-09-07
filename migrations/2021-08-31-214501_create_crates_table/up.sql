@@ -16,7 +16,7 @@ CREATE TABLE crate_versions (
 
 CREATE TABLE users (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    username INTEGER NOT NULL UNIQUE
+    username VARCHAR(255) NOT NULL UNIQUE
 );
 
 CREATE TABLE user_ssh_keys (

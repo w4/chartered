@@ -17,7 +17,7 @@ use thrussh::{
     server::{self, Auth, Session},
     ChannelId, CryptoVec,
 };
-use thrussh_keys::key;
+use thrussh_keys::{key, PublicKeyBase64};
 use tokio_util::codec::{Decoder, Encoder as TokioEncoder};
 
 #[tokio::main]
@@ -25,9 +25,11 @@ use tokio_util::codec::{Decoder, Encoder as TokioEncoder};
 async fn main() {
     env_logger::init();
 
-    let mut config = thrussh::server::Config::default();
-    config.keys.push(key::KeyPair::generate_ed25519().unwrap());
-    let config = Arc::new(config);
+    let config = Arc::new(thrussh::server::Config {
+        methods: thrussh::MethodSet::PUBLICKEY,
+        keys: vec![key::KeyPair::generate_ed25519().unwrap()],
+        ..thrussh::server::Config::default()
+    });
 
     let server = Server {
         db: chartered_db::init().unwrap(),
@@ -52,6 +54,7 @@ impl server::Server for Server {
             input_bytes: BytesMut::default(),
             output_bytes: BytesMut::default(),
             db: self.db.clone(),
+            user: None,
         }
     }
 }
@@ -61,6 +64,7 @@ struct Handler {
     input_bytes: BytesMut,
     output_bytes: BytesMut,
     db: chartered_db::ConnectionPool,
+    user: Option<chartered_db::users::User>,
 }
 
 impl Handler {
@@ -84,13 +88,19 @@ type AsyncHandlerFn = Pin<
 
 impl server::Handler for Handler {
     type Error = anyhow::Error;
-    type FutureAuth = futures::future::Ready<Result<(Self, server::Auth), anyhow::Error>>;
+    type FutureAuth = Pin<
+        Box<
+            dyn Future<
+                    Output = Result<(Handler, server::Auth), <Handler as server::Handler>::Error>,
+                > + Send,
+        >,
+    >;
     type FutureUnit = AsyncHandlerFn;
     type FutureBool = futures::future::Ready<Result<(Self, Session, bool), anyhow::Error>>;
 
     fn finished_auth(self, auth: Auth) -> Self::FutureAuth {
         eprintln!("finished auth");
-        futures::future::ready(Ok((self, auth)))
+        Box::pin(futures::future::ready(Ok((self, auth))))
     }
 
     fn finished_bool(self, b: bool, s: Session) -> Self::FutureBool {
@@ -155,9 +165,38 @@ impl server::Handler for Handler {
         Box::pin(futures::future::ready(Ok((self, session))))
     }
 
-    fn auth_publickey(self, _: &str, _: &key::PublicKey) -> Self::FutureAuth {
-        eprintln!("finished auth pubkey");
-        self.finished_auth(server::Auth::Accept)
+    fn auth_publickey(mut self, _username: &str, key: &key::PublicKey) -> Self::FutureAuth {
+        let public_key = key.public_key_bytes();
+
+        Box::pin(async move {
+            let login_user =
+                match chartered_db::users::User::find_by_ssh_key(self.db.clone(), public_key)
+                    .await?
+                {
+                    Some(user) => user,
+                    None => return self.finished_auth(server::Auth::Reject).await,
+                };
+
+            self.user = Some(login_user);
+            self.finished_auth(server::Auth::Accept).await
+        })
+    }
+
+    fn auth_keyboard_interactive(
+        self,
+        _user: &str,
+        _submethods: &str,
+        _response: Option<server::Response>,
+    ) -> Self::FutureAuth {
+        self.finished_auth(server::Auth::UnsupportedMethod)
+    }
+
+    fn auth_none(self, _user: &str) -> Self::FutureAuth {
+        self.finished_auth(server::Auth::UnsupportedMethod)
+    }
+
+    fn auth_password(self, _user: &str, _password: &str) -> Self::FutureAuth {
+        self.finished_auth(server::Auth::UnsupportedMethod)
     }
 
     fn data(mut self, channel: ChannelId, data: &[u8], mut session: Session) -> Self::FutureUnit {
