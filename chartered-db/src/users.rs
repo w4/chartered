@@ -3,7 +3,6 @@ use super::{
     ConnectionPool, Result,
 };
 use diesel::{prelude::*, Associations, Identifiable, Queryable};
-use std::sync::Arc;
 
 #[derive(Identifiable, Queryable, Associations, PartialEq, Eq, Hash, Debug)]
 pub struct User {

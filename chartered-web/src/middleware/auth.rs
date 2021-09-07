@@ -1,6 +1,13 @@
-use axum::http::{Request, Response, StatusCode};
+use axum::{
+    extract::{self, FromRequest, RequestParts},
+    http::{Request, Response, StatusCode},
+};
+use chartered_db::ConnectionPool;
 use futures::future::BoxFuture;
-use std::task::{Context, Poll};
+use std::{
+    collections::HashMap,
+    task::{Context, Poll},
+};
 use tower::Service;
 
 #[derive(Clone)]
@@ -28,14 +35,37 @@ where
         let mut inner = std::mem::replace(&mut self.0, clone);
 
         Box::pin(async move {
-            // if true {
-            //     return Ok(Response::builder()
-            //         .status(StatusCode::UNAUTHORIZED)
-            //         .body(ResBody::default())
-            //         .unwrap());
-            // }
+            let mut req = RequestParts::new(req);
 
-            let res: Response<ResBody> = inner.call(req).await?;
+            let params = extract::Path::<HashMap<String, String>>::from_request(&mut req)
+                .await
+                .unwrap();
+
+            let key = params.get("key").map(|v| v.as_str()).unwrap_or_default();
+
+            let db = req
+                .extensions()
+                .unwrap()
+                .get::<ConnectionPool>()
+                .unwrap()
+                .clone();
+
+            let user = match chartered_db::users::User::find_by_api_key(db, String::from(key))
+                .await
+                .unwrap()
+            {
+                Some(user) => user,
+                None => {
+                    return Ok(Response::builder()
+                        .status(StatusCode::UNAUTHORIZED)
+                        .body(ResBody::default())
+                        .unwrap())
+                }
+            };
+
+            req.extensions_mut().unwrap().insert(user);
+
+            let res: Response<ResBody> = inner.call(req.try_into_request().unwrap()).await?;
 
             Ok(res)
         })
