@@ -1,3 +1,6 @@
+#![deny(clippy::pedantic)]
+#![deny(clippy::pedantic)]
+
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::{
@@ -66,6 +69,7 @@ pub trait FileSystem {
     async fn read(&self, file_ref: FileReference) -> Result<Vec<u8>, std::io::Error>;
     async fn write(&self, data: &[u8]) -> Result<FileReference, std::io::Error>;
 
+    #[must_use]
     fn create_ref() -> FileReference {
         FileReference {
             file_system: Self::KIND,

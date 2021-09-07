@@ -41,7 +41,7 @@ where
                 .await
                 .unwrap();
 
-            let key = params.get("key").map(|v| v.as_str()).unwrap_or_default();
+            let key = params.get("key").map(String::as_str).unwrap_or_default();
 
             let db = req
                 .extensions()
@@ -65,9 +65,9 @@ where
 
             req.extensions_mut().unwrap().insert(user);
 
-            let res: Response<ResBody> = inner.call(req.try_into_request().unwrap()).await?;
+            let response: Response<ResBody> = inner.call(req.try_into_request().unwrap()).await?;
 
-            Ok(res)
+            Ok(response)
         })
     }
 }

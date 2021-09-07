@@ -87,22 +87,13 @@ impl Handler {
     }
 }
 
-type AsyncHandlerFn = Pin<
-    Box<
-        dyn Future<Output = Result<(Handler, Session), <Handler as server::Handler>::Error>> + Send,
-    >,
->;
+type AsyncHandlerFut<T> =
+    dyn Future<Output = Result<T, <Handler as server::Handler>::Error>> + Send;
 
 impl server::Handler for Handler {
     type Error = anyhow::Error;
-    type FutureAuth = Pin<
-        Box<
-            dyn Future<
-                    Output = Result<(Handler, server::Auth), <Handler as server::Handler>::Error>,
-                > + Send,
-        >,
-    >;
-    type FutureUnit = AsyncHandlerFn;
+    type FutureAuth = Pin<Box<AsyncHandlerFut<(Handler, server::Auth)>>>;
+    type FutureUnit = Pin<Box<AsyncHandlerFut<(Handler, Session)>>>;
     type FutureBool = futures::future::Ready<Result<(Self, Session, bool), anyhow::Error>>;
 
     fn finished_auth(self, auth: Auth) -> Self::FutureAuth {
@@ -324,12 +315,14 @@ pub struct CrateFileEntry<'a> {
     links: Option<()>,
 }
 
+pub type TwoCharTree<T> = BTreeMap<[u8; 2], T>;
+
 async fn fetch_tree(
     db: chartered_db::ConnectionPool,
-) -> BTreeMap<[u8; 2], BTreeMap<[u8; 2], BTreeMap<String, String>>> {
+) -> TwoCharTree<TwoCharTree<BTreeMap<String, String>>> {
     use chartered_db::crates::Crate;
 
-    let mut tree: BTreeMap<[u8; 2], BTreeMap<[u8; 2], BTreeMap<String, String>>> = BTreeMap::new();
+    let mut tree: TwoCharTree<TwoCharTree<BTreeMap<String, String>>> = BTreeMap::new();
 
     // todo: handle files with 1/2/3 characters
     for (crate_def, versions) in Crate::all_with_versions(db).await.unwrap() {
@@ -365,7 +358,7 @@ async fn fetch_tree(
 fn build_tree<'a>(
     root_tree: &mut Vec<TreeItem<'a>>,
     pack_file_entries: &mut Vec<PackFileEntry<'a>>,
-    tree: &'a BTreeMap<[u8; 2], BTreeMap<[u8; 2], BTreeMap<String, String>>>,
+    tree: &'a TwoCharTree<TwoCharTree<BTreeMap<String, String>>>,
 ) -> Result<(), anyhow::Error> {
     root_tree.reserve(tree.len());
     pack_file_entries.reserve(tree.iter().map(|(_, v)| 1 + v.len()).sum::<usize>() + tree.len());

@@ -15,10 +15,10 @@ impl User {
         conn: ConnectionPool,
         given_api_key: String,
     ) -> Result<Option<User>> {
-        use crate::schema::user_api_keys::dsl::*;
+        use crate::schema::user_api_keys::dsl::api_key;
 
         tokio::task::spawn_blocking(move || {
-            let conn = conn.get().unwrap();
+            let conn = conn.get()?;
 
             Ok(crate::schema::user_api_keys::table
                 .filter(api_key.eq(given_api_key))
@@ -34,12 +34,12 @@ impl User {
         conn: ConnectionPool,
         given_ssh_key: Vec<u8>,
     ) -> Result<Option<User>> {
-        use crate::schema::user_ssh_keys::dsl::*;
+        use crate::schema::user_ssh_keys::dsl::ssh_key;
 
         eprintln!("looking up by ssh key: {:x?}", given_ssh_key);
 
         tokio::task::spawn_blocking(move || {
-            let conn = conn.get().unwrap();
+            let conn = conn.get()?;
 
             Ok(crate::schema::user_ssh_keys::table
                 .filter(ssh_key.eq(given_ssh_key))

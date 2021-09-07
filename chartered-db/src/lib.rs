@@ -1,3 +1,6 @@
+#![deny(clippy::pedantic)]
+#![allow(clippy::missing_errors_doc)]
+
 pub mod crates;
 pub mod schema;
 pub mod users;

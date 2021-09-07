@@ -1,3 +1,6 @@
+#![deny(clippy::pedantic)]
+#![allow(clippy::module_name_repetitions)]
+
 mod endpoints;
 mod middleware;
 
@@ -7,6 +10,7 @@ use axum::{
 };
 use tower::{filter::AsyncFilterLayer, ServiceBuilder};
 
+#[allow(clippy::unused_async)]
 async fn hello_world() -> &'static str {
     "hello, world!"
 }
@@ -26,6 +30,7 @@ macro_rules! axum_box_after_every_route {
 }
 
 #[tokio::main]
+#[allow(clippy::semicolon_if_nothing_returned)] // lint breaks with tokio::main
 async fn main() {
     env_logger::init();
 

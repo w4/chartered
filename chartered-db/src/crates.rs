@@ -19,7 +19,7 @@ impl Crate {
         conn: ConnectionPool,
     ) -> Result<HashMap<Crate, Vec<CrateVersion>>> {
         tokio::task::spawn_blocking(move || {
-            let conn = conn.get().unwrap();
+            let conn = conn.get()?;
 
             let crate_versions = crates::table
                 .inner_join(crate_versions::table)
@@ -31,26 +31,26 @@ impl Crate {
     }
 
     pub async fn find_by_name(conn: ConnectionPool, crate_name: String) -> Result<Option<Self>> {
-        use crate::schema::crates::dsl::*;
+        use crate::schema::crates::dsl::{crates, name};
 
-        Ok(tokio::task::spawn_blocking(move || {
-            let conn = conn.get().unwrap();
+        tokio::task::spawn_blocking(move || {
+            let conn = conn.get()?;
 
-            crates
+            Ok(crates
                 .filter(name.eq(crate_name))
                 .first::<Crate>(&conn)
-                .optional()
+                .optional()?)
         })
-        .await??)
+        .await?
     }
 
     pub async fn versions(self: Arc<Self>, conn: ConnectionPool) -> Result<Vec<CrateVersion>> {
-        Ok(tokio::task::spawn_blocking(move || {
-            let conn = conn.get().unwrap();
+        tokio::task::spawn_blocking(move || {
+            let conn = conn.get()?;
 
-            CrateVersion::belonging_to(&*self).load::<CrateVersion>(&conn)
+            Ok(CrateVersion::belonging_to(&*self).load::<CrateVersion>(&conn)?)
         })
-        .await??)
+        .await?
     }
 
     pub async fn version(
@@ -58,17 +58,17 @@ impl Crate {
         conn: ConnectionPool,
         crate_version: String,
     ) -> Result<Option<CrateVersion>> {
-        use crate::schema::crate_versions::*;
+        use crate::schema::crate_versions::version;
 
-        Ok(tokio::task::spawn_blocking(move || {
-            let conn = conn.get().unwrap();
+        tokio::task::spawn_blocking(move || {
+            let conn = conn.get()?;
 
-            CrateVersion::belonging_to(&*self)
+            Ok(CrateVersion::belonging_to(&*self)
                 .filter(version.eq(crate_version))
                 .get_result::<CrateVersion>(&conn)
-                .optional()
+                .optional()?)
         })
-        .await??)
+        .await?
     }
 }
 
@@ -89,21 +89,20 @@ pub async fn publish_crate(
     version_string: String,
     file_identifier: chartered_fs::FileReference,
     file_checksum: String,
-) {
-    use crate::schema::{crate_versions::dsl::*, crates::dsl::*};
+) -> Result<()> {
+    use crate::schema::{
+        crate_versions::dsl::{checksum, crate_id, crate_versions, filesystem_object, version},
+        crates::dsl::{crates, name},
+    };
 
     tokio::task::spawn_blocking(move || {
-        let conn = conn.get().unwrap();
+        let conn = conn.get()?;
 
         insert_or_ignore_into(crates)
             .values(name.eq(&crate_name))
-            .execute(&conn)
-            .unwrap();
+            .execute(&conn)?;
 
-        let selected_crate = crates
-            .filter(name.eq(crate_name))
-            .first::<Crate>(&conn)
-            .unwrap();
+        let selected_crate = crates.filter(name.eq(crate_name)).first::<Crate>(&conn)?;
 
         insert_into(crate_versions)
             .values((
@@ -112,9 +111,9 @@ pub async fn publish_crate(
                 filesystem_object.eq(file_identifier.to_string()),
                 checksum.eq(file_checksum),
             ))
-            .execute(&conn)
-            .unwrap();
+            .execute(&conn)?;
+
+        Ok(())
     })
-    .await
-    .unwrap()
+    .await?
 }

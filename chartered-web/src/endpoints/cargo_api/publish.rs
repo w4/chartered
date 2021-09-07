@@ -29,16 +29,22 @@ pub async fn handle(
 
     let file_ref = chartered_fs::Local.write(crate_bytes).await.unwrap();
 
-    chartered_db::crates::publish_crate(
+    let mut response = PublishCrateResponse::default();
+
+    if let Err(e) = chartered_db::crates::publish_crate(
         db,
         metadata.name.to_string(),
         metadata.vers.to_string(),
         file_ref,
         hex::encode(Sha256::digest(crate_bytes)),
     )
-    .await;
+    .await
+    {
+        // todo: should this be a normal http error?
+        response.warnings.other.push(e.to_string());
+    }
 
-    axum::response::Json(PublishCrateResponse::default())
+    axum::response::Json(response)
 }
 
 fn parse(body: &[u8]) -> nom::IResult<&[u8], (&[u8], &[u8])> {
@@ -47,7 +53,7 @@ fn parse(body: &[u8]) -> nom::IResult<&[u8], (&[u8], &[u8])> {
 
     let u32_from_le_bytes =
         |b: &[u8]| Ok::<_, TryFromSliceError>(u32::from_le_bytes(b.try_into()?));
-    let mut read_u32 = map_res(take(4usize), u32_from_le_bytes);
+    let mut read_u32 = map_res(take(4_usize), u32_from_le_bytes);
 
     let (rest, metadata_length) = read_u32(body)?;
     let (rest, metadata_bytes) = take(metadata_length)(rest)?;
