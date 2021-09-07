@@ -80,7 +80,7 @@ pub struct UserApiKey {
 }
 
 bitflags::bitflags! {
-    #[derive(FromSqlRow, AsExpression)]
+    #[derive(FromSqlRow, AsExpression, Default)]
     pub struct UserCratePermissionValue: i32 {
         const VISIBLE         = 0b0000_0000_0000_0000_0000_0000_0000_0001;
         const PUBLISH_VERSION = 0b0000_0000_0000_0000_0000_0000_0000_0010;
@@ -103,13 +103,34 @@ where
     }
 }
 
-#[derive(Identifiable, Queryable, Associations, PartialEq, Eq, Hash, Debug)]
+#[derive(Identifiable, Queryable, Associations, Default, PartialEq, Eq, Hash, Debug)]
 #[belongs_to(User)]
 pub struct UserCratePermission {
     pub id: i32,
     pub user_id: i32,
     pub crate_id: i32,
     pub permissions: UserCratePermissionValue,
+}
+
+impl UserCratePermission {
+    pub async fn find(
+        conn: ConnectionPool,
+        given_user_id: i32,
+        given_crate_id: i32,
+    ) -> Result<Option<UserCratePermission>> {
+        use crate::schema::user_crate_permissions::dsl::{crate_id, user_id};
+
+        tokio::task::spawn_blocking(move || {
+            let conn = conn.get()?;
+
+            Ok(crate::schema::user_crate_permissions::table
+                .filter(user_id.eq(given_user_id))
+                .filter(crate_id.eq(given_crate_id))
+                .get_result(&conn)
+                .optional()?)
+        })
+        .await?
+    }
 }
 
 #[derive(Identifiable, Queryable, Associations, PartialEq, Eq, Hash, Debug)]

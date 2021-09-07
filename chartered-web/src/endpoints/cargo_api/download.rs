@@ -1,5 +1,9 @@
 use axum::extract;
-use chartered_db::{crates::Crate, ConnectionPool};
+use chartered_db::{
+    crates::Crate,
+    users::{User, UserCratePermission, UserCratePermissionValue},
+    ConnectionPool,
+};
 use chartered_fs::FileSystem;
 use std::{str::FromStr, sync::Arc};
 
@@ -13,10 +17,22 @@ define_error!(
 pub async fn handle(
     extract::Path((_api_key, name, version)): extract::Path<(String, String, String)>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
+    extract::Extension(user): extract::Extension<Arc<User>>,
 ) -> Result<Vec<u8>, Error> {
     let c = Crate::find_by_name(db.clone(), name)
         .await?
         .ok_or(Error::NoCrate)?;
+
+    let perms = UserCratePermission::find(db.clone(), user.id, c.id)
+        .await?
+        .unwrap_or_default();
+
+    if !perms
+        .permissions
+        .contains(UserCratePermissionValue::VISIBLE)
+    {
+        return Err(Error::NoCrate);
+    }
 
     let version = Arc::new(c)
         .version(db, version)

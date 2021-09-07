@@ -54,7 +54,7 @@ where
                 .await
                 .unwrap()
             {
-                Some(user) => user,
+                Some(user) => std::sync::Arc::new(user),
                 None => {
                     return Ok(Response::builder()
                         .status(StatusCode::UNAUTHORIZED)
