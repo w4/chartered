@@ -188,8 +188,10 @@ version = "0.1.0"
 dependencies = [
  "chartered-fs",
  "diesel",
+ "displaydoc",
  "dotenv",
  "itertools",
+ "thiserror",
  "tokio",
 ]
 
@@ -237,12 +239,15 @@ dependencies = [
  "bytes",
  "chartered-db",
  "chartered-fs",
+ "env_logger",
  "futures",
  "hex",
+ "log",
  "nom",
  "serde",
  "serde_json",
  "sha2",
+ "thiserror",
  "tokio",
  "tower",
  "tower-http",
@@ -394,6 +399,17 @@ dependencies = [
  "libc",
  "redox_users",
  "winapi",
+]
+
+[[package]]
+name = "displaydoc"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3bf95dc3f046b9da4f2d51833c0d3547d8564ef6910f5c1ed130306a75b92886"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

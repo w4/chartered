@@ -1,4 +1,6 @@
+use axum::extract;
 use bytes::Bytes;
+use chartered_db::ConnectionPool;
 use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
 
@@ -14,7 +16,10 @@ pub struct PublishCrateResponseWarnings {
     other: Vec<String>,
 }
 
-pub async fn handle(body: Bytes) -> axum::response::Json<PublishCrateResponse> {
+pub async fn handle(
+    extract::Extension(db): extract::Extension<ConnectionPool>,
+    body: Bytes,
+) -> axum::response::Json<PublishCrateResponse> {
     use chartered_fs::FileSystem;
     use sha2::{Digest, Sha256};
 
@@ -24,8 +29,8 @@ pub async fn handle(body: Bytes) -> axum::response::Json<PublishCrateResponse> {
 
     let file_ref = chartered_fs::Local.write(crate_bytes).await.unwrap();
 
-    chartered_db::publish_crate(
-        chartered_db::init(),
+    chartered_db::crates::publish_crate(
+        db,
         metadata.name.to_string(),
         metadata.vers.to_string(),
         file_ref,

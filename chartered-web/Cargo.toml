@@ -11,12 +11,15 @@ chartered-fs = { path = "../chartered-fs" }
 
 axum = "0.2"
 bytes = "1"
+env_logger = "0.9"
 futures = "0.3"
 hex = "0.4"
+log = "0.4"
 nom = "7"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.9"
+thiserror = "1"
 tokio = { version = "1", features = ["full"] }
 tower = { version = "0.4", features = ["util", "filter"] }
 tower-http = { version = "0.1", features = ["trace"] }

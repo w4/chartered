@@ -3,7 +3,7 @@ mod middleware;
 
 use axum::{
     handler::{delete, get, put},
-    Router,
+    AddExtensionLayer, Router,
 };
 use tower::{filter::AsyncFilterLayer, ServiceBuilder};
 
@@ -27,6 +27,10 @@ macro_rules! axum_box_after_every_route {
 
 #[tokio::main]
 async fn main() {
+    env_logger::init();
+
+    let pool = chartered_db::init().unwrap();
+
     let api_authenticated = axum_box_after_every_route!(Router::new()
         .route("/crates/new", put(endpoints::cargo_api::publish))
         .route("/crates/search", get(hello_world))
@@ -43,7 +47,8 @@ async fn main() {
         ServiceBuilder::new()
             .layer_fn(middleware::auth::AuthMiddleware)
             .into_inner(),
-    );
+    )
+    .layer(AddExtensionLayer::new(pool));
 
     let middleware_stack = ServiceBuilder::new()
         .layer(AsyncFilterLayer::new(|req| async {
@@ -52,18 +57,8 @@ async fn main() {
         }))
         .into_inner();
 
-    let pool = chartered_db::init();
-
     let app = Router::new()
-        .route(
-            "/",
-            get(|| async move {
-                format!(
-                    "{:#?}",
-                    chartered_db::get_crate_versions(pool, "cool-test-crate".to_string()).await
-                )
-            }),
-        )
+        .route("/", get(hello_world))
         .nest("/a/:key/api/v1", api_authenticated)
         .layer(middleware_stack);
 

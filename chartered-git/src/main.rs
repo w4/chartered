@@ -30,7 +30,7 @@ async fn main() {
     let config = Arc::new(config);
 
     let server = Server {
-        db: chartered_db::init(),
+        db: chartered_db::init().unwrap(),
     };
 
     thrussh::server::run(config, "127.0.0.1:2233", server)
@@ -280,10 +280,12 @@ pub struct CrateFileEntry<'a> {
 async fn fetch_tree(
     db: chartered_db::ConnectionPool,
 ) -> BTreeMap<[u8; 2], BTreeMap<[u8; 2], BTreeMap<String, String>>> {
+    use chartered_db::crates::Crate;
+
     let mut tree: BTreeMap<[u8; 2], BTreeMap<[u8; 2], BTreeMap<String, String>>> = BTreeMap::new();
 
     // todo: handle files with 1/2/3 characters
-    for (crate_def, versions) in chartered_db::get_crates(db).await {
+    for (crate_def, versions) in Crate::all_with_versions(db).await.unwrap() {
         let mut name_chars = crate_def.name.as_bytes().iter();
         let first_dir = [*name_chars.next().unwrap(), *name_chars.next().unwrap()];
         let second_dir = [*name_chars.next().unwrap(), *name_chars.next().unwrap()];
