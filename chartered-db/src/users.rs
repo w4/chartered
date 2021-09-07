@@ -3,6 +3,7 @@ use super::{
     ConnectionPool, Result,
 };
 use diesel::{prelude::*, Associations, Identifiable, Queryable};
+use std::sync::Arc;
 
 #[derive(Identifiable, Queryable, Associations, PartialEq, Eq, Hash, Debug)]
 pub struct User {
@@ -36,8 +37,6 @@ impl User {
     ) -> Result<Option<User>> {
         use crate::schema::user_ssh_keys::dsl::ssh_key;
 
-        eprintln!("looking up by ssh key: {:x?}", given_ssh_key);
-
         tokio::task::spawn_blocking(move || {
             let conn = conn.get()?;
 
@@ -47,6 +46,26 @@ impl User {
                 .select((users::dsl::id, users::dsl::username))
                 .get_result(&conn)
                 .optional()?)
+        })
+        .await?
+    }
+
+    pub async fn accessible_crates(
+        self: Arc<Self>,
+        conn: ConnectionPool,
+    ) -> Result<Vec<(UserCratePermissionValue, crate::crates::Crate)>> {
+        use crate::schema::crates;
+
+        tokio::task::spawn_blocking(move || {
+            let conn = conn.get()?;
+
+            Ok(UserCratePermission::belonging_to(&*self)
+                .inner_join(crate::schema::crates::table)
+                .select((
+                    user_crate_permissions::permissions,
+                    (crates::dsl::id, crates::dsl::name),
+                ))
+                .load(&conn)?)
         })
         .await?
     }
@@ -60,13 +79,37 @@ pub struct UserApiKey {
     pub api_key: String,
 }
 
+bitflags::bitflags! {
+    #[derive(FromSqlRow, AsExpression)]
+    pub struct UserCratePermissionValue: i32 {
+        const VISIBLE         = 0b0000_0000_0000_0000_0000_0000_0000_0001;
+        const PUBLISH_VERSION = 0b0000_0000_0000_0000_0000_0000_0000_0010;
+        const YANK_VERSION    = 0b0000_0000_0000_0000_0000_0000_0000_0100;
+        const MANAGE_USERS    = 0b0000_0000_0000_0000_0000_0000_0000_1000;
+    }
+}
+
+impl<B: diesel::backend::Backend> diesel::deserialize::FromSql<diesel::sql_types::Integer, B>
+    for UserCratePermissionValue
+where
+    i32: diesel::deserialize::FromSql<diesel::sql_types::Integer, B>,
+{
+    fn from_sql(
+        bytes: Option<&B::RawValue>,
+    ) -> std::result::Result<UserCratePermissionValue, Box<dyn std::error::Error + Send + Sync>>
+    {
+        let val = i32::from_sql(bytes)?;
+        Ok(UserCratePermissionValue::from_bits_truncate(val))
+    }
+}
+
 #[derive(Identifiable, Queryable, Associations, PartialEq, Eq, Hash, Debug)]
 #[belongs_to(User)]
 pub struct UserCratePermission {
     pub id: i32,
     pub user_id: i32,
     pub crate_id: i32,
-    pub permissions: i32,
+    pub permissions: UserCratePermissionValue,
 }
 
 #[derive(Identifiable, Queryable, Associations, PartialEq, Eq, Hash, Debug)]

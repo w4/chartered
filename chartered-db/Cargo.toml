@@ -8,6 +8,7 @@ edition = "2018"
 [dependencies]
 chartered-fs = { path = "../chartered-fs" }
 
+bitflags = "1"
 diesel = { version = "1", features = ["sqlite", "r2d2"] }
 displaydoc = "0.2"
 itertools = "0.10"
