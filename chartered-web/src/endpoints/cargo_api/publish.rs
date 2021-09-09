@@ -1,8 +1,44 @@
 use axum::extract;
 use bytes::Bytes;
-use chartered_db::ConnectionPool;
+use chartered_db::{
+    crates::Crate,
+    users::{User, UserCratePermissionValue as Permission},
+    ConnectionPool,
+};
+use chartered_fs::FileSystem;
 use serde::{Deserialize, Serialize};
-use std::convert::TryInto;
+use sha2::{Digest, Sha256};
+use std::{convert::TryInto, sync::Arc};
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum Error {
+    #[error("Failed to query database")]
+    Database(#[from] chartered_db::Error),
+    #[error("The requested crate does not exist")]
+    NoCrate,
+    #[error("You don't have permission to publish versions for this crate")]
+    NoPermission,
+    #[error("Invalid JSON from client")]
+    JsonParse(#[from] serde_json::Error),
+    #[error("Invalid body")]
+    MetadataParse,
+}
+
+impl Error {
+    pub fn status_code(&self) -> axum::http::StatusCode {
+        use axum::http::StatusCode;
+
+        match self {
+            Self::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::NoCrate => StatusCode::NOT_FOUND,
+            Self::NoPermission => StatusCode::FORBIDDEN,
+            Self::JsonParse(_) | Self::MetadataParse => StatusCode::BAD_REQUEST,
+        }
+    }
+}
+
+define_error_response!(Error);
 
 #[derive(Serialize, Debug, Default)]
 pub struct PublishCrateResponse {
@@ -18,33 +54,35 @@ pub struct PublishCrateResponseWarnings {
 
 pub async fn handle(
     extract::Extension(db): extract::Extension<ConnectionPool>,
+    extract::Extension(user): extract::Extension<Arc<User>>,
     body: Bytes,
-) -> axum::response::Json<PublishCrateResponse> {
-    use chartered_fs::FileSystem;
-    use sha2::{Digest, Sha256};
+) -> Result<axum::response::Json<PublishCrateResponse>, Error> {
+    let (_, (metadata_bytes, crate_bytes)) =
+        parse(body.as_ref()).map_err(|_| Error::MetadataParse)?;
+    let metadata: Metadata = serde_json::from_slice(metadata_bytes)?;
 
-    let (_, (metadata_bytes, crate_bytes)) = parse(body.as_ref()).unwrap();
-
-    let metadata: Metadata = serde_json::from_slice(metadata_bytes).unwrap();
+    let crate_ = Crate::find_by_name(db.clone(), metadata.name.to_string())
+        .await?
+        .ok_or(Error::NoCrate)
+        .map(std::sync::Arc::new)?;
+    ensure_has_crate_perm!(
+        db, user, crate_,
+        Permission::VISIBLE | -> Error::NoCrate,
+        Permission::PUBLISH_VERSION | -> Error::NoPermission,
+    );
 
     let file_ref = chartered_fs::Local.write(crate_bytes).await.unwrap();
 
-    let mut response = PublishCrateResponse::default();
+    crate_
+        .publish_version(
+            db,
+            metadata.vers.to_string(),
+            file_ref,
+            hex::encode(Sha256::digest(crate_bytes)),
+        )
+        .await?;
 
-    if let Err(e) = chartered_db::crates::publish_crate(
-        db,
-        metadata.name.to_string(),
-        metadata.vers.to_string(),
-        file_ref,
-        hex::encode(Sha256::digest(crate_bytes)),
-    )
-    .await
-    {
-        // todo: should this be a normal http error?
-        response.warnings.other.push(e.to_string());
-    }
-
-    axum::response::Json(response)
+    Ok(axum::response::Json(PublishCrateResponse::default()))
 }
 
 fn parse(body: &[u8]) -> nom::IResult<&[u8], (&[u8], &[u8])> {

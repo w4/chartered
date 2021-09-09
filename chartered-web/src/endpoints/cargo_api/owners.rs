@@ -6,11 +6,28 @@ use chartered_db::{
 };
 use serde::Serialize;
 use std::sync::Arc;
+use thiserror::Error;
 
-define_error!(
-    Database(_e: chartered_db::Error) => INTERNAL_SERVER_ERROR / "Failed to query database",
-    NoCrate => NOT_FOUND / "The requested crate does not exist",
-);
+#[derive(Error, Debug)]
+pub enum Error {
+    #[error("Failed to query database")]
+    Database(#[from] chartered_db::Error),
+    #[error("The requested crate does not exist")]
+    NoCrate,
+}
+
+impl Error {
+    pub fn status_code(&self) -> axum::http::StatusCode {
+        use axum::http::StatusCode;
+
+        match self {
+            Self::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::NoCrate => StatusCode::NOT_FOUND,
+        }
+    }
+}
+
+define_error_response!(Error);
 
 #[derive(Serialize)]
 pub struct GetResponse {
@@ -29,8 +46,14 @@ pub async fn handle_get(
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(user): extract::Extension<Arc<User>>,
 ) -> Result<Json<GetResponse>, Error> {
-    let crate_ = get_crate!(db, name; || -> Error::NoCrate);
-    ensure_has_crate_perm!(db, user, crate_, Permission::VISIBLE; || -> Error::NoCrate);
+    let crate_ = Crate::find_by_name(db.clone(), name)
+        .await?
+        .ok_or(Error::NoCrate)
+        .map(std::sync::Arc::new)?;
+    ensure_has_crate_perm!(
+        db, user, crate_,
+        Permission::VISIBLE | -> Error::NoCrate
+    );
 
     let users = crate_
         .owners(db)

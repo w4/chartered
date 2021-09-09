@@ -69,17 +69,15 @@ impl User {
         .await?
     }
 
-    pub async fn has_crate_permission(
+    pub async fn get_crate_permissions(
         self: Arc<Self>,
         conn: ConnectionPool,
         crate_id: i32,
-        requested_permissions: UserCratePermissionValue,
-    ) -> Result<bool> {
-        let perms = UserCratePermission::find(conn, self.id, crate_id)
+    ) -> Result<UserCratePermissionValue> {
+        Ok(UserCratePermission::find(conn, self.id, crate_id)
             .await?
-            .unwrap_or_default();
-
-        Ok(perms.permissions.contains(requested_permissions))
+            .unwrap_or_default()
+            .permissions)
     }
 }
 

@@ -49,7 +49,7 @@ async fn main() {
         .route("/crates/:crate/:version/unyank", put(hello_world))
         .route(
             "/crates/:crate/:version/download",
-            get(endpoints::cargo_api::download),
+            get(endpoints::cargo_api::download)
         ))
     .layer(
         ServiceBuilder::new()

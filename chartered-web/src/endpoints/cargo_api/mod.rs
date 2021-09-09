@@ -1,20 +1,12 @@
-macro_rules! get_crate {
-    ($db:expr, $name:expr; || -> $error:expr) => {
-        Crate::find_by_name($db.clone(), $name)
-            .await?
-            .ok_or($error)
-            .map(std::sync::Arc::new)?
-    };
-}
-
 macro_rules! ensure_has_crate_perm {
-    ($db:expr, $user:expr, $crate_expr:expr, $permissions:expr; || -> $error:expr) => {{
-        if !$user
-            .has_crate_permission($db.clone(), $crate_expr.id, $permissions)
-            .await?
-        {
-            return Err($error);
-        }
+    ($db:expr, $user:expr, $crate_expr:expr, $($permission:path | -> $error:expr$(,)?),*) => {{
+        let perms = $user.get_crate_permissions($db.clone(), $crate_expr.id).await?;
+
+        $(
+            if !perms.contains($permission) {
+                return Err($error);
+            }
+        )*
     }};
 }
 

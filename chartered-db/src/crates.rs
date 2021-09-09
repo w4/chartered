@@ -2,9 +2,7 @@ use super::{
     schema::{crate_versions, crates},
     BitwiseExpressionMethods, ConnectionPool, Result,
 };
-use diesel::{
-    insert_into, insert_or_ignore_into, prelude::*, Associations, Identifiable, Queryable,
-};
+use diesel::{insert_into, prelude::*, Associations, Identifiable, Queryable};
 use itertools::Itertools;
 use std::{collections::HashMap, sync::Arc};
 
@@ -91,6 +89,34 @@ impl Crate {
         })
         .await?
     }
+
+    pub async fn publish_version(
+        self: Arc<Self>,
+        conn: ConnectionPool,
+        version_string: String,
+        file_identifier: chartered_fs::FileReference,
+        file_checksum: String,
+    ) -> Result<()> {
+        use crate::schema::crate_versions::dsl::{
+            checksum, crate_id, crate_versions, filesystem_object, version,
+        };
+
+        tokio::task::spawn_blocking(move || {
+            let conn = conn.get()?;
+
+            insert_into(crate_versions)
+                .values((
+                    crate_id.eq(self.id),
+                    version.eq(version_string),
+                    filesystem_object.eq(file_identifier.to_string()),
+                    checksum.eq(file_checksum),
+                ))
+                .execute(&conn)?;
+
+            Ok(())
+        })
+        .await?
+    }
 }
 
 #[derive(Identifiable, Queryable, Associations, PartialEq, Debug)]
@@ -102,39 +128,4 @@ pub struct CrateVersion {
     pub filesystem_object: String,
     pub yanked: bool,
     pub checksum: String,
-}
-
-pub async fn publish_crate(
-    conn: ConnectionPool,
-    crate_name: String,
-    version_string: String,
-    file_identifier: chartered_fs::FileReference,
-    file_checksum: String,
-) -> Result<()> {
-    use crate::schema::{
-        crate_versions::dsl::{checksum, crate_id, crate_versions, filesystem_object, version},
-        crates::dsl::{crates, name},
-    };
-
-    tokio::task::spawn_blocking(move || {
-        let conn = conn.get()?;
-
-        insert_or_ignore_into(crates)
-            .values(name.eq(&crate_name))
-            .execute(&conn)?;
-
-        let selected_crate = crates.filter(name.eq(crate_name)).first::<Crate>(&conn)?;
-
-        insert_into(crate_versions)
-            .values((
-                crate_id.eq(selected_crate.id),
-                version.eq(version_string),
-                filesystem_object.eq(file_identifier.to_string()),
-                checksum.eq(file_checksum),
-            ))
-            .execute(&conn)?;
-
-        Ok(())
-    })
-    .await?
 }
