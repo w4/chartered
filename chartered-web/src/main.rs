@@ -39,7 +39,10 @@ async fn main() {
     let api_authenticated = axum_box_after_every_route!(Router::new()
         .route("/crates/new", put(endpoints::cargo_api::publish))
         .route("/crates/search", get(hello_world))
-        .route("/crates/:crate/owners", get(hello_world))
+        .route(
+            "/crates/:crate/owners",
+            get(endpoints::cargo_api::get_owners)
+        )
         .route("/crates/:crate/owners", put(hello_world))
         .route("/crates/:crate/owners", delete(hello_world))
         .route("/crates/:crate/:version/yank", delete(hello_world))

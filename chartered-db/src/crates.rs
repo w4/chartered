@@ -1,6 +1,6 @@
 use super::{
     schema::{crate_versions, crates},
-    ConnectionPool, Result,
+    BitwiseExpressionMethods, ConnectionPool, Result,
 };
 use diesel::{
     insert_into, insert_or_ignore_into, prelude::*, Associations, Identifiable, Queryable,
@@ -67,6 +67,27 @@ impl Crate {
                 .filter(version.eq(crate_version))
                 .get_result::<CrateVersion>(&conn)
                 .optional()?)
+        })
+        .await?
+    }
+
+    pub async fn owners(self: Arc<Self>, conn: ConnectionPool) -> Result<Vec<crate::users::User>> {
+        tokio::task::spawn_blocking(move || {
+            use crate::schema::user_crate_permissions::{
+                dsl::permissions, dsl::user_crate_permissions,
+            };
+
+            let conn = conn.get()?;
+
+            Ok(user_crate_permissions
+                .filter(
+                    permissions
+                        .bitwise_and(crate::users::UserCratePermissionValue::MANAGE_USERS.bits())
+                        .ne(0),
+                )
+                .inner_join(crate::schema::users::dsl::users)
+                .select(crate::schema::users::all_columns)
+                .load::<crate::users::User>(&conn)?)
         })
         .await?
     }

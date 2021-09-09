@@ -1,3 +1,8 @@
+#[derive(serde::Serialize)]
+pub struct ErrorResponse {
+    error: &'static str,
+}
+
 macro_rules! define_error {
     ($($kind:ident$(($inner_name:ident: $inner:ty))? => $status:ident / $public_text:expr,)*) => {
         #[derive(thiserror::Error, Debug)]
@@ -16,23 +21,21 @@ macro_rules! define_error {
         }
 
         impl axum::response::IntoResponse for Error {
-            type Body = axum::body::Body;
+            type Body = axum::body::Full<axum::body::Bytes>;
             type BodyError = <Self::Body as axum::body::HttpBody>::Error;
 
             fn into_response(self) -> axum::http::Response<Self::Body> {
-                log::error!("Failed to handle request: {:?}", self);
-
                 let (status, body) = match self {
                     $(Self::$kind$(($inner_name))? => (
                         axum::http::StatusCode::$status,
-                        $public_text.into(),
+                        serde_json::to_vec(&crate::endpoints::ErrorResponse { error: $public_text }).unwrap(),
                     )),*
                 };
 
-                axum::http::Response::builder()
-                    .status(status)
-                    .body(body)
-                    .unwrap()
+                let mut res = axum::http::Response::new(axum::body::Full::from(body));
+                *res.status_mut() = status;
+                res.headers_mut().insert(axum::http::header::CONTENT_TYPE, axum::http::header::HeaderValue::from_static("application/json"));
+                res
             }
         }
     };

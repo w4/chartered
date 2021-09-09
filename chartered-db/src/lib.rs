@@ -8,7 +8,10 @@ pub mod users;
 #[macro_use]
 extern crate diesel;
 
-use diesel::r2d2::{ConnectionManager, Pool};
+use diesel::{
+    expression::{AsExpression, Expression},
+    r2d2::{ConnectionManager, Pool},
+};
 use displaydoc::Display;
 use std::sync::Arc;
 use thiserror::Error;
@@ -30,10 +33,15 @@ pub enum Error {
     TaskJoin(#[from] tokio::task::JoinError),
 }
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
+diesel_infix_operator!(BitwiseAnd, " & ", diesel::sql_types::Integer);
+
+trait BitwiseExpressionMethods: Expression<SqlType = diesel::sql_types::Integer> + Sized {
+    fn bitwise_and<T: AsExpression<diesel::sql_types::Integer>>(
+        self,
+        other: T,
+    ) -> BitwiseAnd<Self, T::Expression> {
+        BitwiseAnd::new(self.as_expression(), other.as_expression())
     }
 }
+
+impl<T: Expression<SqlType = diesel::sql_types::Integer>> BitwiseExpressionMethods for T {}

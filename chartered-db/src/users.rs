@@ -37,6 +37,8 @@ impl User {
     ) -> Result<Option<User>> {
         use crate::schema::user_ssh_keys::dsl::ssh_key;
 
+        eprintln!("ssh key: {:x?}", given_ssh_key);
+
         tokio::task::spawn_blocking(move || {
             let conn = conn.get()?;
 
@@ -61,13 +63,23 @@ impl User {
 
             Ok(UserCratePermission::belonging_to(&*self)
                 .inner_join(crate::schema::crates::table)
-                .select((
-                    user_crate_permissions::permissions,
-                    (crates::dsl::id, crates::dsl::name),
-                ))
+                .select((user_crate_permissions::permissions, crates::all_columns))
                 .load(&conn)?)
         })
         .await?
+    }
+
+    pub async fn has_crate_permission(
+        self: Arc<Self>,
+        conn: ConnectionPool,
+        crate_id: i32,
+        requested_permissions: UserCratePermissionValue,
+    ) -> Result<bool> {
+        let perms = UserCratePermission::find(conn, self.id, crate_id)
+            .await?
+            .unwrap_or_default();
+
+        Ok(perms.permissions.contains(requested_permissions))
     }
 }
 
