@@ -97,17 +97,14 @@ impl server::Handler for Handler {
     type FutureBool = futures::future::Ready<Result<(Self, Session, bool), anyhow::Error>>;
 
     fn finished_auth(self, auth: Auth) -> Self::FutureAuth {
-        eprintln!("finished auth");
         Box::pin(futures::future::ready(Ok((self, auth))))
     }
 
     fn finished_bool(self, b: bool, s: Session) -> Self::FutureBool {
-        eprintln!("finished bool");
         futures::future::ready(Ok((self, s, b)))
     }
 
     fn finished(self, s: Session) -> Self::FutureUnit {
-        eprintln!("finished");
         Box::pin(futures::future::ready(Ok((self, s))))
     }
 
@@ -207,16 +204,30 @@ impl server::Handler for Handler {
             let mut done = false;
 
             while let Some(frame) = self.codec.decode(&mut self.input_bytes)? {
-                eprintln!("data: {:x?}", frame);
+                eprintln!("{:#?}", frame);
 
-                if frame.as_ref() == "command=ls-refs".as_bytes() {
-                    ls_refs = true;
-                } else if frame.as_ref() == "command=fetch".as_bytes() {
-                    fetch = true;
-                } else if frame.as_ref() == "done".as_bytes() {
-                    fetch = false;
-                    done = true;
+                // if the client flushed without giving us a command, we're expected to close
+                // the connection or else the client will just hang
+                if frame.command.is_empty() {
+                    session.exit_status_request(channel, 0);
+                    session.eof(channel);
+                    session.close(channel);
+                    return Ok((self, session));
                 }
+
+                if frame.command.as_ref() == "command=ls-refs".as_bytes() {
+                    ls_refs = true;
+                } else if frame.command.as_ref() == "command=fetch".as_bytes() {
+                    if frame.metadata.iter().any(|v| v.as_ref() == b"done") {
+                        done = true;
+                    } else {
+                        fetch = true;
+                    }
+                }
+            }
+
+            if !ls_refs && !fetch && !done {
+                return Ok((self, session));
             }
 
             // echo -ne "0012command=fetch\n0001000ethin-pack\n0010include-tag\n000eofs-delta\n0032want d24d8020163b5fee57c9babfd0c595b8c90ba253\n0009done\n"
