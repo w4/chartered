@@ -55,6 +55,7 @@ impl server::Server for Server {
             output_bytes: BytesMut::default(),
             db: self.db.clone(),
             user: None,
+            user_ssh_key: None,
         }
     }
 }
@@ -65,6 +66,7 @@ struct Handler {
     output_bytes: BytesMut,
     db: chartered_db::ConnectionPool,
     user: Option<chartered_db::users::User>,
+    user_ssh_key: Option<Arc<chartered_db::users::UserSshKey>>,
 }
 
 impl Handler {
@@ -165,7 +167,7 @@ impl server::Handler for Handler {
         let public_key = key.public_key_bytes();
 
         Box::pin(async move {
-            let login_user =
+            let (ssh_key, login_user) =
                 match chartered_db::users::User::find_by_ssh_key(self.db.clone(), public_key)
                     .await?
                 {
@@ -174,6 +176,7 @@ impl server::Handler for Handler {
                 };
 
             self.user = Some(login_user);
+            self.user_ssh_key = Some(Arc::new(ssh_key));
             self.finished_auth(server::Auth::Accept).await
         })
     }
@@ -235,9 +238,19 @@ impl server::Handler for Handler {
             let mut pack_file_entries = Vec::new();
             let mut root_tree = Vec::new();
 
-            let config_file = PackFileEntry::Blob(
-                br#"{"dl":"http://127.0.0.1:8888/a/abc/api/v1/crates","api":"http://127.0.0.1:8888/a/abc"}"#,
+            // TODO: key should be cached
+            let config = format!(
+                r#"{{"dl":"http://127.0.0.1:8888/a/{key}/api/v1/crates","api":"http://127.0.0.1:8888/a/{key}"}}"#,
+                key = self
+                    .user_ssh_key
+                    .as_ref()
+                    .unwrap()
+                    .clone()
+                    .get_or_insert_api_key(self.db.clone())
+                    .await?
+                    .api_key,
             );
+            let config_file = PackFileEntry::Blob(config.as_bytes());
 
             root_tree.push(TreeItem {
                 kind: TreeItemKind::File,

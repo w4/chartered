@@ -30,7 +30,10 @@ CREATE TABLE user_api_keys (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     api_key VARCHAR(255) NOT NULL UNIQUE,
+    user_ssh_key_id INTEGER,
+    expires_at DATETIME,
     FOREIGN KEY (user_id) REFERENCES users (id)
+    FOREIGN KEY (user_ssh_key_id) REFERENCES user_ssh_keys (id)
 );
 
 CREATE TABLE user_crate_permissions (

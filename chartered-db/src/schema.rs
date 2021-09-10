@@ -21,6 +21,8 @@ table! {
         id -> Integer,
         user_id -> Integer,
         api_key -> Text,
+        user_ssh_key_id -> Nullable<Integer>,
+        expires_at -> Nullable<Timestamp>,
     }
 }
 
@@ -49,6 +51,7 @@ table! {
 }
 
 joinable!(crate_versions -> crates (crate_id));
+joinable!(user_api_keys -> user_ssh_keys (user_ssh_key_id));
 joinable!(user_api_keys -> users (user_id));
 joinable!(user_crate_permissions -> crates (crate_id));
 joinable!(user_crate_permissions -> users (user_id));

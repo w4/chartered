@@ -2,7 +2,8 @@ use super::{
     schema::{user_api_keys, user_crate_permissions, user_ssh_keys, users},
     ConnectionPool, Result,
 };
-use diesel::{prelude::*, Associations, Identifiable, Queryable};
+use diesel::{insert_into, prelude::*, Associations, Identifiable, Queryable};
+use rand::{thread_rng, Rng};
 use std::sync::Arc;
 
 #[derive(Identifiable, Queryable, Associations, PartialEq, Eq, Hash, Debug)]
@@ -16,12 +17,17 @@ impl User {
         conn: ConnectionPool,
         given_api_key: String,
     ) -> Result<Option<User>> {
-        use crate::schema::user_api_keys::dsl::api_key;
+        use crate::schema::user_api_keys::dsl::{api_key, expires_at};
 
         tokio::task::spawn_blocking(move || {
             let conn = conn.get()?;
 
             Ok(crate::schema::user_api_keys::table
+                .filter(
+                    expires_at
+                        .is_null()
+                        .or(expires_at.gt(chrono::Utc::now().naive_utc())),
+                )
                 .filter(api_key.eq(given_api_key))
                 .inner_join(users::table)
                 .select((users::dsl::id, users::dsl::username))
@@ -34,7 +40,7 @@ impl User {
     pub async fn find_by_ssh_key(
         conn: ConnectionPool,
         given_ssh_key: Vec<u8>,
-    ) -> Result<Option<User>> {
+    ) -> Result<Option<(UserSshKey, User)>> {
         use crate::schema::user_ssh_keys::dsl::ssh_key;
 
         eprintln!("ssh key: {:x?}", given_ssh_key);
@@ -45,7 +51,7 @@ impl User {
             Ok(crate::schema::user_ssh_keys::table
                 .filter(ssh_key.eq(given_ssh_key))
                 .inner_join(users::table)
-                .select((users::dsl::id, users::dsl::username))
+                .select((user_ssh_keys::all_columns, users::all_columns))
                 .get_result(&conn)
                 .optional()?)
         })
@@ -83,10 +89,50 @@ impl User {
 
 #[derive(Identifiable, Queryable, Associations, PartialEq, Eq, Hash, Debug)]
 #[belongs_to(User)]
+#[belongs_to(UserSshKey)]
 pub struct UserApiKey {
     pub id: i32,
     pub user_id: i32,
     pub api_key: String,
+    pub user_ssh_key_id: Option<i32>,
+    pub expires_at: Option<chrono::NaiveDateTime>,
+}
+
+impl UserApiKey {
+    pub async fn generate(
+        conn: ConnectionPool,
+        given_user_id: i32,
+        given_user_ssh_key_id: Option<i32>,
+        given_expires_at: Option<chrono::NaiveDateTime>,
+    ) -> Result<UserApiKey> {
+        use crate::schema::user_api_keys::dsl::{
+            api_key, expires_at, user_api_keys, user_id, user_ssh_key_id,
+        };
+
+        tokio::task::spawn_blocking(move || {
+            let conn = conn.get()?;
+
+            let generated_api_key: String = thread_rng()
+                .sample_iter(&rand::distributions::Alphanumeric)
+                .take(48)
+                .map(char::from)
+                .collect();
+
+            insert_into(user_api_keys)
+                .values((
+                    user_id.eq(given_user_id),
+                    api_key.eq(&generated_api_key),
+                    user_ssh_key_id.eq(given_user_ssh_key_id),
+                    expires_at.eq(given_expires_at),
+                ))
+                .execute(&conn)?;
+
+            Ok(crate::schema::user_api_keys::table
+                .filter(api_key.eq(generated_api_key))
+                .get_result(&conn)?)
+        })
+        .await?
+    }
 }
 
 bitflags::bitflags! {
@@ -149,4 +195,43 @@ pub struct UserSshKey {
     pub id: i32,
     pub user_id: i32,
     pub ssh_key: Vec<u8>,
+}
+
+impl UserSshKey {
+    /// Every SSH key should have a corresponding API key so when the config is pulled from git we
+    /// can return a key in there. The API key might have, however, been compromised and removed
+    /// using the Web UI/database/etc - this function will regenerate the key on next pull so
+    /// there's no disruption in service.
+    pub async fn get_or_insert_api_key(
+        self: Arc<Self>,
+        conn: ConnectionPool,
+    ) -> Result<UserApiKey> {
+        use crate::schema::user_api_keys::dsl::{expires_at, user_id};
+
+        let res: Option<UserApiKey> = tokio::task::spawn_blocking({
+            let conn = conn.clone();
+            let this = self.clone();
+            move || {
+                let conn = conn.get()?;
+
+                UserApiKey::belonging_to(&*this)
+                    .filter(
+                        expires_at
+                            .is_null()
+                            .or(expires_at.gt(chrono::Utc::now().naive_utc())),
+                    )
+                    .filter(user_id.eq(this.user_id))
+                    .get_result(&conn)
+                    .optional()
+                    .map_err(crate::Error::Query)
+            }
+        })
+        .await??;
+
+        if let Some(res) = res {
+            Ok(res)
+        } else {
+            UserApiKey::generate(conn, self.user_id, Some(self.id), None).await
+        }
+    }
 }
