@@ -87,6 +87,13 @@ impl Handler {
             None => anyhow::bail!("user not set after auth"),
         }
     }
+
+    fn user_ssh_key(&self) -> Result<&Arc<chartered_db::users::UserSshKey>, anyhow::Error> {
+        match self.user_ssh_key {
+            Some(ref ssh_key) => Ok(ssh_key),
+            None => anyhow::bail!("user not set after auth"),
+        }
+    }
 }
 
 type AsyncHandlerFut<T> =
@@ -242,9 +249,7 @@ impl server::Handler for Handler {
             let config = format!(
                 r#"{{"dl":"http://127.0.0.1:8888/a/{key}/api/v1/crates","api":"http://127.0.0.1:8888/a/{key}"}}"#,
                 key = self
-                    .user_ssh_key
-                    .as_ref()
-                    .unwrap()
+                    .user_ssh_key()?
                     .clone()
                     .get_or_insert_api_key(self.db.clone())
                     .await?
@@ -259,8 +264,9 @@ impl server::Handler for Handler {
             });
             pack_file_entries.push(config_file);
 
-            // todo: this needs caching and filtering
-            let tree = fetch_tree(self.db.clone()).await;
+            // todo: the whole tree needs caching and then we can filter in code rather than at
+            //  the database
+            let tree = fetch_tree(self.db.clone(), self.user()?.id).await;
             build_tree(&mut root_tree, &mut pack_file_entries, &tree)?;
 
             let root_tree = PackFileEntry::Tree(root_tree);
@@ -343,13 +349,14 @@ pub type TwoCharTree<T> = BTreeMap<[u8; 2], T>;
 
 async fn fetch_tree(
     db: chartered_db::ConnectionPool,
+    user_id: i32,
 ) -> TwoCharTree<TwoCharTree<BTreeMap<String, String>>> {
     use chartered_db::crates::Crate;
 
     let mut tree: TwoCharTree<TwoCharTree<BTreeMap<String, String>>> = BTreeMap::new();
 
     // todo: handle files with 1/2/3 characters
-    for (crate_def, versions) in Crate::all_with_versions(db).await.unwrap() {
+    for (crate_def, versions) in Crate::all_visible_with_versions(db, user_id).await.unwrap() {
         let mut name_chars = crate_def.name.as_bytes().iter();
         let first_dir = [*name_chars.next().unwrap(), *name_chars.next().unwrap()];
         let second_dir = [*name_chars.next().unwrap(), *name_chars.next().unwrap()];

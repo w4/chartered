@@ -28,6 +28,30 @@ impl Crate {
         .await?
     }
 
+    pub async fn all_visible_with_versions(
+        conn: ConnectionPool,
+        given_user_id: i32,
+    ) -> Result<HashMap<Crate, Vec<CrateVersion>>> {
+        tokio::task::spawn_blocking(move || {
+            let conn = conn.get()?;
+
+            let crate_versions = crates::table
+                .inner_join(crate::schema::user_crate_permissions::table)
+                .filter(
+                    crate::schema::user_crate_permissions::permissions
+                        .bitwise_and(crate::users::UserCratePermissionValue::VISIBLE.bits())
+                        .ne(0),
+                )
+                .filter(crate::schema::user_crate_permissions::dsl::user_id.eq(given_user_id))
+                .inner_join(crate_versions::table)
+                .select((crates::all_columns, crate_versions::all_columns))
+                .load(&conn)?;
+
+            Ok(crate_versions.into_iter().into_grouping_map().collect())
+        })
+        .await?
+    }
+
     pub async fn find_by_name(conn: ConnectionPool, crate_name: String) -> Result<Option<Self>> {
         use crate::schema::crates::dsl::{crates, name};
 
