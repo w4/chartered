@@ -4,18 +4,13 @@ a little dig at creating a private cargo repository with authenticated downloads
 a git server we setup that we can serve a fake index from generated just for the authenticated user that we can embed
 authentication credentials into.
 
-i've got git connecting to this server and attempting to communicate with it after sending a little bit of hard-coded
-preamble.
-
-next steps:
-
-- ~reverse engineer & create tokio codec for the git protocol~ **now successfully generating a repo, tree & blob in memory git clients can understand!**
-- clean up all the hacked-together code and package it all up into a nice library for generating git commit objects etc
-- ~serve cargo manifest over git (how does git handle 'force pushes' from server -> client? lets see how they like it for once, i'm sick of people picking on servers all the time)~ **turns out, very well - they've helpfully included the --force flag in their `git fetch` call so we can serve a completely different commit on every pull if we wanted to and not have to worry about conflicts**
-- serve .crate files over http using auth tokens we generated while serving the manifest
-
 [open tasks](https://github.com/w4/chartered/issues)
 
-#### open q's
+#### fine grained permissions per user per crate
 
-maybe it'd be better to use git directly and create an index on the filesystem just for the user? seems less fun though
+- VISIBLE
+- PUBLISH_VERSION
+- YANK_VERSION
+- MANAGE_USERS
+
+(support for groups coming)
