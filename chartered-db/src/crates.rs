@@ -188,6 +188,30 @@ impl Crate {
         })
         .await?
     }
+
+    pub async fn yank_version(
+        self: Arc<Self>,
+        conn: ConnectionPool,
+        given_version: String,
+        yank: bool,
+    ) -> Result<()> {
+        use crate::schema::crate_versions::dsl::{crate_id, crate_versions, version, yanked};
+
+        tokio::task::spawn_blocking(move || {
+            let conn = conn.get()?;
+
+            diesel::update(
+                crate_versions
+                    .filter(crate_id.eq(self.id))
+                    .filter(version.eq(given_version)),
+            )
+            .set(yanked.eq(yank))
+            .execute(&conn)?;
+
+            Ok(())
+        })
+        .await?
+    }
 }
 
 impl<'a> From<Vec<chartered_types::cargo::CrateDependency<'a>>> for CrateDependencies<'a> {

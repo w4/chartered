@@ -45,8 +45,14 @@ async fn main() {
         )
         .route("/crates/:crate/owners", put(hello_world))
         .route("/crates/:crate/owners", delete(hello_world))
-        .route("/crates/:crate/:version/yank", delete(hello_world))
-        .route("/crates/:crate/:version/unyank", put(hello_world))
+        .route(
+            "/crates/:crate/:version/yank",
+            delete(endpoints::cargo_api::yank)
+        )
+        .route(
+            "/crates/:crate/:version/unyank",
+            put(endpoints::cargo_api::unyank)
+        )
         .route(
             "/crates/:crate/:version/download",
             get(endpoints::cargo_api::download)
