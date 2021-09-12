@@ -7,6 +7,7 @@ edition = "2018"
 
 [dependencies]
 chartered-fs = { path = "../chartered-fs" }
+chartered-types = { path = "../chartered-types" }
 
 bitflags = "1"
 chrono = "0.4"
@@ -14,6 +15,8 @@ diesel = { version = "1", features = ["sqlite", "r2d2", "chrono"] }
 displaydoc = "0.2"
 itertools = "0.10"
 rand = "0.8"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 thiserror = "1"
 tokio = "1"
 dotenv = "0.15"

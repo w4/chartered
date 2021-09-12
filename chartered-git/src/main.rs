@@ -336,13 +336,10 @@ impl server::Handler for Handler {
 
 #[derive(serde::Serialize)]
 pub struct CrateFileEntry<'a> {
-    name: &'a str,
-    vers: &'a str,
-    deps: &'a [&'a str],
+    #[serde(flatten)]
+    inner: &'a chartered_types::cargo::CrateVersion<'a>,
     cksum: &'a str,
-    features: BTreeMap<String, Vec<String>>,
     yanked: bool,
-    links: Option<()>,
 }
 
 pub type TwoCharTree<T> = BTreeMap<[u8; 2], T>;
@@ -366,14 +363,14 @@ async fn fetch_tree(
 
         let mut file = String::new();
         for version in versions {
+            let cksum = version.checksum.clone();
+            let yanked = version.yanked;
+            let version = version.into_cargo_format(&crate_def);
+
             let entry = CrateFileEntry {
-                name: &crate_def.name,
-                vers: &version.version,
-                deps: &[],
-                cksum: &version.checksum,
-                features: BTreeMap::new(),
-                yanked: version.yanked,
-                links: None,
+                inner: &version,
+                cksum: &cksum,
+                yanked,
             };
 
             file.push_str(&serde_json::to_string(&entry).unwrap());

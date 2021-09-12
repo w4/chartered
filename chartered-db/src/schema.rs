@@ -6,6 +6,9 @@ table! {
         filesystem_object -> Text,
         yanked -> Bool,
         checksum -> Text,
+        dependencies -> Binary,
+        features -> Binary,
+        links -> Nullable<Text>,
     }
 }
 

@@ -10,6 +10,9 @@ CREATE TABLE crate_versions (
     filesystem_object VARCHAR(255) NOT NULL,
     yanked BOOLEAN NOT NULL DEFAULT FALSE,
     checksum VARCHAR(255) NOT NULL,
+    dependencies BLOB NOT NULL,
+    features BLOB NOT NULL,
+    links VARCHAR(255),
     UNIQUE (crate_id, version),
     FOREIGN KEY (crate_id) REFERENCES crates (id)
 );

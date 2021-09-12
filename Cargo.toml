@@ -4,4 +4,5 @@ members = [
     "chartered-web",
     "chartered-fs",
     "chartered-db",
+    "chartered-types",
 ]

@@ -19,7 +19,7 @@ pub enum Error {
     NoCrate,
     #[error("You don't have permission to publish versions for this crate")]
     NoPermission,
-    #[error("Invalid JSON from client")]
+    #[error("Invalid JSON from client: {0}")]
     JsonParse(#[from] serde_json::Error),
     #[error("Invalid body")]
     MetadataParse,
@@ -61,7 +61,7 @@ pub async fn handle(
         parse(body.as_ref()).map_err(|_| Error::MetadataParse)?;
     let metadata: Metadata = serde_json::from_slice(metadata_bytes)?;
 
-    let crate_ = Crate::find_by_name(db.clone(), metadata.name.to_string())
+    let crate_ = Crate::find_by_name(db.clone(), metadata.inner.name.to_string())
         .await?
         .ok_or(Error::NoCrate)
         .map(std::sync::Arc::new)?;
@@ -76,9 +76,9 @@ pub async fn handle(
     crate_
         .publish_version(
             db,
-            metadata.vers.to_string(),
             file_ref,
             hex::encode(Sha256::digest(crate_bytes)),
+            metadata.inner.into_owned(),
         )
         .await?;
 
@@ -103,10 +103,6 @@ fn parse(body: &[u8]) -> nom::IResult<&[u8], (&[u8], &[u8])> {
 
 #[derive(Deserialize, Debug)]
 pub struct Metadata<'a> {
-    name: &'a str,
-    vers: &'a str,
-    deps: Vec<MetadataDependency<'a>>,
-    features: std::collections::HashMap<&'a str, Vec<&'a str>>,
     authors: Vec<&'a str>,
     description: Option<&'a str>,
     documentation: Option<&'a str>,
@@ -118,18 +114,6 @@ pub struct Metadata<'a> {
     license: Option<&'a str>,
     license_file: Option<&'a str>,
     repository: Option<&'a str>,
-    links: Option<&'a str>,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct MetadataDependency<'a> {
-    name: &'a str,
-    version_req: &'a str,
-    features: Vec<&'a str>,
-    optional: bool,
-    default_features: bool,
-    target: Option<&'a str>,
-    kind: &'a str, // 'dev', 'build', or 'normal'
-    registry: &'a str,
-    explicit_name_in_toml: Option<&'a str>,
+    #[serde(flatten)]
+    inner: chartered_types::cargo::CrateVersion<'a>,
 }

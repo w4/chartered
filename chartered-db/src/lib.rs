@@ -1,6 +1,34 @@
 #![deny(clippy::pedantic)]
 #![allow(clippy::missing_errors_doc)]
 
+macro_rules! derive_diesel_json {
+    ($typ:ident$(<$lt:lifetime>)?) => {
+        impl<$($lt, )?B: diesel::backend::Backend>
+            diesel::deserialize::FromSql<diesel::sql_types::Blob, B> for $typ$(<$lt>)?
+        where
+            Vec<u8>: diesel::deserialize::FromSql<diesel::sql_types::Blob, B>,
+        {
+            fn from_sql(bytes: Option<&B::RawValue>) -> diesel::deserialize::Result<Self> {
+                let bytes = <Vec<u8>>::from_sql(bytes)?; // todo: we either have to allocate or deal with a raw pointer...
+                serde_json::from_slice(&bytes).map_err(|_| "Invalid Json".into())
+            }
+        }
+
+        impl<$($lt, )?B: diesel::backend::Backend> diesel::serialize::ToSql<diesel::sql_types::Blob, B>
+            for $typ$(<$lt>)?
+        {
+            fn to_sql<W: std::io::Write>(
+                &self,
+                out: &mut diesel::serialize::Output<W, B>,
+            ) -> diesel::serialize::Result {
+                serde_json::to_writer(out, self)
+                    .map(|_| diesel::serialize::IsNull::No)
+                    .map_err(Into::into)
+            }
+        }
+    };
+}
+
 pub mod crates;
 pub mod schema;
 pub mod users;

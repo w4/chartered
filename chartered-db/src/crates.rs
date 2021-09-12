@@ -4,6 +4,7 @@ use super::{
 };
 use diesel::{insert_into, prelude::*, Associations, Identifiable, Queryable};
 use itertools::Itertools;
+use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, sync::Arc};
 
 #[derive(Identifiable, Queryable, PartialEq, Eq, Hash, Debug)]
@@ -12,10 +13,49 @@ pub struct Crate {
     pub name: String,
 }
 
+#[derive(Identifiable, Queryable, Associations, PartialEq, Debug)]
+#[belongs_to(Crate)]
+pub struct CrateVersion<'a> {
+    pub id: i32,
+    pub crate_id: i32,
+    pub version: String,
+    pub filesystem_object: String,
+    pub yanked: bool,
+    pub checksum: String,
+    pub dependencies: CrateDependencies<'a>,
+    pub features: CrateFeatures,
+    pub links: Option<String>,
+}
+
+impl<'a> CrateVersion<'a> {
+    #[must_use]
+    pub fn into_cargo_format(self, crate_: &'a Crate) -> chartered_types::cargo::CrateVersion<'a> {
+        chartered_types::cargo::CrateVersion {
+            name: crate_.name.as_str().into(),
+            vers: self.version.into(),
+            deps: self.dependencies.0,
+            features: self.features.0,
+            links: self.links.map(Into::into),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, FromSqlRow, AsExpression, Debug, Clone, PartialEq, Eq)]
+#[sql_type = "diesel::sql_types::Blob"]
+pub struct CrateDependencies<'a>(pub Vec<chartered_types::cargo::CrateDependency<'a>>);
+
+derive_diesel_json!(CrateDependencies<'a>);
+
+#[derive(Serialize, Deserialize, FromSqlRow, AsExpression, Debug, Clone, PartialEq, Eq)]
+#[sql_type = "diesel::sql_types::Blob"]
+pub struct CrateFeatures(pub chartered_types::cargo::CrateFeatures);
+
+derive_diesel_json!(CrateFeatures);
+
 impl Crate {
     pub async fn all_with_versions(
         conn: ConnectionPool,
-    ) -> Result<HashMap<Crate, Vec<CrateVersion>>> {
+    ) -> Result<HashMap<Crate, Vec<CrateVersion<'static>>>> {
         tokio::task::spawn_blocking(move || {
             let conn = conn.get()?;
 
@@ -31,7 +71,7 @@ impl Crate {
     pub async fn all_visible_with_versions(
         conn: ConnectionPool,
         given_user_id: i32,
-    ) -> Result<HashMap<Crate, Vec<CrateVersion>>> {
+    ) -> Result<HashMap<Crate, Vec<CrateVersion<'static>>>> {
         tokio::task::spawn_blocking(move || {
             let conn = conn.get()?;
 
@@ -66,7 +106,10 @@ impl Crate {
         .await?
     }
 
-    pub async fn versions(self: Arc<Self>, conn: ConnectionPool) -> Result<Vec<CrateVersion>> {
+    pub async fn versions(
+        self: Arc<Self>,
+        conn: ConnectionPool,
+    ) -> Result<Vec<CrateVersion<'static>>> {
         tokio::task::spawn_blocking(move || {
             let conn = conn.get()?;
 
@@ -79,7 +122,7 @@ impl Crate {
         self: Arc<Self>,
         conn: ConnectionPool,
         crate_version: String,
-    ) -> Result<Option<CrateVersion>> {
+    ) -> Result<Option<CrateVersion<'static>>> {
         use crate::schema::crate_versions::version;
 
         tokio::task::spawn_blocking(move || {
@@ -117,12 +160,13 @@ impl Crate {
     pub async fn publish_version(
         self: Arc<Self>,
         conn: ConnectionPool,
-        version_string: String,
         file_identifier: chartered_fs::FileReference,
         file_checksum: String,
+        given: chartered_types::cargo::CrateVersion<'static>,
     ) -> Result<()> {
         use crate::schema::crate_versions::dsl::{
-            checksum, crate_id, crate_versions, filesystem_object, version,
+            checksum, crate_id, crate_versions, dependencies, features, filesystem_object, links,
+            version,
         };
 
         tokio::task::spawn_blocking(move || {
@@ -131,9 +175,12 @@ impl Crate {
             insert_into(crate_versions)
                 .values((
                     crate_id.eq(self.id),
-                    version.eq(version_string),
                     filesystem_object.eq(file_identifier.to_string()),
                     checksum.eq(file_checksum),
+                    version.eq(given.vers),
+                    dependencies.eq(CrateDependencies(given.deps)),
+                    features.eq(CrateFeatures(given.features)),
+                    links.eq(given.links),
                 ))
                 .execute(&conn)?;
 
@@ -143,13 +190,14 @@ impl Crate {
     }
 }
 
-#[derive(Identifiable, Queryable, Associations, PartialEq, Debug)]
-#[belongs_to(Crate)]
-pub struct CrateVersion {
-    pub id: i32,
-    pub crate_id: i32,
-    pub version: String,
-    pub filesystem_object: String,
-    pub yanked: bool,
-    pub checksum: String,
+impl<'a> From<Vec<chartered_types::cargo::CrateDependency<'a>>> for CrateDependencies<'a> {
+    fn from(o: Vec<chartered_types::cargo::CrateDependency<'a>>) -> Self {
+        Self(o)
+    }
+}
+
+impl<'a> From<chartered_types::cargo::CrateFeatures> for CrateFeatures {
+    fn from(o: chartered_types::cargo::CrateFeatures) -> Self {
+        Self(o)
+    }
 }

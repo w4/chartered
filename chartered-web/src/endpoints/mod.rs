@@ -10,6 +10,8 @@ macro_rules! define_error_response {
             type BodyError = <Self::Body as axum::body::HttpBody>::Error;
 
             fn into_response(self) -> axum::http::Response<Self::Body> {
+                eprintln!("error: {:?}", self);
+
                 let body = serde_json::to_vec(&crate::endpoints::ErrorResponse {
                     error: self.to_string(),
                 })
