@@ -8,7 +8,7 @@ use axum::{
     handler::{delete, get, put},
     AddExtensionLayer, Router,
 };
-use tower::{filter::AsyncFilterLayer, ServiceBuilder};
+use tower::ServiceBuilder;
 
 #[allow(clippy::unused_async)]
 async fn hello_world() -> &'static str {
@@ -59,10 +59,7 @@ async fn main() {
     .layer(AddExtensionLayer::new(pool));
 
     let middleware_stack = ServiceBuilder::new()
-        .layer(AsyncFilterLayer::new(|req| async {
-            eprintln!("{:#?}", req);
-            Ok::<_, std::convert::Infallible>(req)
-        }))
+        .layer_fn(middleware::logging::LoggingMiddleware)
         .into_inner();
 
     let app = Router::new()
@@ -71,7 +68,7 @@ async fn main() {
         .layer(middleware_stack);
 
     axum::Server::bind(&"0.0.0.0:8888".parse().unwrap())
-        .serve(app.into_make_service())
+        .serve(app.into_make_service_with_connect_info::<std::net::SocketAddr, _>())
         .await
         .unwrap();
 }

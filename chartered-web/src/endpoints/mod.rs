@@ -5,13 +5,13 @@ pub struct ErrorResponse {
 
 macro_rules! define_error_response {
     ($error:ty) => {
-        impl axum::response::IntoResponse for Error {
+        impl crate::middleware::logging::GenericError for $error {}
+
+        impl axum::response::IntoResponse for $error {
             type Body = axum::body::Full<axum::body::Bytes>;
             type BodyError = <Self::Body as axum::body::HttpBody>::Error;
 
             fn into_response(self) -> axum::http::Response<Self::Body> {
-                eprintln!("error: {:?}", self);
-
                 let body = serde_json::to_vec(&crate::endpoints::ErrorResponse {
                     error: self.to_string(),
                 })
@@ -23,6 +23,8 @@ macro_rules! define_error_response {
                     axum::http::header::CONTENT_TYPE,
                     axum::http::header::HeaderValue::from_static("application/json"),
                 );
+                res.extensions_mut()
+                    .insert::<Box<dyn crate::middleware::logging::GenericError>>(Box::new(self));
                 res
             }
         }

@@ -108,6 +108,7 @@ mod tests {
     use super::FileSystem;
 
     #[tokio::test]
+    #[allow(clippy::pedantic)]
     async fn local() {
         let fs = super::Local;
         let file_ref = fs.write(b"abcdef").await.unwrap();
