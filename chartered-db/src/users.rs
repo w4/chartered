@@ -13,6 +13,23 @@ pub struct User {
 }
 
 impl User {
+    pub async fn find_by_username(
+        conn: ConnectionPool,
+        given_username: String,
+    ) -> Result<Option<User>> {
+        use crate::schema::users::dsl::username;
+
+        tokio::task::spawn_blocking(move || {
+            let conn = conn.get()?;
+
+            Ok(crate::schema::users::table
+                .filter(username.eq(given_username))
+                .get_result(&conn)
+                .optional()?)
+        })
+        .await?
+    }
+
     pub async fn find_by_api_key(
         conn: ConnectionPool,
         given_api_key: String,

@@ -12,7 +12,7 @@ chartered-types = { path = "../chartered-types" }
 
 axum = "0.2"
 bytes = "1"
-chrono = "0.4"
+chrono = { version = "0.4", features = ["serde"] }
 env_logger = "0.9"
 futures = "0.3"
 hex = "0.4"
@@ -26,4 +26,5 @@ sha2 = "0.9"
 thiserror = "1"
 tokio = { version = "1", features = ["full"] }
 tower = { version = "0.4", features = ["util", "filter"] }
-tower-http = { version = "0.1", features = ["trace"] }
+# tower-http = { version = "0.1", features = ["trace", "set-header"] }
+tower-http = { git = "https://github.com/tower-rs/tower-http", branch = "cors", features = ["trace", "set-header", "cors"] }

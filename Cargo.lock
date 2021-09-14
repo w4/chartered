@@ -86,7 +86,7 @@ dependencies = [
  "tokio",
  "tokio-util",
  "tower",
- "tower-http",
+ "tower-http 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "tower-layer",
  "tower-service",
 ]
@@ -268,7 +268,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "tower",
- "tower-http",
+ "tower-http 0.1.1 (git+https://github.com/tower-rs/tower-http?branch=cors)",
 ]
 
 [[package]]
@@ -280,6 +280,7 @@ dependencies = [
  "libc",
  "num-integer",
  "num-traits",
+ "serde",
  "time",
  "winapi",
 ]
@@ -1465,6 +1466,21 @@ name = "tower-http"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b7b56efe69aa0ad2b5da6b942e57ea9f6fe683b7a314d4ff48662e2c8838de1"
+dependencies = [
+ "bytes",
+ "futures-core",
+ "futures-util",
+ "http",
+ "http-body",
+ "pin-project",
+ "tower-layer",
+ "tower-service",
+]
+
+[[package]]
+name = "tower-http"
+version = "0.1.1"
+source = "git+https://github.com/tower-rs/tower-http?branch=cors#c07f4582491f8eb667dca5440b0870bcd68b47a4"
 dependencies = [
  "bytes",
  "futures-core",

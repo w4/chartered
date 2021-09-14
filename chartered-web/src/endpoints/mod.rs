@@ -32,3 +32,4 @@ macro_rules! define_error_response {
 }
 
 pub mod cargo_api;
+pub mod login;

@@ -5,10 +5,15 @@ mod endpoints;
 mod middleware;
 
 use axum::{
-    handler::{delete, get, put},
+    body::Body,
+    handler::{delete, get, post, put},
+    http::header::ACCESS_CONTROL_ALLOW_ORIGIN,
+    http::Method,
     AddExtensionLayer, Router,
 };
 use tower::ServiceBuilder;
+use tower_http::cors::{Any, CorsLayer};
+use tower_http::set_header::SetResponseHeaderLayer;
 
 #[allow(clippy::unused_async)]
 async fn hello_world() -> &'static str {
@@ -61,8 +66,10 @@ async fn main() {
         ServiceBuilder::new()
             .layer_fn(middleware::auth::AuthMiddleware)
             .into_inner(),
-    )
-    .layer(AddExtensionLayer::new(pool));
+    );
+
+    let api_unauthenticated =
+        axum_box_after_every_route!(Router::new().route("/login", post(endpoints::login::handle)));
 
     let middleware_stack = ServiceBuilder::new()
         .layer_fn(middleware::logging::LoggingMiddleware)
@@ -70,8 +77,17 @@ async fn main() {
 
     let app = Router::new()
         .route("/", get(hello_world))
+        .nest("/a/-", api_unauthenticated)
         .nest("/a/:key/api/v1", api_authenticated)
-        .layer(middleware_stack);
+        .layer(middleware_stack)
+        // TODO!!!
+        .layer(
+            CorsLayer::new()
+                .allow_methods(vec![Method::GET, Method::POST, Method::OPTIONS])
+                .allow_origin(Any)
+                .allow_credentials(false),
+        )
+        .layer(AddExtensionLayer::new(pool));
 
     axum::Server::bind(&"0.0.0.0:8888".parse().unwrap())
         .serve(app.into_make_service_with_connect_info::<std::net::SocketAddr, _>())
