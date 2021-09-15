@@ -1,5 +1,7 @@
 import "./index.sass";
 
+import './overscrollColourFixer.ts';
+
 import React = require("react");
 import ReactDOM = require("react-dom");
 import {
@@ -14,6 +16,7 @@ import { ProvideAuth, useAuth } from "./useAuth";
 
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import SingleCrate from "./pages/SingleCrate";
 
 function App() {
     return (
@@ -24,6 +27,7 @@ function App() {
 
                     <PrivateRoute exact path="/" component={() => <Redirect to="/dashboard" />} />
                     <PrivateRoute exact path="/dashboard" component={() => <Dashboard />} />
+                    <PrivateRoute exact path="/crates/:crate" component={() => <SingleCrate />} />
                 </Switch>
             </Router>
         </ProvideAuth>

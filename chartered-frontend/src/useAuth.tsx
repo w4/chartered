@@ -1,8 +1,8 @@
 import React = require('react');
 import { useState, useEffect, useContext, createContext } from "react";
-import { BASE_URL } from "./util";
+import { unauthenticatedEndpoint } from "./util";
 
-interface AuthContext {
+export interface AuthContext {
     authKey?: string,
     expires?: Date,
     login: (username: string, password: string) => Promise<void>,
@@ -29,7 +29,7 @@ function useProvideAuth(): AuthContext {
     }, [authKey, expires]);
 
     const login = async (username: string, password: string) => {
-        let res = await fetch(`${BASE_URL}/a/-/login`, {
+        let res = await fetch(unauthenticatedEndpoint('login'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

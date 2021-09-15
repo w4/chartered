@@ -8,7 +8,7 @@ use chartered_db::{
 use chartered_fs::FileSystem;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::{convert::TryInto, sync::Arc};
+use std::{borrow::Cow, convert::TryInto, sync::Arc};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -103,17 +103,28 @@ fn parse(body: &[u8]) -> nom::IResult<&[u8], (&[u8], &[u8])> {
 
 #[derive(Deserialize, Debug)]
 pub struct Metadata<'a> {
-    authors: Vec<&'a str>,
-    description: Option<&'a str>,
-    documentation: Option<&'a str>,
-    homepage: Option<&'a str>,
-    readme: Option<&'a str>,
-    readme_file: Option<&'a str>,
-    keywords: Vec<&'a str>,
-    categories: Vec<&'a str>,
-    license: Option<&'a str>,
-    license_file: Option<&'a str>,
-    repository: Option<&'a str>,
+    #[serde(borrow)]
+    authors: Vec<Cow<'a, str>>,
+    #[serde(borrow)]
+    description: Option<Cow<'a, str>>,
+    #[serde(borrow)]
+    documentation: Option<Cow<'a, str>>,
+    #[serde(borrow)]
+    homepage: Option<Cow<'a, str>>,
+    #[serde(borrow)]
+    readme: Option<Cow<'a, str>>,
+    #[serde(borrow)]
+    readme_file: Option<Cow<'a, str>>,
+    #[serde(borrow)]
+    keywords: Vec<Cow<'a, str>>,
+    #[serde(borrow)]
+    categories: Vec<Cow<'a, str>>,
+    #[serde(borrow)]
+    license: Option<Cow<'a, str>>,
+    #[serde(borrow)]
+    license_file: Option<Cow<'a, str>>,
+    #[serde(borrow)]
+    repository: Option<Cow<'a, str>>,
     #[serde(flatten)]
     inner: chartered_types::cargo::CrateVersion<'a>,
 }

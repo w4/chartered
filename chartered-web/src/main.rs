@@ -68,8 +68,17 @@ async fn main() {
             .into_inner(),
     );
 
-    let api_unauthenticated =
-        axum_box_after_every_route!(Router::new().route("/login", post(endpoints::login::handle)));
+    let web_unauthenticated =
+        axum_box_after_every_route!(Router::new().route("/login", post(endpoints::web_api::login)));
+
+    let web_authenticated = axum_box_after_every_route!(
+        Router::new().route("/crates/:crate", get(endpoints::web_api::crate_info))
+    )
+    .layer(
+        ServiceBuilder::new()
+            .layer_fn(middleware::auth::AuthMiddleware)
+            .into_inner(),
+    );
 
     let middleware_stack = ServiceBuilder::new()
         .layer_fn(middleware::logging::LoggingMiddleware)
@@ -77,7 +86,8 @@ async fn main() {
 
     let app = Router::new()
         .route("/", get(hello_world))
-        .nest("/a/-", api_unauthenticated)
+        .nest("/a/:key/web/v1", web_authenticated)
+        .nest("/a/-/web/v1", web_unauthenticated)
         .nest("/a/:key/api/v1", api_authenticated)
         .layer(middleware_stack)
         // TODO!!!

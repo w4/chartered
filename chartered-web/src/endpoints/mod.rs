@@ -1,3 +1,15 @@
+macro_rules! ensure_has_crate_perm {
+    ($db:expr, $user:expr, $crate_expr:expr, $($permission:path | -> $error:expr$(,)?),*) => {{
+        let perms = $user.get_crate_permissions($db.clone(), $crate_expr.id).await?;
+
+        $(
+            if !perms.contains($permission) {
+                return Err($error);
+            }
+        )*
+    }};
+}
+
 #[derive(serde::Serialize)]
 pub struct ErrorResponse {
     error: String,
@@ -32,4 +44,4 @@ macro_rules! define_error_response {
 }
 
 pub mod cargo_api;
-pub mod login;
+pub mod web_api;
