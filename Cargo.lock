@@ -198,6 +198,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
+ "thrussh-keys",
  "tokio",
 ]
 

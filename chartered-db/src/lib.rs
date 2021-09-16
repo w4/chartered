@@ -59,6 +59,8 @@ pub enum Error {
     Query(#[from] diesel::result::Error),
     /// Failed to complete query task: `{0}`
     TaskJoin(#[from] tokio::task::JoinError),
+    /// Key parse failure: `{0}`
+    KeyParse(#[from] thrussh_keys::Error),
 }
 
 diesel_infix_operator!(BitwiseAnd, " & ", diesel::sql_types::Integer);

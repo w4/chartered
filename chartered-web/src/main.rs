@@ -5,15 +5,13 @@ mod endpoints;
 mod middleware;
 
 use axum::{
-    body::Body,
     handler::{delete, get, post, put},
-    http::header::ACCESS_CONTROL_ALLOW_ORIGIN,
     http::Method,
     AddExtensionLayer, Router,
 };
 use tower::ServiceBuilder;
 use tower_http::cors::{Any, CorsLayer};
-use tower_http::set_header::SetResponseHeaderLayer;
+
 
 #[allow(clippy::unused_async)]
 async fn hello_world() -> &'static str {
@@ -71,9 +69,11 @@ async fn main() {
     let web_unauthenticated =
         axum_box_after_every_route!(Router::new().route("/login", post(endpoints::web_api::login)));
 
-    let web_authenticated = axum_box_after_every_route!(
-        Router::new().route("/crates/:crate", get(endpoints::web_api::crate_info))
-    )
+    let web_authenticated = axum_box_after_every_route!(Router::new()
+        .route("/crates/:crate", get(endpoints::web_api::crate_info))
+        .route("/ssh-key", get(endpoints::web_api::get_ssh_keys))
+        .route("/ssh-key", put(endpoints::web_api::add_ssh_key))
+        .route("/ssh-key/:id", delete(endpoints::web_api::delete_ssh_key)))
     .layer(
         ServiceBuilder::new()
             .layer_fn(middleware::auth::AuthMiddleware)
@@ -93,7 +93,13 @@ async fn main() {
         // TODO!!!
         .layer(
             CorsLayer::new()
-                .allow_methods(vec![Method::GET, Method::POST, Method::OPTIONS])
+                .allow_methods(vec![
+                    Method::GET,
+                    Method::POST,
+                    Method::DELETE,
+                    Method::PUT,
+                    Method::OPTIONS,
+                ])
                 .allow_origin(Any)
                 .allow_credentials(false),
         )

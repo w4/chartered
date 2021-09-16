@@ -17,6 +17,8 @@ import { ProvideAuth, useAuth } from "./useAuth";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import SingleCrate from "./pages/SingleCrate";
+import ListSshKeys from "./pages/ssh-keys/ListSshKeys";
+import AddSshKeys from "./pages/ssh-keys/AddSshKeys";
 
 function App() {
     return (
@@ -28,6 +30,8 @@ function App() {
                     <PrivateRoute exact path="/" component={() => <Redirect to="/dashboard" />} />
                     <PrivateRoute exact path="/dashboard" component={() => <Dashboard />} />
                     <PrivateRoute exact path="/crates/:crate" component={() => <SingleCrate />} />
+                    <PrivateRoute exact path="/ssh-keys/list" component={() => <ListSshKeys />} />
+                    <PrivateRoute exact path="/ssh-keys/add" component={() => <AddSshKeys />} />
                 </Switch>
             </Router>
         </ProvideAuth>

@@ -4,7 +4,8 @@ use super::{
 };
 use diesel::{insert_into, prelude::*, Associations, Identifiable, Queryable};
 use rand::{thread_rng, Rng};
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
+use thrussh_keys::PublicKeyBase64;
 
 #[derive(Identifiable, Queryable, Associations, PartialEq, Eq, Hash, Debug)]
 pub struct User {
@@ -60,8 +61,6 @@ impl User {
     ) -> Result<Option<(UserSshKey, User)>> {
         use crate::schema::user_ssh_keys::dsl::ssh_key;
 
-        eprintln!("ssh key: {:x?}", given_ssh_key);
-
         tokio::task::spawn_blocking(move || {
             let conn = conn.get()?;
 
@@ -71,6 +70,93 @@ impl User {
                 .select((user_ssh_keys::all_columns, users::all_columns))
                 .get_result(&conn)
                 .optional()?)
+        })
+        .await?
+    }
+
+    /// Parses an ssh key from its `ssh-add -L` format (`ssh-ed25519 AAAAC3N...`) and
+    /// inserts it to the database for the user.
+    pub async fn insert_ssh_key(
+        self: Arc<Self>,
+        conn: ConnectionPool,
+        ssh_key: &str,
+    ) -> Result<()> {
+        let mut split = ssh_key.split_whitespace();
+
+        let key = match (split.next(), split.next()) {
+            (Some(_), Some(key)) => key,
+            (Some(key), None) => key,
+            _ => return Err(thrussh_keys::Error::CouldNotReadKey.into()),
+        };
+
+        let parsed_key = thrussh_keys::parse_public_key_base64(key)?;
+
+        tokio::task::spawn_blocking(move || {
+            use crate::schema::user_ssh_keys::dsl::{ssh_key, user_id};
+
+            let conn = conn.get()?;
+
+            insert_into(crate::schema::user_ssh_keys::dsl::user_ssh_keys)
+                .values((
+                    ssh_key.eq(parsed_key.public_key_bytes()),
+                    user_id.eq(self.id),
+                ))
+                .execute(&conn)?;
+
+            Ok(())
+        })
+        .await?
+    }
+
+    pub async fn delete_user_ssh_key_by_id(
+        self: Arc<Self>,
+        conn: ConnectionPool,
+        ssh_key_id: i32,
+    ) -> Result<bool> {
+        use crate::schema::user_ssh_keys::dsl::{id, user_id, user_ssh_keys};
+
+        tokio::task::spawn_blocking(move || {
+            let conn = conn.get()?;
+
+            let rows = diesel::delete(
+                user_ssh_keys
+                    .filter(user_id.eq(self.id))
+                    .filter(id.eq(ssh_key_id)),
+            )
+            .execute(&conn)?;
+
+            Ok(rows > 0)
+        })
+        .await?
+    }
+
+    /// Get all the SSH keys for the user, returned as `id:fingerprint`.
+    pub async fn list_ssh_keys(
+        self: Arc<Self>,
+        conn: ConnectionPool,
+    ) -> Result<HashMap<i32, String>> {
+        tokio::task::spawn_blocking(move || {
+            use crate::schema::user_ssh_keys::dsl::user_id;
+
+            let conn = conn.get()?;
+
+            let selected: Vec<(i32, Vec<u8>)> = crate::schema::user_ssh_keys::table
+                .filter(user_id.eq(self.id))
+                .inner_join(users::table)
+                .select((user_ssh_keys::id, user_ssh_keys::ssh_key))
+                .load(&conn)?;
+
+            Ok(selected
+                .into_iter()
+                .map(|(id, key)| {
+                    (
+                        id,
+                        thrussh_keys::key::parse_public_key(&key)
+                            .map(|v| v.fingerprint())
+                            .unwrap_or_else(|e| format!("INVALID: {}", e)),
+                    )
+                })
+                .collect())
         })
         .await?
     }
