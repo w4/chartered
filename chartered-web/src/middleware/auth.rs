@@ -50,7 +50,7 @@ where
                 .unwrap()
                 .clone();
 
-            let user = match chartered_db::users::User::find_by_api_key(db, String::from(key))
+            let user = match chartered_db::users::User::find_by_session_key(db, String::from(key))
                 .await
                 .unwrap()
             {

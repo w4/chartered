@@ -1,5 +1,5 @@
 use super::{
-    schema::{user_api_keys, user_crate_permissions, user_ssh_keys, users},
+    schema::{user_crate_permissions, user_sessions, user_ssh_keys, users},
     ConnectionPool, Result,
 };
 use diesel::{insert_into, prelude::*, Associations, Identifiable, Queryable};
@@ -31,22 +31,22 @@ impl User {
         .await?
     }
 
-    pub async fn find_by_api_key(
+    pub async fn find_by_session_key(
         conn: ConnectionPool,
-        given_api_key: String,
+        given_session_key: String,
     ) -> Result<Option<User>> {
-        use crate::schema::user_api_keys::dsl::{api_key, expires_at};
+        use crate::schema::user_sessions::dsl::{expires_at, session_key};
 
         tokio::task::spawn_blocking(move || {
             let conn = conn.get()?;
 
-            Ok(crate::schema::user_api_keys::table
+            Ok(user_sessions::table
                 .filter(
                     expires_at
                         .is_null()
                         .or(expires_at.gt(chrono::Utc::now().naive_utc())),
                 )
-                .filter(api_key.eq(given_api_key))
+                .filter(session_key.eq(given_session_key))
                 .inner_join(users::table)
                 .select((users::dsl::id, users::dsl::username))
                 .get_result(&conn)
@@ -210,45 +210,51 @@ impl User {
 #[derive(Identifiable, Queryable, Associations, PartialEq, Eq, Hash, Debug)]
 #[belongs_to(User)]
 #[belongs_to(UserSshKey)]
-pub struct UserApiKey {
+pub struct UserSession {
     pub id: i32,
     pub user_id: i32,
-    pub api_key: String,
+    pub session_key: String,
     pub user_ssh_key_id: Option<i32>,
     pub expires_at: Option<chrono::NaiveDateTime>,
+    pub user_agent: Option<String>,
+    pub ip: Option<String>,
 }
 
-impl UserApiKey {
+impl UserSession {
     pub async fn generate(
         conn: ConnectionPool,
         given_user_id: i32,
         given_user_ssh_key_id: Option<i32>,
         given_expires_at: Option<chrono::NaiveDateTime>,
-    ) -> Result<UserApiKey> {
-        use crate::schema::user_api_keys::dsl::{
-            api_key, expires_at, user_api_keys, user_id, user_ssh_key_id,
+        given_user_agent: Option<String>,
+        given_ip: Option<String>,
+    ) -> Result<Self> {
+        use crate::schema::user_sessions::dsl::{
+            expires_at, ip, session_key, user_agent, user_id, user_sessions, user_ssh_key_id,
         };
 
         tokio::task::spawn_blocking(move || {
             let conn = conn.get()?;
 
-            let generated_api_key: String = thread_rng()
+            let generated_session_key: String = thread_rng()
                 .sample_iter(&rand::distributions::Alphanumeric)
                 .take(48)
                 .map(char::from)
                 .collect();
 
-            insert_into(user_api_keys)
+            insert_into(user_sessions)
                 .values((
                     user_id.eq(given_user_id),
-                    api_key.eq(&generated_api_key),
+                    session_key.eq(&generated_session_key),
                     user_ssh_key_id.eq(given_user_ssh_key_id),
                     expires_at.eq(given_expires_at),
+                    user_agent.eq(given_user_agent),
+                    ip.eq(given_ip),
                 ))
                 .execute(&conn)?;
 
-            Ok(crate::schema::user_api_keys::table
-                .filter(api_key.eq(generated_api_key))
+            Ok(crate::schema::user_sessions::table
+                .filter(session_key.eq(generated_session_key))
                 .get_result(&conn)?)
         })
         .await?
@@ -318,23 +324,24 @@ pub struct UserSshKey {
 }
 
 impl UserSshKey {
-    /// Every SSH key should have a corresponding API key so when the config is pulled from git we
-    /// can return a key in there. The API key might have, however, been compromised and removed
+    /// Every SSH key should have a corresponding session so when the config is pulled from git we
+    /// can return a key in there. The session might have, however, been compromised and removed
     /// using the Web UI/database/etc - this function will regenerate the key on next pull so
     /// there's no disruption in service.
-    pub async fn get_or_insert_api_key(
+    pub async fn get_or_insert_session(
         self: Arc<Self>,
         conn: ConnectionPool,
-    ) -> Result<UserApiKey> {
-        use crate::schema::user_api_keys::dsl::{expires_at, user_id};
+        ip: Option<String>,
+    ) -> Result<UserSession> {
+        use crate::schema::user_sessions::dsl::{expires_at, user_id};
 
-        let res: Option<UserApiKey> = tokio::task::spawn_blocking({
+        let res: Option<UserSession> = tokio::task::spawn_blocking({
             let conn = conn.clone();
             let this = self.clone();
             move || {
                 let conn = conn.get()?;
 
-                UserApiKey::belonging_to(&*this)
+                UserSession::belonging_to(&*this)
                     .filter(
                         expires_at
                             .is_null()
@@ -351,7 +358,7 @@ impl UserSshKey {
         if let Some(res) = res {
             Ok(res)
         } else {
-            UserApiKey::generate(conn, self.user_id, Some(self.id), None).await
+            UserSession::generate(conn, self.user_id, Some(self.id), None, None, ip).await
         }
     }
 }

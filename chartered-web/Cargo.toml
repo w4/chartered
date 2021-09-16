@@ -10,11 +10,12 @@ chartered-db = { path = "../chartered-db" }
 chartered-fs = { path = "../chartered-fs" }
 chartered-types = { path = "../chartered-types" }
 
-axum = "0.2"
+axum = { version = "0.2", features = ["headers"] }
 bytes = "1"
 chrono = { version = "0.4", features = ["serde"] }
 env_logger = "0.9"
 futures = "0.3"
+headers = "0.3"
 hex = "0.4"
 log = "0.4"
 nom = "7"

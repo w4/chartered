@@ -33,6 +33,7 @@ function useProvideAuth(): AuthContext {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'User-Agent': window.navigator.userAgent,
             },
             body: JSON.stringify({ username, password }),
         });

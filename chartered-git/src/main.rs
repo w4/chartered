@@ -48,8 +48,9 @@ struct Server {
 impl server::Server for Server {
     type Handler = Handler;
 
-    fn new(&mut self, _: Option<std::net::SocketAddr>) -> Self::Handler {
+    fn new(&mut self, ip: Option<std::net::SocketAddr>) -> Self::Handler {
         Handler {
+            ip,
             codec: GitCodec::default(),
             input_bytes: BytesMut::default(),
             output_bytes: BytesMut::default(),
@@ -61,6 +62,7 @@ impl server::Server for Server {
 }
 
 struct Handler {
+    ip: Option<std::net::SocketAddr>,
     codec: GitCodec,
     input_bytes: BytesMut,
     output_bytes: BytesMut,
@@ -251,9 +253,9 @@ impl server::Handler for Handler {
                 key = self
                     .user_ssh_key()?
                     .clone()
-                    .get_or_insert_api_key(self.db.clone())
+                    .get_or_insert_session(self.db.clone(), self.ip.map(|v| v.to_string()))
                     .await?
-                    .api_key,
+                    .session_key,
             );
             let config_file = PackFileEntry::Blob(config.as_bytes());
 

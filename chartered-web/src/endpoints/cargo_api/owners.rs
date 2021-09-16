@@ -42,7 +42,7 @@ pub struct GetResponseUser {
 }
 
 pub async fn handle_get(
-    extract::Path((_api_key, name)): extract::Path<(String, String)>,
+    extract::Path((_session_key, name)): extract::Path<(String, String)>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(user): extract::Extension<Arc<User>>,
 ) -> Result<Json<GetResponse>, Error> {

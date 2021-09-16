@@ -34,12 +34,14 @@ CREATE TABLE user_ssh_keys (
     FOREIGN KEY (user_id) REFERENCES users (id)
 );
 
-CREATE TABLE user_api_keys (
+CREATE TABLE user_sessions (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
-    api_key VARCHAR(255) NOT NULL UNIQUE,
+    session_key VARCHAR(255) NOT NULL UNIQUE,
     user_ssh_key_id INTEGER,
     expires_at DATETIME,
+    user_agent VARCHAR(255),
+    ip VARCHAR(255),
     FOREIGN KEY (user_id) REFERENCES users (id)
     FOREIGN KEY (user_ssh_key_id) REFERENCES user_ssh_keys (id)
 );

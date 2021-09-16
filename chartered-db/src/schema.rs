@@ -25,21 +25,23 @@ table! {
 }
 
 table! {
-    user_api_keys (id) {
-        id -> Integer,
-        user_id -> Integer,
-        api_key -> Text,
-        user_ssh_key_id -> Nullable<Integer>,
-        expires_at -> Nullable<Timestamp>,
-    }
-}
-
-table! {
     user_crate_permissions (id) {
         id -> Integer,
         user_id -> Integer,
         crate_id -> Integer,
         permissions -> Integer,
+    }
+}
+
+table! {
+    user_sessions (id) {
+        id -> Integer,
+        user_id -> Integer,
+        session_key -> Text,
+        user_ssh_key_id -> Nullable<Integer>,
+        expires_at -> Nullable<Timestamp>,
+        user_agent -> Nullable<Text>,
+        ip -> Nullable<Text>,
     }
 }
 
@@ -59,17 +61,17 @@ table! {
 }
 
 joinable!(crate_versions -> crates (crate_id));
-joinable!(user_api_keys -> user_ssh_keys (user_ssh_key_id));
-joinable!(user_api_keys -> users (user_id));
 joinable!(user_crate_permissions -> crates (crate_id));
 joinable!(user_crate_permissions -> users (user_id));
+joinable!(user_sessions -> user_ssh_keys (user_ssh_key_id));
+joinable!(user_sessions -> users (user_id));
 joinable!(user_ssh_keys -> users (user_id));
 
 allow_tables_to_appear_in_same_query!(
     crate_versions,
     crates,
-    user_api_keys,
     user_crate_permissions,
+    user_sessions,
     user_ssh_keys,
     users,
 );

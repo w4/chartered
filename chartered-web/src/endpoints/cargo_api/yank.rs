@@ -38,7 +38,7 @@ pub struct Response {
 }
 
 pub async fn handle_yank(
-    extract::Path((_api_key, name, version)): extract::Path<(String, String, String)>,
+    extract::Path((_session_key, name, version)): extract::Path<(String, String, String)>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(user): extract::Extension<Arc<User>>,
 ) -> Result<Json<Response>, Error> {
@@ -58,7 +58,7 @@ pub async fn handle_yank(
 }
 
 pub async fn handle_unyank(
-    extract::Path((_api_key, name, version)): extract::Path<(String, String, String)>,
+    extract::Path((_session_key, name, version)): extract::Path<(String, String, String)>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(user): extract::Extension<Arc<User>>,
 ) -> Result<Json<Response>, Error> {

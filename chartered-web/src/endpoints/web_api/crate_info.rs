@@ -33,7 +33,7 @@ impl Error {
 define_error_response!(Error);
 
 pub async fn handle(
-    extract::Path((_api_key, name)): extract::Path<(String, String)>,
+    extract::Path((_session_key, name)): extract::Path<(String, String)>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(user): extract::Extension<Arc<User>>,
 ) -> Result<Json<Response>, Error> {

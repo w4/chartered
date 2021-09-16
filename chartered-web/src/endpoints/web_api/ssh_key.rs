@@ -60,7 +60,7 @@ pub struct DeleteResponse {
 pub async fn handle_delete(
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(user): extract::Extension<Arc<User>>,
-    extract::Path((_api_key, ssh_key_id)): extract::Path<(String, i32)>,
+    extract::Path((_session_key, ssh_key_id)): extract::Path<(String, i32)>,
 ) -> Result<Json<DeleteResponse>, Error> {
     let deleted = user.delete_user_ssh_key_by_id(db, ssh_key_id).await?;
 
