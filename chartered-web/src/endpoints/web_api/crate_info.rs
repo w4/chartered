@@ -4,7 +4,7 @@ use chartered_db::{
     users::{User, UserCratePermissionValue as Permission},
     ConnectionPool,
 };
-use chartered_types::cargo::CrateVersion;
+use chartered_types::cargo::{CrateVersion, CrateVersionMetadata};
 use serde::Serialize;
 use std::sync::Arc;
 use thiserror::Error;
@@ -48,12 +48,23 @@ pub async fn handle(
     Ok(Json(Response {
         versions: versions
             .into_iter()
-            .map(|v| v.into_cargo_format(&crate_).into_owned())
+            .map(|v| {
+                let (inner, meta) = v.into_cargo_format(&crate_);
+                ResponseVersion { inner: inner.into_owned(), meta }
+            })
             .collect(),
     }))
 }
 
 #[derive(Serialize)]
+pub struct ResponseVersion {
+    #[serde(flatten)]
+    meta: CrateVersionMetadata,
+    #[serde(flatten)]
+    inner: CrateVersion<'static>,
+}
+
+#[derive(Serialize)]
 pub struct Response {
-    versions: Vec<CrateVersion<'static>>,
+    versions: Vec<ResponseVersion>,
 }

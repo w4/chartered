@@ -365,7 +365,7 @@ async fn fetch_tree(
         for version in versions {
             let cksum = version.checksum.clone();
             let yanked = version.yanked;
-            let version = version.into_cargo_format(&crate_def);
+            let (version, _) = version.into_cargo_format(&crate_def);
 
             let entry = CrateFileEntry {
                 inner: &version,

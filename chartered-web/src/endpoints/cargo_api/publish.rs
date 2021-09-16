@@ -79,6 +79,7 @@ pub async fn handle(
             file_ref,
             hex::encode(Sha256::digest(crate_bytes)),
             metadata.inner.into_owned(),
+            metadata.meta,
         )
         .await?;
 
@@ -106,14 +107,6 @@ pub struct Metadata<'a> {
     #[serde(borrow)]
     authors: Vec<Cow<'a, str>>,
     #[serde(borrow)]
-    description: Option<Cow<'a, str>>,
-    #[serde(borrow)]
-    documentation: Option<Cow<'a, str>>,
-    #[serde(borrow)]
-    homepage: Option<Cow<'a, str>>,
-    #[serde(borrow)]
-    readme: Option<Cow<'a, str>>,
-    #[serde(borrow)]
     readme_file: Option<Cow<'a, str>>,
     #[serde(borrow)]
     keywords: Vec<Cow<'a, str>>,
@@ -123,8 +116,8 @@ pub struct Metadata<'a> {
     license: Option<Cow<'a, str>>,
     #[serde(borrow)]
     license_file: Option<Cow<'a, str>>,
-    #[serde(borrow)]
-    repository: Option<Cow<'a, str>>,
+    #[serde(flatten)]
+    meta: chartered_types::cargo::CrateVersionMetadata,
     #[serde(flatten)]
     inner: chartered_types::cargo::CrateVersion<'a>,
 }

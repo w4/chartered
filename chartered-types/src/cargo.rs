@@ -29,6 +29,15 @@ impl CrateVersion<'_> {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct CrateVersionMetadata {
+    pub description: Option<String>,
+    pub readme: Option<String>,
+    pub repository: Option<String>,
+    pub homepage: Option<String>,
+    pub documentation: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct CrateDependency<'a> {
     pub name: Cow<'a, str>,
     pub version_req: Cow<'a, str>, // needs to be: https://github.com/steveklabnik/semver#requirements

@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Link } from "react-router-dom";
 import { useAuth } from '../useAuth';
 import Nav from "../sections/Nav";
-import { Box } from 'react-bootstrap-icons';
+import { Box, HouseDoor, Book, Building, PersonPlus } from 'react-bootstrap-icons';
 import { useParams } from "react-router-dom";
 import { authenticatedEndpoint } from '../util';
 
@@ -13,11 +13,14 @@ import Prism from 'react-syntax-highlighter/dist/cjs/prism';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
+type Tab = 'readme' | 'versions' | 'members';
+
 export default function SingleCrate() {
     const auth = useAuth();
     const { crate } = useParams();
 
     const [crateInfo, setCrateInfo] = useState(null);
+    const [currentTab, setCurrentTab] = useState<Tab>('readme');
 
     useEffect(async () => {
         let res = await fetch(authenticatedEndpoint(auth, `crates/${crate}`));
@@ -30,166 +33,6 @@ export default function SingleCrate() {
     }
 
     const crateVersion = crateInfo.versions[crateInfo.versions.length - 1];
-
-    const readme = `
-# Rand
-
-[![Test Status](https://github.com/rust-random/rand/workflows/Tests/badge.svg?event=push)](https://github.com/rust-random/rand/actions)
-[![Crate](https://img.shields.io/crates/v/rand.svg)](https://crates.io/crates/rand)
-[![Book](https://img.shields.io/badge/book-master-yellow.svg)](https://rust-random.github.io/book/)
-[![API](https://img.shields.io/badge/api-master-yellow.svg)](https://rust-random.github.io/rand/rand)
-[![API](https://docs.rs/rand/badge.svg)](https://docs.rs/rand)
-[![Minimum rustc version](https://img.shields.io/badge/rustc-1.36+-lightgray.svg)](https://github.com/rust-random/rand#rust-version-requirements)
-
-A Rust library for random number generation, featuring:
-
--   Easy random value generation and usage via the [\`Rng\`](https://docs.rs/rand/*/rand/trait.Rng.html),
-    [\`SliceRandom\`](https://docs.rs/rand/*/rand/seq/trait.SliceRandom.html) and
-    [\`IteratorRandom\`](https://docs.rs/rand/*/rand/seq/trait.IteratorRandom.html) traits
--   Secure seeding via the [\`getrandom\` crate](https://crates.io/crates/getrandom)
-    and fast, convenient generation via [\`thread_rng\`](https://docs.rs/rand/*/rand/fn.thread_rng.html)
--   A modular design built over [\`rand_core\`](https://crates.io/crates/rand_core)
-    ([see the book](https://rust-random.github.io/book/crates.html))
--   Fast implementations of the best-in-class [cryptographic](https://rust-random.github.io/book/guide-rngs.html#cryptographically-secure-pseudo-random-number-generators-csprngs) and
-    [non-cryptographic](https://rust-random.github.io/book/guide-rngs.html#basic-pseudo-random-number-generators-prngs) generators
--   A flexible [\`distributions\`](https://docs.rs/rand/*/rand/distributions/index.html) module
--   Samplers for a large number of random number distributions via our own
-    [\`rand_distr\`](https://docs.rs/rand_distr) and via
-    the [\`statrs\`](https://docs.rs/statrs/0.13.0/statrs/)
--   [Portably reproducible output](https://rust-random.github.io/book/portability.html)
--   \`#[no_std]\` compatibility (partial)
--   *Many* performance optimisations
-
-It's also worth pointing out what \`rand\` *is not*:
-
--   Small. Most low-level crates are small, but the higher-level \`rand\` and
-    \`rand_distr\` each contain a lot of functionality.
--   Simple (implementation). We have a strong focus on correctness, speed and flexibility, but
-    not simplicity. If you prefer a small-and-simple library, there are
-    alternatives including [fastrand](https://crates.io/crates/fastrand)
-    and [oorandom](https://crates.io/crates/oorandom).
--   Slow. We take performance seriously, with considerations also for set-up
-    time of new distributions, commonly-used parameters, and parameters of the
-    current sampler.
-
-Documentation:
-
--   [The Rust Rand Book](https://rust-random.github.io/book)
--   [API reference (master branch)](https://rust-random.github.io/rand)
--   [API reference (docs.rs)](https://docs.rs/rand)
-
-
-## Usage
-
-Add this to your \`Cargo.toml\`:
-
-\`\`\`toml
-[dependencies]
-rand = "0.8.0"
-\`\`\`
-
-To get started using Rand, see [The Book](https://rust-random.github.io/book).
-
-
-## Versions
-
-Rand is *mature* (suitable for general usage, with infrequent breaking releases
-which minimise breakage) but not yet at 1.0. We maintain compatibility with
-pinned versions of the Rust compiler (see below).
-
-Current Rand versions are:
-
--   Version 0.7 was released in June 2019, moving most non-uniform distributions
-    to an external crate, moving \`from_entropy\` to \`SeedableRng\`, and many small
-    changes and fixes.
--   Version 0.8 was released in December 2020 with many small changes.
-
-A detailed [changelog](CHANGELOG.md) is available for releases.
-
-When upgrading to the next minor series (especially 0.4 → 0.5), we recommend
-reading the [Upgrade Guide](https://rust-random.github.io/book/update.html).
-
-Rand has not yet reached 1.0 implying some breaking changes may arrive in the
-future ([SemVer](https://semver.org/) allows each 0.x.0 release to include
-breaking changes), but is considered *mature*: breaking changes are minimised
-and breaking releases are infrequent.
-
-Rand libs have inter-dependencies and make use of the
-[semver trick](https://github.com/dtolnay/semver-trick/) in order to make traits
-compatible across crate versions. (This is especially important for \`RngCore\`
-and \`SeedableRng\`.) A few crate releases are thus compatibility shims,
-depending on the *next* lib version (e.g. \`rand_core\` versions \`0.2.2\` and
-\`0.3.1\`). This means, for example, that \`rand_core_0_4_0::SeedableRng\` and
-\`rand_core_0_3_0::SeedableRng\` are distinct, incompatible traits, which can
-cause build errors. Usually, running \`cargo update\` is enough to fix any issues.
-
-### Yanked versions
-
-Some versions of Rand crates have been yanked ("unreleased"). Where this occurs,
-the crate's CHANGELOG *should* be updated with a rationale, and a search on the
-issue tracker with the keyword \`yank\` *should* uncover the motivation.
-
-### Rust version requirements
-
-Since version 0.8, Rand requires **Rustc version 1.36 or greater**.
-Rand 0.7 requires Rustc 1.32 or greater while versions 0.5 require Rustc 1.22 or
-greater, and 0.4 and 0.3 (since approx. June 2017) require Rustc version 1.15 or
-greater. Subsets of the Rand code may work with older Rust versions, but this is
-not supported.
-
-Continuous Integration (CI) will always test the minimum supported Rustc version
-(the MSRV). The current policy is that this can be updated in any
-Rand release if required, but the change must be noted in the changelog.
-
-## Crate Features
-
-Rand is built with these features enabled by default:
-
--   \`std\` enables functionality dependent on the \`std\` lib
--   \`alloc\` (implied by \`std\`) enables functionality requiring an allocator
--   \`getrandom\` (implied by \`std\`) is an optional dependency providing the code
-    behind \`rngs::OsRng\`
--   \`std_rng\` enables inclusion of \`StdRng\`, \`thread_rng\` and \`random\`
-    (the latter two *also* require that \`std\` be enabled)
-
-Optionally, the following dependencies can be enabled:
-
--   \`log\` enables logging via the \`log\` crate\` crate
-
-Additionally, these features configure Rand:
-
--   \`small_rng\` enables inclusion of the \`SmallRng\` PRNG
--   \`nightly\` enables some optimizations requiring nightly Rust
--   \`simd_support\` (experimental) enables sampling of SIMD values
-    (uniformly random SIMD integers and floats), requiring nightly Rust
--   \`min_const_gen\` enables generating random arrays of 
-    any size using min-const-generics, requiring Rust ≥ 1.51.
-
-Note that nightly features are not stable and therefore not all library and
-compiler versions will be compatible. This is especially true of Rand's
-experimental \`simd_support\` feature.
-
-Rand supports limited functionality in \`no_std\` mode (enabled via
-\`default-features = false\`). In this case, \`OsRng\` and \`from_entropy\` are
-unavailable (unless \`getrandom\` is enabled), large parts of \`seq\` are
-unavailable (unless \`alloc\` is enabled), and \`thread_rng\` and \`random\` are
-unavailable.
-
-### WASM support
-
-The WASM target \`wasm32-unknown-unknown\` is not *automatically* supported by
-\`rand\` or \`getrandom\`. To solve this, either use a different target such as
-\`wasm32-wasi\` or add a direct dependency on \`getrandom\` with the \`js\` feature
-(if the target supports JavaScript). See
-[getrandom#WebAssembly support](https://docs.rs/getrandom/latest/getrandom/#webassembly-support).
-
-# License
-
-Rand is distributed under the terms of both the MIT license and the
-Apache License (Version 2.0).
-
-See [LICENSE-APACHE](LICENSE-APACHE) and [LICENSE-MIT](LICENSE-MIT), and
-[COPYRIGHT](COPYRIGHT) for details.`;
 
     return (
         <div className="text-white">
@@ -209,7 +52,7 @@ See [LICENSE-APACHE](LICENSE-APACHE) and [LICENSE-MIT](LICENSE-MIT), and
                                     <h2 className="text-secondary m-0">{crateVersion.vers}</h2>
                                 </div>
 
-                                <p className="m-0">Random number generators and other randomness functionality.</p>
+                                <p className="m-0">{crateVersion.description}</p>
                             </div>
                         </div>
                     </div>
@@ -217,7 +60,9 @@ See [LICENSE-APACHE](LICENSE-APACHE) and [LICENSE-MIT](LICENSE-MIT), and
                     <div className="col-md-6">
                         <div className="card border-0 shadow-sm text-black h-100">
                             <div className="card-body">
-                                test
+                                <HouseDoor /> <a href={crateVersion.homepage}>{crateVersion.homepage}</a><br />
+                                <Book /> <a href={crateVersion.documentation}>{crateVersion.documentation}</a><br />
+                                <Building /> <a href={crateVersion.repository}>{crateVersion.repository}</a>
                             </div>
                         </div>
                     </div>
@@ -229,35 +74,31 @@ See [LICENSE-APACHE](LICENSE-APACHE) and [LICENSE-MIT](LICENSE-MIT), and
                             <div className="card-header">
                                 <ul className="nav nav-pills card-header-pills">
                                     <li className="nav-item">
-                                        <a className="nav-link active bg-primary bg-gradient" href="#">Readme</a>
+                                        <a className={`nav-link ${currentTab == 'readme' ? 'bg-primary bg-gradient active' : ''}`} href="#"
+                                            onClick={() => setCurrentTab('readme')}>
+                                            Readme
+                                        </a>
                                     </li>
                                     <li className="nav-item">
-                                        <a className="nav-link" href="#">
+                                        <a className={`nav-link ${currentTab == 'versions' ? 'bg-primary bg-gradient active' : ''}`} href="#"
+                                            onClick={() => setCurrentTab('versions')}>
                                             Versions
-                                            <span className="badge rounded-pill bg-danger ms-1">{crateInfo.versions.length}</span>
+                                            <span className={`badge rounded-pill bg-danger ms-1`}>{crateInfo.versions.length}</span>
+                                        </a>
+                                    </li>
+                                    <li className="nav-item">
+                                        <a className={`nav-link ${currentTab == 'members' ? 'bg-primary bg-gradient active' : ''}`} href="#"
+                                            onClick={() => setCurrentTab('members')}>
+                                            Members
                                         </a>
                                     </li>
                                 </ul>
                             </div>
 
                             <div className="card-body">
-                                <ReactMarkdown children={readme} remarkPlugins={[remarkGfm]} components={{
-                                    code({node, inline, className, children, ...props}) {
-                                        const match = /language-(\w+)/.exec(className || '')
-                                        return !inline && match ? (
-                                        <Prism
-                                            children={String(children).replace(/\n$/, '')}
-                                            language={match[1]}
-                                            PreTag="div"
-                                            {...props}
-                                        />
-                                        ) : (
-                                        <code className={className} {...props}>
-                                            {children}
-                                        </code>
-                                        )
-                                    }
-                                }} />
+                                {currentTab == 'readme' ? <ReadMe crateInfo={crateVersion} /> : <></>}
+                                {currentTab == 'versions' ? <>Versions</> : <></>}
+                                {currentTab == 'members' ? <Members crateInfo={crateVersion} /> : <></>}
                             </div>
                         </div>
                     </div>
@@ -270,7 +111,7 @@ See [LICENSE-APACHE](LICENSE-APACHE) and [LICENSE-MIT](LICENSE-MIT), and
 
                             <ul className="list-group list-group-flush mb-2">
                                 {crateVersion.deps.map(dep => (
-                                    <li key={dep} className="list-group-item">{dep.name} = "<strong>{dep.version_req}</strong>"</li>
+                                    <li key={`${dep.name}-${dep.version_req}`} className="list-group-item">{dep.name} = "<strong>{dep.version_req}</strong>"</li>
                                 ))}
                             </ul>
                         </div>
@@ -291,4 +132,83 @@ See [LICENSE-APACHE](LICENSE-APACHE) and [LICENSE-MIT](LICENSE-MIT), and
             </div>
         </div>
     );
+}
+
+function ReadMe(props: { crateInfo: any }) {
+    return (
+        <ReactMarkdown children={props.crateInfo.readme} remarkPlugins={[remarkGfm]} components={{
+            code({node, inline, className, children, ...props}) {
+                const match = /language-(\w+)/.exec(className || '')
+                return !inline && match ? (
+                <Prism
+                    children={String(children).replace(/\n$/, '')}
+                    language={match[1]}
+                    PreTag="pre"
+                    {...props}
+                />
+                ) : (
+                <code className={className} {...props}>
+                    {children}
+                </code>
+                )
+            }
+        }} />
+    );
+}
+
+function Members(props: { crateInfo: any }) {
+    return <div className="grid" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
+        <div className="g-col-4 g-col-lg-1 d-flex align-items-center">
+            <img src="http://placekitten.com/96/96" className="rounded-circle" />
+
+            <div className="ms-2">
+                <strong>Johnny Davidson</strong> <em>(that's you!)</em><br />
+                Owner
+            </div>
+        </div>
+
+        <div className="g-col-4 g-col-lg-1 d-flex align-items-center mt-2">
+            <img src="http://placekitten.com/96/96" className="rounded-circle" />
+
+            <div className="ms-2">
+                <strong>Will Woodwood</strong><br />
+                <select className="form-select form-select-sm" aria-label="Default select example">
+                    <option value="1">Consumer</option>
+                    <option value="2">Maintainer</option>
+                    <option value="3">Owner</option>
+                </select>
+            </div>
+        </div>
+
+        <div className="g-col-4 g-col-lg-1 d-flex align-items-center mt-2">
+            <img src="http://placekitten.com/96/96" className="rounded-circle" />
+
+            <div className="ms-2">
+                <strong>Ben Dover</strong><br />
+                <select className="form-select form-select-sm" aria-label="Default select example">
+                    <option value="1">Consumer</option>
+                    <option value="2" selected>Maintainer</option>
+                    <option value="3">Owner</option>
+                </select>
+            </div>
+        </div>
+
+        <div className="g-col-4 g-col-lg-1 d-flex align-items-center mt-2">
+            <img src="http://placekitten.com/96/96" className="rounded-circle" />
+
+            <div className="ms-2">
+                <strong>Eline Dover</strong><br />
+                <select className="form-select form-select-sm" aria-label="Default select example">
+                    <option value="1">Consumer</option>
+                    <option value="2">Maintainer</option>
+                    <option value="3" selected>Owner</option>
+                </select>
+            </div>
+        </div>
+
+        <div className="g-col-4 g-col-lg-1 mt-2 d-flex align-items-center justify-content-center rounded-circle"
+            style={{ width: '96px', height: '96px', background: '#DEDEDE', fontSize: '2rem' }}>
+            <PersonPlus />
+        </div>
+    </div>;
 }

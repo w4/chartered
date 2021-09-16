@@ -21,6 +21,14 @@ pub struct CrateVersion<'a> {
     pub version: String,
     pub filesystem_object: String,
     pub yanked: bool,
+    // TODO: readme should be versioned in the db so we can just pass a reference rather
+    // than this massive blob for each version - or just update the readme for the whole
+    // crate and don't version it at all? we also need tags, etc too in a pivot table
+    pub readme: Option<String>,
+    pub description: Option<String>,
+    pub repository: Option<String>,
+    pub homepage: Option<String>,
+    pub documentation: Option<String>,
     pub checksum: String,
     pub dependencies: CrateDependencies<'a>,
     pub features: CrateFeatures,
@@ -29,14 +37,23 @@ pub struct CrateVersion<'a> {
 
 impl<'a> CrateVersion<'a> {
     #[must_use]
-    pub fn into_cargo_format(self, crate_: &'a Crate) -> chartered_types::cargo::CrateVersion<'a> {
-        chartered_types::cargo::CrateVersion {
-            name: crate_.name.as_str().into(),
-            vers: self.version.into(),
-            deps: self.dependencies.0,
-            features: self.features.0,
-            links: self.links.map(Into::into),
-        }
+    pub fn into_cargo_format(self, crate_: &'a Crate) -> (chartered_types::cargo::CrateVersion<'a>, chartered_types::cargo::CrateVersionMetadata) {
+        (
+            chartered_types::cargo::CrateVersion {
+                name: crate_.name.as_str().into(),
+                vers: self.version.into(),
+                deps: self.dependencies.0,
+                features: self.features.0,
+                links: self.links.map(Into::into),
+            },
+            chartered_types::cargo::CrateVersionMetadata {
+                description: self.description,
+                readme: self.readme,
+                repository: self.repository,
+                homepage: self.homepage,
+                documentation: self.documentation,
+            }
+        )
     }
 }
 
@@ -163,10 +180,11 @@ impl Crate {
         file_identifier: chartered_fs::FileReference,
         file_checksum: String,
         given: chartered_types::cargo::CrateVersion<'static>,
+        metadata: chartered_types::cargo::CrateVersionMetadata,
     ) -> Result<()> {
         use crate::schema::crate_versions::dsl::{
             checksum, crate_id, crate_versions, dependencies, features, filesystem_object, links,
-            version,
+            version, description, readme, repository, homepage, documentation,
         };
 
         tokio::task::spawn_blocking(move || {
@@ -181,6 +199,11 @@ impl Crate {
                     dependencies.eq(CrateDependencies(given.deps)),
                     features.eq(CrateFeatures(given.features)),
                     links.eq(given.links),
+                    description.eq(metadata.description),
+                    readme.eq(metadata.readme),
+                    repository.eq(metadata.repository),
+                    homepage.eq(metadata.homepage),
+                    documentation.eq(metadata.documentation),
                 ))
                 .execute(&conn)?;
 
