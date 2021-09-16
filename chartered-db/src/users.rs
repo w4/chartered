@@ -4,7 +4,7 @@ use super::{
 };
 use diesel::{insert_into, prelude::*, Associations, Identifiable, Queryable};
 use rand::{thread_rng, Rng};
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 use thrussh_keys::PublicKeyBase64;
 
 #[derive(Identifiable, Queryable, Associations, PartialEq, Eq, Hash, Debug)]
@@ -89,14 +89,16 @@ impl User {
         };
 
         let parsed_key = thrussh_keys::parse_public_key_base64(key)?;
+        let parsed_name = split.next().unwrap_or("(none)").to_string();
 
         tokio::task::spawn_blocking(move || {
-            use crate::schema::user_ssh_keys::dsl::{ssh_key, user_id};
+            use crate::schema::user_ssh_keys::dsl::{name, ssh_key, user_id};
 
             let conn = conn.get()?;
 
             insert_into(crate::schema::user_ssh_keys::dsl::user_ssh_keys)
                 .values((
+                    name.eq(parsed_name),
                     ssh_key.eq(parsed_key.public_key_bytes()),
                     user_id.eq(self.id),
                 ))
@@ -129,51 +131,20 @@ impl User {
         .await?
     }
 
-    /// Get all the SSH keys for the user, returned as `id:fingerprint`.
-    pub async fn list_ssh_keys(
-        self: Arc<Self>,
-        conn: ConnectionPool,
-    ) -> Result<HashMap<i32, String>> {
+    /// Get all the SSH keys for the user.
+    pub async fn list_ssh_keys(self: Arc<Self>, conn: ConnectionPool) -> Result<Vec<UserSshKey>> {
         tokio::task::spawn_blocking(move || {
             use crate::schema::user_ssh_keys::dsl::user_id;
 
             let conn = conn.get()?;
 
-            let selected: Vec<(i32, Vec<u8>)> = crate::schema::user_ssh_keys::table
+            let selected = crate::schema::user_ssh_keys::table
                 .filter(user_id.eq(self.id))
                 .inner_join(users::table)
-                .select((user_ssh_keys::id, user_ssh_keys::ssh_key))
+                .select(user_ssh_keys::all_columns)
                 .load(&conn)?;
 
-            Ok(selected
-                .into_iter()
-                .map(|(id, key)| {
-                    (
-                        id,
-                        thrussh_keys::key::parse_public_key(&key)
-                            .map_err(|e| e.into())
-                            .and_then(|v| {
-                                let raw_hex = hex::encode(
-                                    base64::decode(&v.fingerprint())
-                                        .map_err(|_| thrussh_keys::Error::CouldNotReadKey)?,
-                                );
-                                let mut hex =
-                                    String::with_capacity(raw_hex.len() + (raw_hex.len() / 2 - 1));
-
-                                for (i, c) in raw_hex.chars().enumerate() {
-                                    if i != 0 && i % 2 == 0 {
-                                        hex.push(':');
-                                    }
-
-                                    hex.push(c);
-                                }
-
-                                Ok::<_, crate::Error>(hex)
-                            })
-                            .unwrap_or_else(|e| format!("INVALID: {}", e)),
-                    )
-                })
-                .collect())
+            Ok(selected)
         })
         .await?
     }
@@ -319,8 +290,11 @@ impl UserCratePermission {
 #[belongs_to(User)]
 pub struct UserSshKey {
     pub id: i32,
+    pub name: String,
     pub user_id: i32,
     pub ssh_key: Vec<u8>,
+    pub created_at: chrono::NaiveDateTime,
+    pub last_used_at: Option<chrono::NaiveDateTime>,
 }
 
 impl UserSshKey {
@@ -360,5 +334,43 @@ impl UserSshKey {
         } else {
             UserSession::generate(conn, self.user_id, Some(self.id), None, None, ip).await
         }
+    }
+
+    /// Updates the last used time of this SSH key for reporting purposes in the
+    /// dashboard.
+    pub async fn update_last_used(self: Arc<Self>, conn: ConnectionPool) -> Result<()> {
+        use crate::schema::user_ssh_keys::dsl::{id, last_used_at, user_ssh_keys};
+
+        tokio::task::spawn_blocking(move || {
+            let conn = conn.get()?;
+
+            diesel::update(user_ssh_keys.filter(id.eq(self.id)))
+                .set(last_used_at.eq(diesel::dsl::now))
+                .execute(&conn)
+                .map(|_| ())
+                .map_err(Into::into)
+        })
+        .await?
+    }
+
+    /// Retrieves the key fingerprint, encoded in hex and separated in two character chunks
+    /// with colons.
+    pub fn fingerprint(&self) -> Result<String> {
+        let key = thrussh_keys::key::parse_public_key(&self.ssh_key)?;
+
+        let raw_hex = hex::encode(
+            base64::decode(&key.fingerprint()).map_err(|_| thrussh_keys::Error::CouldNotReadKey)?,
+        );
+        let mut hex = String::with_capacity(raw_hex.len() + (raw_hex.len() / 2 - 1));
+
+        for (i, c) in raw_hex.chars().enumerate() {
+            if i != 0 && i % 2 == 0 {
+                hex.push(':');
+            }
+
+            hex.push(c);
+        }
+
+        Ok(hex)
     }
 }

@@ -29,8 +29,11 @@ CREATE TABLE users (
 
 CREATE TABLE user_ssh_keys (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    name VARCHAR(255) NOT NULL,
     user_id INTEGER NOT NULL,
     ssh_key BLOB NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_used_at DATETIME,
     FOREIGN KEY (user_id) REFERENCES users (id)
 );
 

@@ -31,7 +31,7 @@ pub async fn handle(
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Json(req): extract::Json<Request>,
     user_agent: Option<extract::TypedHeader<headers::UserAgent>>,
-    extract::ConnectInfo(addr) : extract::ConnectInfo<std::net::SocketAddr>,
+    extract::ConnectInfo(addr): extract::ConnectInfo<std::net::SocketAddr>,
 ) -> Result<Json<Response>, Error> {
     // TODO: passwords
     let user = User::find_by_username(db.clone(), req.username)

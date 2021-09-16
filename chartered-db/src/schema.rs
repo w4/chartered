@@ -48,8 +48,11 @@ table! {
 table! {
     user_ssh_keys (id) {
         id -> Integer,
+        name -> Text,
         user_id -> Integer,
         ssh_key -> Binary,
+        created_at -> Timestamp,
+        last_used_at -> Nullable<Timestamp>,
     }
 }
 

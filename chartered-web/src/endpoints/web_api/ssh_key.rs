@@ -1,6 +1,8 @@
 use chartered_db::{users::User, ConnectionPool};
 
 use axum::{extract, Json};
+use chrono::NaiveDateTime;
+use log::warn;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use thiserror::Error;
@@ -13,7 +15,10 @@ pub struct GetResponse {
 #[derive(Serialize)]
 pub struct GetResponseKey {
     id: i32, // TODO: this should be a UUID so we don't leak incremental IDs
+    name: String,
     fingerprint: String,
+    created_at: NaiveDateTime,
+    last_used_at: Option<NaiveDateTime>,
 }
 
 pub async fn handle_get(
@@ -24,7 +29,16 @@ pub async fn handle_get(
         .list_ssh_keys(db)
         .await?
         .into_iter()
-        .map(|(id, fingerprint)| GetResponseKey { id, fingerprint })
+        .map(|key| GetResponseKey {
+            id: key.id,
+            fingerprint: key.fingerprint().unwrap_or_else(|e| {
+                warn!("Failed to parse key with id {}: {}", key.id, e);
+                "INVALID".to_string()
+            }),
+            name: key.name,
+            created_at: key.created_at,
+            last_used_at: key.last_used_at,
+        })
         .collect();
 
     Ok(Json(GetResponse { keys }))

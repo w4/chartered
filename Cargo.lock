@@ -239,6 +239,7 @@ dependencies = [
  "futures",
  "hex",
  "itoa",
+ "log",
  "serde",
  "serde_json",
  "sha-1",

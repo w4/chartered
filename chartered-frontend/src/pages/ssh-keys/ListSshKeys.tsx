@@ -8,6 +8,7 @@ import { authenticatedEndpoint } from "../../util";
 
 import { Plus, Trash } from "react-bootstrap-icons";
 import { Button, Modal } from "react-bootstrap";
+import HumanTime from "react-human-time";
 
 export default function ListSshKeys() {
     const auth = useAuth();
@@ -50,6 +51,9 @@ export default function ListSshKeys() {
         }
     };
 
+    const dateMonthAgo = new Date();
+    dateMonthAgo.setMonth(dateMonthAgo.getMonth() - 1);
+
     return (
         <div className="text-white">
             <Nav />
@@ -71,10 +75,14 @@ export default function ListSshKeys() {
                                 {sshKeys.keys.map(key => (
                                     <tr key={key.id}>
                                         <td className="align-middle">
+                                            <h6 className="m-0 lh-sm">{key.name}</h6>
                                             <pre className="m-0">{key.fingerprint}</pre>
                                             <div className="lh-sm" style={{ fontSize: '.75rem' }}>
-                                                <div>Added on 10 May 2016</div>
-                                                <div className="text-success">Last used within the last week</div>
+                                                <span className="text-muted">Added <HumanTime time={key.created_at} /></span>
+                                                <span className="mx-2"></span>
+                                                <span className={`text-${key.last_used_at ? (new Date(key.last_used_at) > dateMonthAgo ? 'success' : 'danger') : 'muted'}`}>
+                                                    Last used {key.last_used_at ? <HumanTime time={key.last_used_at} /> : <>never</>}
+                                                </span>
                                             </div>
                                         </td>
 

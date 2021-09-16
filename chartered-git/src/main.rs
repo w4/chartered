@@ -19,6 +19,7 @@ use thrussh::{
 };
 use thrussh_keys::{key, PublicKeyBase64};
 use tokio_util::codec::{Decoder, Encoder as TokioEncoder};
+use log::warn;
 
 #[tokio::main]
 #[allow(clippy::semicolon_if_nothing_returned)] // broken clippy lint
@@ -183,9 +184,15 @@ impl server::Handler for Handler {
                     Some(user) => user,
                     None => return self.finished_auth(server::Auth::Reject).await,
                 };
+            let ssh_key = Arc::new(ssh_key);
+
+            if let Err(e) = ssh_key.clone().update_last_used(self.db.clone()).await {
+                warn!("Failed to update last used key: {:?}", e);
+            }
 
             self.user = Some(login_user);
-            self.user_ssh_key = Some(Arc::new(ssh_key));
+            self.user_ssh_key = Some(ssh_key);
+
             self.finished_auth(server::Auth::Accept).await
         })
     }
