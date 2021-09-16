@@ -12,7 +12,6 @@ use axum::{
 use tower::ServiceBuilder;
 use tower_http::cors::{Any, CorsLayer};
 
-
 #[allow(clippy::unused_async)]
 async fn hello_world() -> &'static str {
     "hello, world!"

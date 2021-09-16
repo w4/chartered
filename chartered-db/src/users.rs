@@ -84,8 +84,7 @@ impl User {
         let mut split = ssh_key.split_whitespace();
 
         let key = match (split.next(), split.next()) {
-            (Some(_), Some(key)) => key,
-            (Some(key), None) => key,
+            (Some(_), Some(key)) | (Some(key), None) => key,
             _ => return Err(thrussh_keys::Error::CouldNotReadKey.into()),
         };
 
@@ -152,7 +151,25 @@ impl User {
                     (
                         id,
                         thrussh_keys::key::parse_public_key(&key)
-                            .map(|v| v.fingerprint())
+                            .map_err(|e| e.into())
+                            .and_then(|v| {
+                                let raw_hex = hex::encode(
+                                    base64::decode(&v.fingerprint())
+                                        .map_err(|_| thrussh_keys::Error::CouldNotReadKey)?,
+                                );
+                                let mut hex =
+                                    String::with_capacity(raw_hex.len() + (raw_hex.len() / 2 - 1));
+
+                                for (i, c) in raw_hex.chars().enumerate() {
+                                    if i != 0 && i % 2 == 0 {
+                                        hex.push(':');
+                                    }
+
+                                    hex.push(c);
+                                }
+
+                                Ok::<_, crate::Error>(hex)
+                            })
                             .unwrap_or_else(|e| format!("INVALID: {}", e)),
                     )
                 })

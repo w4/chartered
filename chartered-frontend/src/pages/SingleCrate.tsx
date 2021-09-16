@@ -157,58 +157,77 @@ function ReadMe(props: { crateInfo: any }) {
 }
 
 function Members(props: { crateInfo: any }) {
-    return <div className="grid" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
-        <div className="g-col-4 g-col-lg-1 d-flex align-items-center">
-            <img src="http://placekitten.com/96/96" className="rounded-circle" />
+    const x = ["John Paul", "David Davidson", "Andrew Smith"];
 
-            <div className="ms-2">
-                <strong>Johnny Davidson</strong> <em>(that's you!)</em><br />
-                Owner
-            </div>
-        </div>
+    return <div className="container-fluid g-0">
+        <div className="table-responsive">
+            <table className="table table-striped">
+                <tbody>
+                    {x.map(v =>
+                        <tr key={v}>
+                            <td className="align-middle fit">
+                                <img src="http://placekitten.com/48/48" className="rounded-circle" />
+                            </td>
 
-        <div className="g-col-4 g-col-lg-1 d-flex align-items-center mt-2">
-            <img src="http://placekitten.com/96/96" className="rounded-circle" />
+                            <td className="align-middle">
+                                <strong>{v}</strong><br />
+                                <em>(that's you!)</em>
+                            </td>
 
-            <div className="ms-2">
-                <strong>Will Woodwood</strong><br />
-                <select className="form-select form-select-sm" aria-label="Default select example">
-                    <option value="1">Consumer</option>
-                    <option value="2">Maintainer</option>
-                    <option value="3">Owner</option>
-                </select>
-            </div>
-        </div>
+                            <td className="align-middle">
+                                <div className="d-flex">
+                                    <div>
+                                        <div className="form-check">
+                                            <input className="form-check-input" type="checkbox" value="" id="visible" />
+                                            <label className="form-check-label" htmlFor="visible">
+                                                Visible
+                                            </label>
+                                        </div>
 
-        <div className="g-col-4 g-col-lg-1 d-flex align-items-center mt-2">
-            <img src="http://placekitten.com/96/96" className="rounded-circle" />
+                                        <div className="form-check">
+                                            <input className="form-check-input" type="checkbox" value="" id="publish_version" />
+                                            <label className="form-check-label" htmlFor="visible">
+                                                Publish Version
+                                            </label>
+                                        </div>
+                                    </div>
 
-            <div className="ms-2">
-                <strong>Ben Dover</strong><br />
-                <select className="form-select form-select-sm" aria-label="Default select example">
-                    <option value="1">Consumer</option>
-                    <option value="2" selected>Maintainer</option>
-                    <option value="3">Owner</option>
-                </select>
-            </div>
-        </div>
+                                    <div className="ms-3">
+                                        <div className="form-check">
+                                            <input className="form-check-input" type="checkbox" value="" id="visible" />
+                                            <label className="form-check-label" htmlFor="visible">
+                                                Yank Version
+                                            </label>
+                                        </div>
 
-        <div className="g-col-4 g-col-lg-1 d-flex align-items-center mt-2">
-            <img src="http://placekitten.com/96/96" className="rounded-circle" />
+                                        <div className="form-check">
+                                            <input className="form-check-input" type="checkbox" value="" id="publish_version" />
+                                            <label className="form-check-label" htmlFor="visible">
+                                                Manage Users
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    )}
 
-            <div className="ms-2">
-                <strong>Eline Dover</strong><br />
-                <select className="form-select form-select-sm" aria-label="Default select example">
-                    <option value="1">Consumer</option>
-                    <option value="2">Maintainer</option>
-                    <option value="3" selected>Owner</option>
-                </select>
-            </div>
-        </div>
+                    <tr>
+                        <td className="align-middle fit">
+                            <div
+                                className="d-flex align-items-center justify-content-center rounded-circle"
+                                style={{ width: '48px', height: '48px', background: '#DEDEDE', fontSize: '1rem' }}
+                            >
+                                <PersonPlus />
+                            </div>
+                        </td>
 
-        <div className="g-col-4 g-col-lg-1 mt-2 d-flex align-items-center justify-content-center rounded-circle"
-            style={{ width: '96px', height: '96px', background: '#DEDEDE', fontSize: '2rem' }}>
-            <PersonPlus />
+                        <td></td>
+
+                        <td></td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>;
 }

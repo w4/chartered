@@ -50,7 +50,10 @@ pub async fn handle(
             .into_iter()
             .map(|v| {
                 let (inner, meta) = v.into_cargo_format(&crate_);
-                ResponseVersion { inner: inner.into_owned(), meta }
+                ResponseVersion {
+                    inner: inner.into_owned(),
+                    meta,
+                }
             })
             .collect(),
     }))

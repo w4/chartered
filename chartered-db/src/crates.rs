@@ -37,7 +37,13 @@ pub struct CrateVersion<'a> {
 
 impl<'a> CrateVersion<'a> {
     #[must_use]
-    pub fn into_cargo_format(self, crate_: &'a Crate) -> (chartered_types::cargo::CrateVersion<'a>, chartered_types::cargo::CrateVersionMetadata) {
+    pub fn into_cargo_format(
+        self,
+        crate_: &'a Crate,
+    ) -> (
+        chartered_types::cargo::CrateVersion<'a>,
+        chartered_types::cargo::CrateVersionMetadata,
+    ) {
         (
             chartered_types::cargo::CrateVersion {
                 name: crate_.name.as_str().into(),
@@ -52,7 +58,7 @@ impl<'a> CrateVersion<'a> {
                 repository: self.repository,
                 homepage: self.homepage,
                 documentation: self.documentation,
-            }
+            },
         )
     }
 }
@@ -183,8 +189,8 @@ impl Crate {
         metadata: chartered_types::cargo::CrateVersionMetadata,
     ) -> Result<()> {
         use crate::schema::crate_versions::dsl::{
-            checksum, crate_id, crate_versions, dependencies, features, filesystem_object, links,
-            version, description, readme, repository, homepage, documentation,
+            checksum, crate_id, crate_versions, dependencies, description, documentation, features,
+            filesystem_object, homepage, links, readme, repository, version,
         };
 
         tokio::task::spawn_blocking(move || {

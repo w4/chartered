@@ -65,18 +65,29 @@ export default function ListSshKeys() {
                 </div>
 
                 <div className="card border-0 shadow-sm text-black">
-                    <ul className="list-group list-group-flush">
-                        {sshKeys.keys.map(key => (
-                            <li key={key.id} className="list-group-item">
-                                <div className="d-flex">
-                                    <div className="flex-grow-1"><strong>{key.fingerprint}</strong></div>
-                                    <div>
-                                        <button type="button" className="btn text-danger" onClick={() => setDeleting(key)}><Trash /></button>
-                                    </div>
-                                </div>
-                            </li>
-                        ))}
-                    </ul>
+                    <div className="table-responsive">
+                        <table className="table table-striped">
+                            <tbody>
+                                {sshKeys.keys.map(key => (
+                                    <tr key={key.id}>
+                                        <td className="align-middle">
+                                            <pre className="m-0">{key.fingerprint}</pre>
+                                            <div className="lh-sm" style={{ fontSize: '.75rem' }}>
+                                                <div>Added on 10 May 2016</div>
+                                                <div className="text-success">Last used within the last week</div>
+                                            </div>
+                                        </td>
+
+                                        <td className="align-middle fit">
+                                            <button type="button" className="btn text-danger" onClick={() => setDeleting(key)}>
+                                                <Trash />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <Link to="/ssh-keys/add" className="btn btn-outline-light mt-2 float-end"><Plus /> Add New</Link>
