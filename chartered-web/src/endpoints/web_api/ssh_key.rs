@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use thiserror::Error;
 
+use crate::endpoints::ErrorResponse;
+
 #[derive(Serialize)]
 pub struct GetResponse {
     keys: Vec<GetResponseKey>,
@@ -49,37 +51,27 @@ pub struct PutRequest {
     key: String,
 }
 
-#[derive(Serialize)]
-pub struct PutResponse {
-    error: bool,
-}
-
 pub async fn handle_put(
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(user): extract::Extension<Arc<User>>,
     extract::Json(req): extract::Json<PutRequest>,
-) -> Result<Json<PutResponse>, Error> {
+) -> Result<Json<ErrorResponse>, Error> {
     match user.insert_ssh_key(db, &req.key).await {
-        Ok(()) => Ok(Json(PutResponse { error: false })),
+        Ok(()) => Ok(Json(ErrorResponse { error: None })),
         Err(e @ chartered_db::Error::KeyParse(_)) => Err(Error::KeyParse(e)),
         Err(e) => Err(Error::Database(e)),
     }
-}
-
-#[derive(Serialize)]
-pub struct DeleteResponse {
-    error: bool,
 }
 
 pub async fn handle_delete(
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(user): extract::Extension<Arc<User>>,
     extract::Path((_session_key, ssh_key_id)): extract::Path<(String, i32)>,
-) -> Result<Json<DeleteResponse>, Error> {
+) -> Result<Json<ErrorResponse>, Error> {
     let deleted = user.delete_user_ssh_key_by_id(db, ssh_key_id).await?;
 
     if deleted {
-        Ok(Json(DeleteResponse { error: false }))
+        Ok(Json(ErrorResponse { error: None }))
     } else {
         Err(Error::NonExistentKey)
     }

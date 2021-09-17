@@ -2,25 +2,26 @@ import React = require('react');
 
 import { useState, useEffect } from 'react';
 
-import { useAuth } from '../useAuth';
-import Nav from "../sections/Nav";
-import Loading from './Loading';
-import ErrorPage from './ErrorPage';
-import { Box, HouseDoor, Book, Building, PersonPlus } from 'react-bootstrap-icons';
+import { useAuth } from '../../useAuth';
+import Nav from "../../sections/Nav";
+import Loading from '../Loading';
+import ErrorPage from '../ErrorPage';
+import { Box, HouseDoor, Book, Building } from 'react-bootstrap-icons';
 import { useParams } from "react-router-dom";
-import { authenticatedEndpoint, useAuthenticatedRequest } from '../util';
+import { useAuthenticatedRequest } from '../../util';
 
 import Prism from 'react-syntax-highlighter/dist/cjs/prism';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import Members from './Members';
 
 type Tab = 'readme' | 'versions' | 'members';
 
-interface CrateInfo {
+export interface CrateInfo {
     versions: CrateInfoVersion[],
 }
 
-interface CrateInfoVersion {
+export interface CrateInfoVersion {
     vers: string,
     homepage: string | null,
     description: string | null,
@@ -29,7 +30,7 @@ interface CrateInfoVersion {
     deps: CrateInfoVersionDependency[],
 }
 
-interface CrateInfoVersionDependency {
+export interface CrateInfoVersionDependency {
     name: string,
     version_req: string,
 }
@@ -117,7 +118,7 @@ export default function SingleCrate() {
                             <div className="card-body">
                                 {currentTab == 'readme' ? <ReadMe crateInfo={crateVersion} /> : <></>}
                                 {currentTab == 'versions' ? <>Versions</> : <></>}
-                                {currentTab == 'members' ? <Members crateInfo={crateVersion} /> : <></>}
+                                {currentTab == 'members' ? <Members crate={crate} /> : <></>}
                             </div>
                         </div>
                     </div>
@@ -173,80 +174,4 @@ function ReadMe(props: { crateInfo: any }) {
             }
         }} />
     );
-}
-
-function Members(props: { crateInfo: CrateInfoVersion }) {
-    const x = ["John Paul", "David Davidson", "Andrew Smith"];
-
-    return <div className="container-fluid g-0">
-        <div className="table-responsive">
-            <table className="table table-striped">
-                <tbody>
-                    {x.map(v =>
-                        <tr key={v}>
-                            <td className="align-middle fit">
-                                <img src="http://placekitten.com/48/48" className="rounded-circle" />
-                            </td>
-
-                            <td className="align-middle">
-                                <strong>{v}</strong><br />
-                                <em>(that's you!)</em>
-                            </td>
-
-                            <td className="align-middle">
-                                <div className="d-flex">
-                                    <div>
-                                        <div className="form-check">
-                                            <input className="form-check-input" type="checkbox" value="" id="visible" />
-                                            <label className="form-check-label" htmlFor="visible">
-                                                Visible
-                                            </label>
-                                        </div>
-
-                                        <div className="form-check">
-                                            <input className="form-check-input" type="checkbox" value="" id="publish_version" />
-                                            <label className="form-check-label" htmlFor="visible">
-                                                Publish Version
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    <div className="ms-3">
-                                        <div className="form-check">
-                                            <input className="form-check-input" type="checkbox" value="" id="visible" />
-                                            <label className="form-check-label" htmlFor="visible">
-                                                Yank Version
-                                            </label>
-                                        </div>
-
-                                        <div className="form-check">
-                                            <input className="form-check-input" type="checkbox" value="" id="publish_version" />
-                                            <label className="form-check-label" htmlFor="visible">
-                                                Manage Users
-                                            </label>
-                                        </div>
-                                    </div>
-                                </div>
-                            </td>
-                        </tr>
-                    )}
-
-                    <tr>
-                        <td className="align-middle fit">
-                            <div
-                                className="d-flex align-items-center justify-content-center rounded-circle"
-                                style={{ width: '48px', height: '48px', background: '#DEDEDE', fontSize: '1rem' }}
-                            >
-                                <PersonPlus />
-                            </div>
-                        </td>
-
-                        <td></td>
-
-                        <td></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>;
 }

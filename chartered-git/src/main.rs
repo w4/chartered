@@ -11,6 +11,7 @@ use crate::git::{
 use bytes::BytesMut;
 use chrono::TimeZone;
 use futures::future::Future;
+use log::warn;
 use std::collections::BTreeMap;
 use std::{fmt::Write, pin::Pin, sync::Arc};
 use thrussh::{
@@ -19,7 +20,6 @@ use thrussh::{
 };
 use thrussh_keys::{key, PublicKeyBase64};
 use tokio_util::codec::{Decoder, Encoder as TokioEncoder};
-use log::warn;
 
 #[tokio::main]
 #[allow(clippy::semicolon_if_nothing_returned)] // broken clippy lint

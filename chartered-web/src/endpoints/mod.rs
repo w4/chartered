@@ -12,7 +12,7 @@ macro_rules! ensure_has_crate_perm {
 
 #[derive(serde::Serialize)]
 pub struct ErrorResponse {
-    error: String,
+    error: Option<String>,
 }
 
 macro_rules! define_error_response {
@@ -25,7 +25,7 @@ macro_rules! define_error_response {
 
             fn into_response(self) -> axum::http::Response<Self::Body> {
                 let body = serde_json::to_vec(&crate::endpoints::ErrorResponse {
-                    error: self.to_string(),
+                    error: Some(self.to_string()),
                 })
                 .unwrap();
 

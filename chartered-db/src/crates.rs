@@ -1,3 +1,5 @@
+use crate::users::UserCratePermission;
+
 use super::{
     schema::{crate_versions, crates},
     BitwiseExpressionMethods, ConnectionPool, Result,
@@ -161,13 +163,11 @@ impl Crate {
 
     pub async fn owners(self: Arc<Self>, conn: ConnectionPool) -> Result<Vec<crate::users::User>> {
         tokio::task::spawn_blocking(move || {
-            use crate::schema::user_crate_permissions::{
-                dsl::permissions, dsl::user_crate_permissions,
-            };
+            use crate::schema::user_crate_permissions::dsl::permissions;
 
             let conn = conn.get()?;
 
-            Ok(user_crate_permissions
+            Ok(UserCratePermission::belonging_to(&*self)
                 .filter(
                     permissions
                         .bitwise_and(crate::users::UserCratePermissionValue::MANAGE_USERS.bits())
@@ -176,6 +176,72 @@ impl Crate {
                 .inner_join(crate::schema::users::dsl::users)
                 .select(crate::schema::users::all_columns)
                 .load::<crate::users::User>(&conn)?)
+        })
+        .await?
+    }
+
+    pub async fn members(
+        self: Arc<Self>,
+        conn: ConnectionPool,
+    ) -> Result<Vec<(crate::users::User, crate::users::UserCratePermissionValue)>> {
+        tokio::task::spawn_blocking(move || {
+            let conn = conn.get()?;
+
+            Ok(UserCratePermission::belonging_to(&*self)
+                .inner_join(crate::schema::users::dsl::users)
+                .select((
+                    crate::schema::users::all_columns,
+                    crate::schema::user_crate_permissions::permissions,
+                ))
+                .load(&conn)?)
+        })
+        .await?
+    }
+
+    pub async fn update_permissions(
+        self: Arc<Self>,
+        conn: ConnectionPool,
+        given_user_id: i32,
+        given_permissions: crate::users::UserCratePermissionValue,
+    ) -> Result<usize> {
+        tokio::task::spawn_blocking(move || {
+            use crate::schema::user_crate_permissions::dsl::{
+                crate_id, permissions, user_crate_permissions, user_id,
+            };
+
+            let conn = conn.get()?;
+
+            Ok(diesel::update(
+                user_crate_permissions
+                    .filter(user_id.eq(given_user_id))
+                    .filter(crate_id.eq(self.id)),
+            )
+            .set(permissions.eq(given_permissions.bits()))
+            .execute(&conn)?)
+        })
+        .await?
+    }
+
+    pub async fn delete_member(
+        self: Arc<Self>,
+        conn: ConnectionPool,
+        given_user_id: i32,
+    ) -> Result<()> {
+        tokio::task::spawn_blocking(move || {
+            use crate::schema::user_crate_permissions::dsl::{
+                crate_id, user_crate_permissions, user_id,
+            };
+
+            let conn = conn.get()?;
+
+            diesel::delete(
+                user_crate_permissions
+                    .filter(user_id.eq(given_user_id))
+                    .filter(crate_id.eq(self.id))
+            )
+            .execute(&conn)?;
+
+            Ok(())
         })
         .await?
     }

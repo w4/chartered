@@ -2,7 +2,9 @@ use super::{
     schema::{user_crate_permissions, user_sessions, user_ssh_keys, users},
     ConnectionPool, Result,
 };
+use bitflags::bitflags;
 use diesel::{insert_into, prelude::*, Associations, Identifiable, Queryable};
+use option_set::{option_set, OptionSet};
 use rand::{thread_rng, Rng};
 use std::sync::Arc;
 use thrussh_keys::PublicKeyBase64;
@@ -232,13 +234,19 @@ impl UserSession {
     }
 }
 
-bitflags::bitflags! {
-    #[derive(FromSqlRow, AsExpression, Default)]
-    pub struct UserCratePermissionValue: i32 {
+option_set! {
+    #[derive(FromSqlRow, AsExpression)]
+    pub struct UserCratePermissionValue: Identity + i32 {
         const VISIBLE         = 0b0000_0000_0000_0000_0000_0000_0000_0001;
         const PUBLISH_VERSION = 0b0000_0000_0000_0000_0000_0000_0000_0010;
         const YANK_VERSION    = 0b0000_0000_0000_0000_0000_0000_0000_0100;
         const MANAGE_USERS    = 0b0000_0000_0000_0000_0000_0000_0000_1000;
+    }
+}
+
+impl UserCratePermissionValue {
+    pub fn names() -> &'static [&'static str] {
+        Self::NAMES
     }
 }
 
@@ -258,6 +266,7 @@ where
 
 #[derive(Identifiable, Queryable, Associations, Default, PartialEq, Eq, Hash, Debug)]
 #[belongs_to(User)]
+#[belongs_to(super::crates::Crate)]
 pub struct UserCratePermission {
     pub id: i32,
     pub user_id: i32,

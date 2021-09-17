@@ -5,7 +5,7 @@ mod endpoints;
 mod middleware;
 
 use axum::{
-    handler::{delete, get, post, put},
+    handler::{delete, get, patch, post, put},
     http::Method,
     AddExtensionLayer, Router,
 };
@@ -69,7 +69,19 @@ async fn main() {
         axum_box_after_every_route!(Router::new().route("/login", post(endpoints::web_api::login)));
 
     let web_authenticated = axum_box_after_every_route!(Router::new()
-        .route("/crates/:crate", get(endpoints::web_api::crate_info))
+        .route("/crates/:crate", get(endpoints::web_api::crates::info))
+        .route(
+            "/crates/:crate/members",
+            get(endpoints::web_api::crates::get_members)
+        )
+        .route(
+            "/crates/:crate/members",
+            patch(endpoints::web_api::crates::update_members)
+        )
+        .route(
+            "/crates/:crate/members",
+            delete(endpoints::web_api::crates::delete_member)
+        )
         .route("/ssh-key", get(endpoints::web_api::get_ssh_keys))
         .route("/ssh-key", put(endpoints::web_api::add_ssh_key))
         .route("/ssh-key/:id", delete(endpoints::web_api::delete_ssh_key)))
@@ -95,6 +107,7 @@ async fn main() {
                 .allow_methods(vec![
                     Method::GET,
                     Method::POST,
+                    Method::PATCH,
                     Method::DELETE,
                     Method::PUT,
                     Method::OPTIONS,
