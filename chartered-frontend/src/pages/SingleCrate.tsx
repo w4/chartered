@@ -2,12 +2,13 @@ import React = require('react');
 
 import { useState, useEffect } from 'react';
 
-import { Link } from "react-router-dom";
 import { useAuth } from '../useAuth';
 import Nav from "../sections/Nav";
+import Loading from './Loading';
+import ErrorPage from './ErrorPage';
 import { Box, HouseDoor, Book, Building, PersonPlus } from 'react-bootstrap-icons';
 import { useParams } from "react-router-dom";
-import { authenticatedEndpoint } from '../util';
+import { authenticatedEndpoint, useAuthenticatedRequest } from '../util';
 
 import Prism from 'react-syntax-highlighter/dist/cjs/prism';
 import ReactMarkdown from 'react-markdown';
@@ -15,21 +16,39 @@ import remarkGfm from 'remark-gfm';
 
 type Tab = 'readme' | 'versions' | 'members';
 
+interface CrateInfo {
+    versions: CrateInfoVersion[],
+}
+
+interface CrateInfoVersion {
+    vers: string,
+    homepage: string | null,
+    description: string | null,
+    documentation: string | null,
+    repository: string | null,
+    deps: CrateInfoVersionDependency[],
+}
+
+interface CrateInfoVersionDependency {
+    name: string,
+    version_req: string,
+}
+
 export default function SingleCrate() {
     const auth = useAuth();
     const { crate } = useParams();
 
-    const [crateInfo, setCrateInfo] = useState(null);
     const [currentTab, setCurrentTab] = useState<Tab>('readme');
 
-    useEffect(async () => {
-        let res = await fetch(authenticatedEndpoint(auth, `crates/${crate}`));
-        let json = await res.json();
-        setCrateInfo(json);
-    }, []);
+    const { response: crateInfo, error } = useAuthenticatedRequest<CrateInfo>({
+        auth,
+        endpoint: `crates/${crate}`,
+    });
 
-    if (!crateInfo) {
-        return (<div>Loading...</div>);
+    if (error) {
+        return <ErrorPage message={error} />;
+    } else if (!crateInfo) {
+        return <Loading />;
     }
 
     const crateVersion = crateInfo.versions[crateInfo.versions.length - 1];
@@ -156,7 +175,7 @@ function ReadMe(props: { crateInfo: any }) {
     );
 }
 
-function Members(props: { crateInfo: any }) {
+function Members(props: { crateInfo: CrateInfoVersion }) {
     const x = ["John Paul", "David Davidson", "Andrew Smith"];
 
     return <div className="container-fluid g-0">

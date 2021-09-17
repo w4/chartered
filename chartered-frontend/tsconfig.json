@@ -2,5 +2,5 @@
   "compilerOptions": {
     "jsx": "react"
   },
-  "lib": ["es2015"]
+  "lib": ["ES2015"]
 }

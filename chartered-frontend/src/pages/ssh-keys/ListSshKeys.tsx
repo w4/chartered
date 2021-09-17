@@ -4,27 +4,42 @@ import { Link } from 'react-router-dom';
 
 import Nav from "../../sections/Nav";
 import { useAuth } from "../../useAuth";
-import { authenticatedEndpoint } from "../../util";
+import { useAuthenticatedRequest, authenticatedEndpoint } from "../../util";
 
 import { Plus, Trash } from "react-bootstrap-icons";
 import { Button, Modal } from "react-bootstrap";
 import HumanTime from "react-human-time";
+import ErrorPage from "../ErrorPage";
+import Loading from "../Loading";
+
+interface SshKeysResponse {
+    keys: SshKeysResponseKey[],
+}
+
+interface SshKeysResponseKey {
+    id: number,
+    name: string,
+    fingerprint: string,
+    created_at: string,
+    last_used_at: string,
+}
 
 export default function ListSshKeys() {
     const auth = useAuth();
 
     const [error, setError] = useState("");
     const [deleting, setDeleting] = useState(null);
-    const [sshKeys, setSshKeys] = useState(null);
     const [reloadSshKeys, setReloadSshKeys] = useState(0);
-    useEffect(async () => {
-        let res = await fetch(authenticatedEndpoint(auth, 'ssh-key'));
-        let json = await res.json();
-        setSshKeys(json);
+
+    const { response: sshKeys, error: loadError } = useAuthenticatedRequest<SshKeysResponse>({
+        auth,
+        endpoint: 'ssh-key',
     }, [reloadSshKeys]);
 
-    if (!sshKeys) {
-        return (<div>loading...</div>);
+    if (loadError) {
+        return <ErrorPage message={loadError} />;
+    } else if (!sshKeys) {
+        return <Loading />;
     }
 
     const deleteKey = async () => {
