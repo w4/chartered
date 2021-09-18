@@ -17,7 +17,7 @@ interface SshKeysResponse {
 }
 
 interface SshKeysResponseKey {
-    id: number,
+    uuid: string,
     name: string,
     fingerprint: string,
     created_at: string,
@@ -46,7 +46,7 @@ export default function ListSshKeys() {
         setError("");
 
         try {
-            let res = await fetch(authenticatedEndpoint(auth, `ssh-key/${deleting.id}`), {
+            let res = await fetch(authenticatedEndpoint(auth, `ssh-key/${deleting.uuid}`), {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
@@ -88,7 +88,7 @@ export default function ListSshKeys() {
                         <table className="table table-striped">
                             <tbody>
                                 {sshKeys.keys.map(key => (
-                                    <tr key={key.id}>
+                                    <tr key={key.uuid}>
                                         <td className="align-middle">
                                             <h6 className="m-0 lh-sm">{key.name}</h6>
                                             <pre className="m-0">{key.fingerprint}</pre>

@@ -32,6 +32,7 @@ macro_rules! derive_diesel_json {
 pub mod crates;
 pub mod schema;
 pub mod users;
+pub mod uuid;
 
 #[macro_use]
 extern crate diesel;

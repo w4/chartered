@@ -6,6 +6,7 @@ use log::warn;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use thiserror::Error;
+use chartered_db::uuid::Uuid;
 
 use crate::endpoints::ErrorResponse;
 
@@ -16,7 +17,7 @@ pub struct GetResponse {
 
 #[derive(Serialize)]
 pub struct GetResponseKey {
-    id: i32, // TODO: this should be a UUID so we don't leak incremental IDs
+    uuid: Uuid,
     name: String,
     fingerprint: String,
     created_at: NaiveDateTime,
@@ -32,7 +33,7 @@ pub async fn handle_get(
         .await?
         .into_iter()
         .map(|key| GetResponseKey {
-            id: key.id,
+            uuid: key.uuid.0,
             fingerprint: key.fingerprint().unwrap_or_else(|e| {
                 warn!("Failed to parse key with id {}: {}", key.id, e);
                 "INVALID".to_string()
@@ -66,9 +67,9 @@ pub async fn handle_put(
 pub async fn handle_delete(
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(user): extract::Extension<Arc<User>>,
-    extract::Path((_session_key, ssh_key_id)): extract::Path<(String, i32)>,
+    extract::Path((_session_key, ssh_key_id)): extract::Path<(String, Uuid)>,
 ) -> Result<Json<ErrorResponse>, Error> {
-    let deleted = user.delete_user_ssh_key_by_id(db, ssh_key_id).await?;
+    let deleted = user.delete_user_ssh_key_by_uuid(db, ssh_key_id).await?;
 
     if deleted {
         Ok(Json(ErrorResponse { error: None }))

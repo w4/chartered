@@ -48,6 +48,7 @@ table! {
 table! {
     user_ssh_keys (id) {
         id -> Integer,
+        uuid -> Binary,
         name -> Text,
         user_id -> Integer,
         ssh_key -> Binary,
@@ -59,6 +60,7 @@ table! {
 table! {
     users (id) {
         id -> Integer,
+        uuid -> Binary,
         username -> Text,
     }
 }

@@ -14,7 +14,7 @@ interface CratesMembersResponse {
 }
 
 interface Member {
-    id: number,
+    uuid: string,
     username: string,
     permissions: string[],
 }
@@ -31,7 +31,7 @@ export default function Members({ crate }: { crate: string }) {
     React.useEffect(() => {
         if (response && response.members) {
             setProspectiveMembers(prospectiveMembers.filter((prospectiveMember) => {
-                _.findIndex(response.members, (responseMember) => responseMember.id === prospectiveMember.id) === -1
+                _.findIndex(response.members, (responseMember) => responseMember.uuid === prospectiveMember.uuid) === -1
             }));
         }
     }, [response])
@@ -75,10 +75,10 @@ export default function Members({ crate }: { crate: string }) {
                     )}
 
                     <MemberListInserter
-                        onInsert={(username, userId) => setProspectiveMembers([
+                        onInsert={(username, userUuid) => setProspectiveMembers([
                             ...prospectiveMembers,
                             {
-                                id: userId,
+                                uuid: userUuid,
                                 username,
                                 permissions: ["VISIBLE"],
                             }
@@ -111,7 +111,7 @@ function MemberListItem({ crate, member, prospectiveMember, allowedPermissions, 
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    user_id: member.id,
+                    user_uuid: member.uuid,
                     permissions: selectedPermissions,
                 }),
             });
@@ -140,7 +140,7 @@ function MemberListItem({ crate, member, prospectiveMember, allowedPermissions, 
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    user_id: member.id,
+                    user_uuid: member.uuid,
                 }),
             });
             let json = await res.json();
@@ -195,7 +195,7 @@ function MemberListItem({ crate, member, prospectiveMember, allowedPermissions, 
                 <RenderPermissions
                     allowedPermissions={allowedPermissions}
                     selectedPermissions={selectedPermissions}
-                    userId={member.id}
+                    userUuid={member.uuid}
                     onChange={setSelectedPermissions}
                 />
             </td>
@@ -207,7 +207,7 @@ function MemberListItem({ crate, member, prospectiveMember, allowedPermissions, 
     </>;
 }
 
-function MemberListInserter({ onInsert, existingMembers }: { existingMembers: Member[], onInsert: (username, user_id) => any }) {
+function MemberListInserter({ onInsert, existingMembers }: { existingMembers: Member[], onInsert: (username, user_uuid) => any }) {
     const auth = useAuth();
     const searchRef = React.useRef(null);
     const [loading, setLoading] = useState(false);
@@ -235,7 +235,7 @@ function MemberListInserter({ onInsert, existingMembers }: { existingMembers: Me
     };
 
     const handleChange = (selected) => {
-        onInsert(selected[0].username, selected[0].user_id);
+        onInsert(selected[0].username, selected[0].user_uuid);
         searchRef.current.clear();
     }
 
@@ -253,7 +253,7 @@ function MemberListInserter({ onInsert, existingMembers }: { existingMembers: Me
             <AsyncTypeahead
                 id="search-new-user"
                 onSearch={handleSearch}
-                filterBy={(option) => _.findIndex(existingMembers, (existing) => option.user_id === existing.id) === -1}
+                filterBy={(option) => _.findIndex(existingMembers, (existing) => option.user_uuid === existing.uuid) === -1}
                 labelKey="username"
                 options={options}
                 isLoading={loading}
@@ -284,16 +284,16 @@ function MemberListInserter({ onInsert, existingMembers }: { existingMembers: Me
     </tr>;
 }
 
-function RenderPermissions({ allowedPermissions, selectedPermissions, userId, onChange }: { allowedPermissions: string[], selectedPermissions: string[], userId: number, onChange: (permissions) => any }) {
+function RenderPermissions({ allowedPermissions, selectedPermissions, userUuid, onChange }: { allowedPermissions: string[], selectedPermissions: string[], userUuid: number, onChange: (permissions) => any }) {
     return (
         <div className="row ms-2">
             {allowedPermissions.map((permission) => (
-                <div key={permission + userId} className="form-check col-12 col-md-6">
+                <div key={permission + userUuid} className="form-check col-12 col-md-6">
                     <input
                         className="form-check-input"
                         type="checkbox"
                         value="1"
-                        id={`checkbox-${userId}-${permission}`}
+                        id={`checkbox-${userUuid}-${permission}`}
                         checked={selectedPermissions.indexOf(permission) > -1}
                         onChange={(e) => {
                             let newUserPermissions = new Set(selectedPermissions);
@@ -307,7 +307,7 @@ function RenderPermissions({ allowedPermissions, selectedPermissions, userId, on
                             onChange(Array.from(newUserPermissions));
                         }}
                     />
-                    <label className="form-check-label" htmlFor={`checkbox-${userId}-${permission}`}>
+                    <label className="form-check-label" htmlFor={`checkbox-${userUuid}-${permission}`}>
                         {permission}
                     </label>
                 </div>

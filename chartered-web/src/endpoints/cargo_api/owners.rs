@@ -36,7 +36,8 @@ pub struct GetResponse {
 
 #[derive(Serialize)]
 pub struct GetResponseUser {
-    id: i32,
+    // cargo spec says this should be an unsigned 32-bit integer
+    // uuid: chartered_db::uuid::Uuid,
     login: String,
     name: Option<String>,
 }
@@ -60,7 +61,7 @@ pub async fn handle_get(
         .await?
         .into_iter()
         .map(|user| GetResponseUser {
-            id: user.id,
+            // uuid: user.uuid.0,
             login: user.username,
             name: None,
         })

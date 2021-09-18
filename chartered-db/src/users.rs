@@ -1,5 +1,6 @@
 use super::{
     schema::{user_crate_permissions, user_sessions, user_ssh_keys, users},
+    uuid::SqlUuid,
     ConnectionPool, Result,
 };
 use bitflags::bitflags;
@@ -12,6 +13,7 @@ use thrussh_keys::PublicKeyBase64;
 #[derive(Identifiable, Queryable, Associations, PartialEq, Eq, Hash, Debug)]
 pub struct User {
     pub id: i32,
+    pub uuid: SqlUuid,
     pub username: String,
 }
 
@@ -51,6 +53,23 @@ impl User {
         .await?
     }
 
+    pub async fn find_by_uuid(
+        conn: ConnectionPool,
+        given_uuid: uuid::Uuid,
+    ) -> Result<Option<User>> {
+        use crate::schema::users::dsl::uuid;
+
+        tokio::task::spawn_blocking(move || {
+            let conn = conn.get()?;
+
+            Ok(crate::schema::users::table
+                .filter(uuid.eq(SqlUuid(given_uuid)))
+                .get_result(&conn)
+                .optional()?)
+        })
+        .await?
+    }
+
     pub async fn find_by_session_key(
         conn: ConnectionPool,
         given_session_key: String,
@@ -68,7 +87,7 @@ impl User {
                 )
                 .filter(session_key.eq(given_session_key))
                 .inner_join(users::table)
-                .select((users::dsl::id, users::dsl::username))
+                .select(users::all_columns)
                 .get_result(&conn)
                 .optional()?)
         })
@@ -112,12 +131,13 @@ impl User {
         let parsed_name = split.next().unwrap_or("(none)").to_string();
 
         tokio::task::spawn_blocking(move || {
-            use crate::schema::user_ssh_keys::dsl::{name, ssh_key, user_id};
+            use crate::schema::user_ssh_keys::dsl::{name, ssh_key, user_id, uuid};
 
             let conn = conn.get()?;
 
             insert_into(crate::schema::user_ssh_keys::dsl::user_ssh_keys)
                 .values((
+                    uuid.eq(SqlUuid::random()),
                     name.eq(parsed_name),
                     ssh_key.eq(parsed_key.public_key_bytes()),
                     user_id.eq(self.id),
@@ -129,12 +149,12 @@ impl User {
         .await?
     }
 
-    pub async fn delete_user_ssh_key_by_id(
+    pub async fn delete_user_ssh_key_by_uuid(
         self: Arc<Self>,
         conn: ConnectionPool,
-        ssh_key_id: i32,
+        ssh_key_id: uuid::Uuid,
     ) -> Result<bool> {
-        use crate::schema::user_ssh_keys::dsl::{id, user_id, user_ssh_keys};
+        use crate::schema::user_ssh_keys::dsl::{uuid, user_id, user_ssh_keys};
 
         tokio::task::spawn_blocking(move || {
             let conn = conn.get()?;
@@ -142,7 +162,7 @@ impl User {
             let rows = diesel::delete(
                 user_ssh_keys
                     .filter(user_id.eq(self.id))
-                    .filter(id.eq(ssh_key_id)),
+                    .filter(uuid.eq(SqlUuid(ssh_key_id))),
             )
             .execute(&conn)?;
 
@@ -317,6 +337,7 @@ impl UserCratePermission {
 #[belongs_to(User)]
 pub struct UserSshKey {
     pub id: i32,
+    pub uuid: SqlUuid,
     pub name: String,
     pub user_id: i32,
     pub ssh_key: Vec<u8>,

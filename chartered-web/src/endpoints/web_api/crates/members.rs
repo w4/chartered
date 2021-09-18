@@ -1,9 +1,5 @@
 use axum::{extract, Json};
-use chartered_db::{
-    crates::Crate,
-    users::{User, UserCratePermissionValue as Permission},
-    ConnectionPool,
-};
+use chartered_db::{ConnectionPool, crates::Crate, users::{User, UserCratePermissionValue as Permission}, uuid::Uuid};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use thiserror::Error;
@@ -18,7 +14,7 @@ pub struct GetResponse {
 
 #[derive(Deserialize, Serialize)]
 pub struct GetResponseMember {
-    id: i32,
+    uuid: Uuid,
     username: String,
     permissions: Permission,
 }
@@ -39,7 +35,7 @@ pub async fn handle_get(
         .await?
         .into_iter()
         .map(|(user, permissions)| GetResponseMember {
-            id: user.id,
+            uuid: user.uuid.0,
             username: user.username,
             permissions,
         })
@@ -53,7 +49,7 @@ pub async fn handle_get(
 
 #[derive(Deserialize)]
 pub struct PutOrPatchRequest {
-    user_id: i32,
+    user_uuid: chartered_db::uuid::Uuid,
     permissions: Permission,
 }
 
@@ -69,8 +65,10 @@ pub async fn handle_patch(
         .map(std::sync::Arc::new)?;
     ensure_has_crate_perm!(db, user, crate_, Permission::VISIBLE | -> Error::NoCrate, Permission::MANAGE_USERS | -> Error::NoPermission);
 
+    let action_user = User::find_by_uuid(db.clone(), req.user_uuid).await?.ok_or(Error::InvalidUserId)?;
+
     let affected_rows = crate_
-        .update_permissions(db, req.user_id, req.permissions)
+        .update_permissions(db, action_user.id, req.permissions)
         .await?;
     if affected_rows == 0 {
         return Err(Error::UpdateConflictRemoved);
@@ -91,8 +89,10 @@ pub async fn handle_put(
         .map(std::sync::Arc::new)?;
     ensure_has_crate_perm!(db, user, crate_, Permission::VISIBLE | -> Error::NoCrate, Permission::MANAGE_USERS | -> Error::NoPermission);
 
+    let action_user = User::find_by_uuid(db.clone(), req.user_uuid).await?.ok_or(Error::InvalidUserId)?;
+
     crate_
-        .insert_permissions(db, req.user_id, req.permissions)
+        .insert_permissions(db, action_user.id, req.permissions)
         .await?;
 
     Ok(Json(ErrorResponse { error: None }))
@@ -100,7 +100,7 @@ pub async fn handle_put(
 
 #[derive(Deserialize)]
 pub struct DeleteRequest {
-    user_id: i32,
+    user_uuid: chartered_db::uuid::Uuid,
 }
 
 pub async fn handle_delete(
@@ -115,7 +115,9 @@ pub async fn handle_delete(
         .map(std::sync::Arc::new)?;
     ensure_has_crate_perm!(db, user, crate_, Permission::VISIBLE | -> Error::NoCrate, Permission::MANAGE_USERS | -> Error::NoPermission);
 
-    crate_.delete_member(db, req.user_id).await?;
+    let action_user = User::find_by_uuid(db.clone(), req.user_uuid).await?.ok_or(Error::InvalidUserId)?;
+
+    crate_.delete_member(db, action_user.id).await?;
 
     Ok(Json(ErrorResponse { error: None }))
 }
@@ -130,6 +132,8 @@ pub enum Error {
     NoPermission,
     #[error("Permissions update conflict, user was removed as a member of the crate")]
     UpdateConflictRemoved,
+    #[error("An invalid user id was given")]
+    InvalidUserId,
 }
 
 impl Error {
@@ -141,6 +145,7 @@ impl Error {
             Self::NoCrate => StatusCode::NOT_FOUND,
             Self::NoPermission => StatusCode::FORBIDDEN,
             Self::UpdateConflictRemoved => StatusCode::CONFLICT,
+            Self::InvalidUserId => StatusCode::BAD_REQUEST,
         }
     }
 }
