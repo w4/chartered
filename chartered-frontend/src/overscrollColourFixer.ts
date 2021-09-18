@@ -3,17 +3,22 @@
 // just want to carry on the body background, whereas the header is
 // white so we want to use that at the top of the page.
 
-window.addEventListener('load', () => {
-    let ticking;
+window.addEventListener("load", () => {
+  let ticking;
 
-    window.addEventListener('scroll', function (event) {
-        if (!ticking) {
-            ticking = true;
+  window.addEventListener(
+    "scroll",
+    function (event) {
+      if (!ticking) {
+        ticking = true;
 
-            window.requestAnimationFrame(() => {
-                document.documentElement.style.backgroundColor = (window.scrollY > 70) ? 'var(--bs-primary)' : '#fff';
-                ticking = false;
-            });
-        }
-    }, false);
+        window.requestAnimationFrame(() => {
+          document.documentElement.style.backgroundColor =
+            window.scrollY > 70 ? "var(--bs-primary)" : "#fff";
+          ticking = false;
+        });
+      }
+    },
+    false
+  );
 });
