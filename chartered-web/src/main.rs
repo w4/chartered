@@ -3,6 +3,7 @@
 
 mod endpoints;
 mod middleware;
+mod models;
 
 use axum::{
     handler::{delete, get, patch, post, put},

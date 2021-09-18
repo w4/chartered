@@ -1,6 +1,6 @@
+use crate::models::crates::get_crate_with_permissions;
 use axum::{extract, Json};
 use chartered_db::{
-    crates::Crate,
     users::{User, UserCratePermissionValue as Permission},
     ConnectionPool,
 };
@@ -15,8 +15,8 @@ pub enum Error {
     Database(#[from] chartered_db::Error),
     #[error("Failed to fetch crate file")]
     File(#[from] std::io::Error),
-    #[error("The requested crate does not exist")]
-    NoCrate,
+    #[error("{0}")]
+    CrateFetch(#[from] crate::models::crates::CrateFetchError),
 }
 
 impl Error {
@@ -25,7 +25,7 @@ impl Error {
 
         match self {
             Self::Database(_) | Self::File(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            Self::NoCrate => StatusCode::NOT_FOUND,
+            Self::CrateFetch(e) => e.status_code(),
         }
     }
 }
@@ -37,11 +37,7 @@ pub async fn handle(
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(user): extract::Extension<Arc<User>>,
 ) -> Result<Json<Response>, Error> {
-    let crate_ = Crate::find_by_name(db.clone(), name)
-        .await?
-        .ok_or(Error::NoCrate)
-        .map(std::sync::Arc::new)?;
-    ensure_has_crate_perm!(db, user, crate_, Permission::VISIBLE | -> Error::NoCrate);
+    let crate_ = get_crate_with_permissions(db.clone(), user, name, &[Permission::VISIBLE]).await?;
 
     let versions = crate_.clone().versions(db).await?;
 

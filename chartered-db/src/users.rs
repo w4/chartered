@@ -154,7 +154,7 @@ impl User {
         conn: ConnectionPool,
         ssh_key_id: uuid::Uuid,
     ) -> Result<bool> {
-        use crate::schema::user_ssh_keys::dsl::{uuid, user_id, user_ssh_keys};
+        use crate::schema::user_ssh_keys::dsl::{user_id, user_ssh_keys, uuid};
 
         tokio::task::spawn_blocking(move || {
             let conn = conn.get()?;

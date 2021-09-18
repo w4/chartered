@@ -1,7 +1,7 @@
+use crate::models::crates::get_crate_with_permissions;
 use axum::extract;
 use bytes::Bytes;
 use chartered_db::{
-    crates::Crate,
     users::{User, UserCratePermissionValue as Permission},
     ConnectionPool,
 };
@@ -15,10 +15,8 @@ use thiserror::Error;
 pub enum Error {
     #[error("Failed to query database")]
     Database(#[from] chartered_db::Error),
-    #[error("The requested crate does not exist")]
-    NoCrate,
-    #[error("You don't have permission to publish versions for this crate")]
-    NoPermission,
+    #[error("{0}")]
+    CrateFetch(#[from] crate::models::crates::CrateFetchError),
     #[error("Invalid JSON from client: {0}")]
     JsonParse(#[from] serde_json::Error),
     #[error("Invalid body")]
@@ -31,8 +29,7 @@ impl Error {
 
         match self {
             Self::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            Self::NoCrate => StatusCode::NOT_FOUND,
-            Self::NoPermission => StatusCode::FORBIDDEN,
+            Self::CrateFetch(e) => e.status_code(),
             Self::JsonParse(_) | Self::MetadataParse => StatusCode::BAD_REQUEST,
         }
     }
@@ -61,15 +58,13 @@ pub async fn handle(
         parse(body.as_ref()).map_err(|_| Error::MetadataParse)?;
     let metadata: Metadata = serde_json::from_slice(metadata_bytes)?;
 
-    let crate_ = Crate::find_by_name(db.clone(), metadata.inner.name.to_string())
-        .await?
-        .ok_or(Error::NoCrate)
-        .map(std::sync::Arc::new)?;
-    ensure_has_crate_perm!(
-        db, user, crate_,
-        Permission::VISIBLE | -> Error::NoCrate,
-        Permission::PUBLISH_VERSION | -> Error::NoPermission,
-    );
+    let crate_ = get_crate_with_permissions(
+        db.clone(),
+        user,
+        metadata.inner.name.to_string(),
+        &[Permission::VISIBLE, Permission::PUBLISH_VERSION],
+    )
+    .await?;
 
     let file_ref = chartered_fs::Local.write(crate_bytes).await.unwrap();
 

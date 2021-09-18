@@ -1,5 +1,10 @@
+use crate::models::crates::get_crate_with_permissions;
 use axum::{extract, Json};
-use chartered_db::{ConnectionPool, crates::Crate, users::{User, UserCratePermissionValue as Permission}, uuid::Uuid};
+use chartered_db::{
+    users::{User, UserCratePermissionValue as Permission},
+    uuid::Uuid,
+    ConnectionPool,
+};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use thiserror::Error;
@@ -24,11 +29,13 @@ pub async fn handle_get(
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(user): extract::Extension<Arc<User>>,
 ) -> Result<Json<GetResponse>, Error> {
-    let crate_ = Crate::find_by_name(db.clone(), name)
-        .await?
-        .ok_or(Error::NoCrate)
-        .map(std::sync::Arc::new)?;
-    ensure_has_crate_perm!(db, user, crate_, Permission::VISIBLE | -> Error::NoCrate, Permission::MANAGE_USERS | -> Error::NoPermission);
+    let crate_ = get_crate_with_permissions(
+        db.clone(),
+        user,
+        name,
+        &[Permission::VISIBLE, Permission::MANAGE_USERS],
+    )
+    .await?;
 
     let members = crate_
         .members(db)
@@ -59,13 +66,17 @@ pub async fn handle_patch(
     extract::Extension(user): extract::Extension<Arc<User>>,
     extract::Json(req): extract::Json<PutOrPatchRequest>,
 ) -> Result<Json<ErrorResponse>, Error> {
-    let crate_ = Crate::find_by_name(db.clone(), name)
-        .await?
-        .ok_or(Error::NoCrate)
-        .map(std::sync::Arc::new)?;
-    ensure_has_crate_perm!(db, user, crate_, Permission::VISIBLE | -> Error::NoCrate, Permission::MANAGE_USERS | -> Error::NoPermission);
+    let crate_ = get_crate_with_permissions(
+        db.clone(),
+        user,
+        name,
+        &[Permission::VISIBLE, Permission::MANAGE_USERS],
+    )
+    .await?;
 
-    let action_user = User::find_by_uuid(db.clone(), req.user_uuid).await?.ok_or(Error::InvalidUserId)?;
+    let action_user = User::find_by_uuid(db.clone(), req.user_uuid)
+        .await?
+        .ok_or(Error::InvalidUserId)?;
 
     let affected_rows = crate_
         .update_permissions(db, action_user.id, req.permissions)
@@ -83,13 +94,17 @@ pub async fn handle_put(
     extract::Extension(user): extract::Extension<Arc<User>>,
     extract::Json(req): extract::Json<PutOrPatchRequest>,
 ) -> Result<Json<ErrorResponse>, Error> {
-    let crate_ = Crate::find_by_name(db.clone(), name)
-        .await?
-        .ok_or(Error::NoCrate)
-        .map(std::sync::Arc::new)?;
-    ensure_has_crate_perm!(db, user, crate_, Permission::VISIBLE | -> Error::NoCrate, Permission::MANAGE_USERS | -> Error::NoPermission);
+    let crate_ = get_crate_with_permissions(
+        db.clone(),
+        user,
+        name,
+        &[Permission::VISIBLE, Permission::MANAGE_USERS],
+    )
+    .await?;
 
-    let action_user = User::find_by_uuid(db.clone(), req.user_uuid).await?.ok_or(Error::InvalidUserId)?;
+    let action_user = User::find_by_uuid(db.clone(), req.user_uuid)
+        .await?
+        .ok_or(Error::InvalidUserId)?;
 
     crate_
         .insert_permissions(db, action_user.id, req.permissions)
@@ -109,13 +124,17 @@ pub async fn handle_delete(
     extract::Extension(user): extract::Extension<Arc<User>>,
     extract::Json(req): extract::Json<DeleteRequest>,
 ) -> Result<Json<ErrorResponse>, Error> {
-    let crate_ = Crate::find_by_name(db.clone(), name)
-        .await?
-        .ok_or(Error::NoCrate)
-        .map(std::sync::Arc::new)?;
-    ensure_has_crate_perm!(db, user, crate_, Permission::VISIBLE | -> Error::NoCrate, Permission::MANAGE_USERS | -> Error::NoPermission);
+    let crate_ = get_crate_with_permissions(
+        db.clone(),
+        user,
+        name,
+        &[Permission::VISIBLE, Permission::MANAGE_USERS],
+    )
+    .await?;
 
-    let action_user = User::find_by_uuid(db.clone(), req.user_uuid).await?.ok_or(Error::InvalidUserId)?;
+    let action_user = User::find_by_uuid(db.clone(), req.user_uuid)
+        .await?
+        .ok_or(Error::InvalidUserId)?;
 
     crate_.delete_member(db, action_user.id).await?;
 
@@ -126,10 +145,8 @@ pub async fn handle_delete(
 pub enum Error {
     #[error("Failed to query database")]
     Database(#[from] chartered_db::Error),
-    #[error("The requested crate does not exist")]
-    NoCrate,
-    #[error("You don't have permission to manage users for this crate")]
-    NoPermission,
+    #[error("{0}")]
+    CrateFetch(#[from] crate::models::crates::CrateFetchError),
     #[error("Permissions update conflict, user was removed as a member of the crate")]
     UpdateConflictRemoved,
     #[error("An invalid user id was given")]
@@ -142,8 +159,7 @@ impl Error {
 
         match self {
             Self::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            Self::NoCrate => StatusCode::NOT_FOUND,
-            Self::NoPermission => StatusCode::FORBIDDEN,
+            Self::CrateFetch(e) => e.status_code(),
             Self::UpdateConflictRemoved => StatusCode::CONFLICT,
             Self::InvalidUserId => StatusCode::BAD_REQUEST,
         }
