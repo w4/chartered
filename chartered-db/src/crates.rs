@@ -222,6 +222,30 @@ impl Crate {
         .await?
     }
 
+    pub async fn insert_permissions(
+        self: Arc<Self>,
+        conn: ConnectionPool,
+        given_user_id: i32,
+        given_permissions: crate::users::UserCratePermissionValue,
+    ) -> Result<usize> {
+        tokio::task::spawn_blocking(move || {
+            use crate::schema::user_crate_permissions::dsl::{
+                crate_id, permissions, user_crate_permissions, user_id,
+            };
+
+            let conn = conn.get()?;
+
+            Ok(diesel::insert_into(user_crate_permissions)
+                .values((
+                    user_id.eq(given_user_id),
+                    crate_id.eq(self.id),
+                    permissions.eq(given_permissions.bits()),
+                ))
+                .execute(&conn)?)
+        })
+        .await?
+    }
+
     pub async fn delete_member(
         self: Arc<Self>,
         conn: ConnectionPool,
@@ -237,7 +261,7 @@ impl Crate {
             diesel::delete(
                 user_crate_permissions
                     .filter(user_id.eq(given_user_id))
-                    .filter(crate_id.eq(self.id))
+                    .filter(crate_id.eq(self.id)),
             )
             .execute(&conn)?;
 

@@ -4,6 +4,9 @@ import { PersonPlus, Trash, CheckLg, Save, PlusLg } from 'react-bootstrap-icons'
 import { authenticatedEndpoint, useAuthenticatedRequest } from "../../util";
 import { useAuth } from "../../useAuth";
 import { Button, Modal } from "react-bootstrap";
+import { AsyncTypeahead } from "react-bootstrap-typeahead";
+import { debounce } from "lodash";
+import _ = require("lodash");
 
 interface CratesMembersResponse {
     allowed_permissions: string[],
@@ -23,6 +26,15 @@ export default function Members({ crate }: { crate: string }) {
         auth,
         endpoint: `crates/${crate}/members`,
     }, [reload]);
+    const [prospectiveMembers, setProspectiveMembers] = useState([]);
+
+    React.useEffect(() => {
+        if (response && response.members) {
+            setProspectiveMembers(prospectiveMembers.filter((prospectiveMember) => {
+                _.findIndex(response.members, (responseMember) => responseMember.id === prospectiveMember.id) === -1
+            }));
+        }
+    }, [response])
 
     if (error) {
         return <>{error}</>;
@@ -37,7 +49,7 @@ export default function Members({ crate }: { crate: string }) {
     const allowedPermissions = response.allowed_permissions;
 
     return <div className="container-fluid g-0">
-        <div className="table-responsive">
+        <div className={/*"table-responsive"*/ ""}>
             <table className="table table-striped">
                 <tbody>
                     {response.members.map((member, index) =>
@@ -45,42 +57,41 @@ export default function Members({ crate }: { crate: string }) {
                             key={index}
                             crate={crate}
                             member={member}
+                            prospectiveMember={false}
                             allowedPermissions={allowedPermissions}
                             onUpdateComplete={() => setReload(reload + 1)}
                         />
                     )}
 
-                    <tr>
-                        <td className="align-middle fit">
-                            <div
-                                className="d-flex align-items-center justify-content-center rounded-circle"
-                                style={{ width: '48px', height: '48px', background: '#DEDEDE', fontSize: '1rem' }}
-                            >
-                                <PersonPlus />
-                            </div>
-                        </td>
+                    {prospectiveMembers.map((member, index) =>
+                        <MemberListItem
+                            key={index}
+                            crate={crate}
+                            member={member}
+                            prospectiveMember={true}
+                            allowedPermissions={allowedPermissions}
+                            onUpdateComplete={() => setReload(reload + 1)}
+                        />
+                    )}
 
-                        <td className="align-middle">
-                            <input type="search" className="form-control" placeholder="Search for User" />
-                        </td>
-
-                        <td className="align-middle">
-                            <RenderPermissions allowedPermissions={allowedPermissions} selectedPermissions={[]} userId={-1} />
-                        </td>
-
-                        <td className="align-middle">
-                            <button type="button" className="btn text-dark pe-none">
-                                <PlusLg />
-                            </button>
-                        </td>
-                    </tr>
+                    <MemberListInserter
+                        onInsert={(username, userId) => setProspectiveMembers([
+                            ...prospectiveMembers,
+                            {
+                                id: userId,
+                                username,
+                                permissions: ["VISIBLE"],
+                            }
+                        ])}
+                        existingMembers={response.members}
+                    />
                 </tbody>
             </table>
         </div>
     </div>;
 }
 
-function MemberListItem({ crate, member, allowedPermissions, onUpdateComplete }: { crate: string, member: Member, allowedPermissions: string[], onUpdateComplete: () => any }) {
+function MemberListItem({ crate, member, prospectiveMember, allowedPermissions, onUpdateComplete }: { crate: string, member: Member, prospectiveMember: boolean, allowedPermissions: string[], onUpdateComplete: () => any }) {
     const auth = useAuth();
     const [selectedPermissions, setSelectedPermissions] = useState(member.permissions);
     const [deleting, setDeleting] = useState(false);
@@ -94,7 +105,7 @@ function MemberListItem({ crate, member, allowedPermissions, onUpdateComplete }:
 
         try {
             let res = await fetch(authenticatedEndpoint(auth, `crates/${crate}/members`), {
-                method: 'PATCH',
+                method: prospectiveMember ? 'PUT' : 'PATCH',
                 headers: {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json',
@@ -152,11 +163,11 @@ function MemberListItem({ crate, member, allowedPermissions, onUpdateComplete }:
                 <span className="visually-hidden">Loading...</span>
             </div>
         </button>;
-    } else if (selectedPermissions.indexOf("VISIBLE") === -1) {
+    } else if (!prospectiveMember && selectedPermissions.indexOf("VISIBLE") === -1) {
         itemAction = <button type="button" className="btn text-danger" onClick={() => setDeleting(true)}>
             <Trash />
         </button>;
-    } else if (selectedPermissions.sort().join(',') != member.permissions.sort().join(',')) {
+    } else if (prospectiveMember || selectedPermissions.sort().join(',') != member.permissions.sort().join(',')) {
         itemAction = <button type="button" className="btn text-success" onClick={saveUserPermissions}>
             <CheckLg />
         </button>;
@@ -194,6 +205,83 @@ function MemberListItem({ crate, member, allowedPermissions, onUpdateComplete }:
             </td>
         </tr>
     </>;
+}
+
+function MemberListInserter({ onInsert, existingMembers }: { existingMembers: Member[], onInsert: (username, user_id) => any }) {
+    const auth = useAuth();
+    const searchRef = React.useRef(null);
+    const [loading, setLoading] = useState(false);
+    const [options, setOptions] = useState([]);
+    const [error, setError] = useState("");
+
+    const handleSearch = async (query) => {
+        setLoading(true);
+        setError("");
+
+        try {
+            let res = await fetch(authenticatedEndpoint(auth, `users/search?q=` + encodeURIComponent(query)));
+            let json = await res.json();
+
+            if (json.error) {
+                throw new Error(json.error);
+            }
+
+            setOptions(json.users || []);
+        } catch (e) {
+            setError(e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleChange = (selected) => {
+        onInsert(selected[0].username, selected[0].user_id);
+        searchRef.current.clear();
+    }
+
+    return <tr>
+        <td className="align-middle fit">
+            <div
+                className="d-flex align-items-center justify-content-center rounded-circle"
+                style={{ width: '48px', height: '48px', background: '#DEDEDE', fontSize: '1rem' }}
+            >
+                <PersonPlus />
+            </div>
+        </td>
+
+        <td className="align-middle">
+            <AsyncTypeahead
+                id="search-new-user"
+                onSearch={handleSearch}
+                filterBy={(option) => _.findIndex(existingMembers, (existing) => option.user_id === existing.id) === -1}
+                labelKey="username"
+                options={options}
+                isLoading={loading}
+                placeholder="Search for User"
+                onChange={handleChange}
+                ref={searchRef}
+                renderMenuItemChildren={(option, props) => <>
+                    <img
+                        alt={option.username}
+                        src="http://placekitten.com/24/24"
+                        className="rounded-circle me-2"
+                    />
+                    <span>{option.username}</span>
+                </>}
+            />
+
+            <div className="text-danger">{error}</div>
+        </td>
+
+        <td className="align-middle">
+        </td>
+
+        <td className="align-middle">
+            <button type="button" className="btn text-dark pe-none">
+                <PlusLg />
+            </button>
+        </td>
+    </tr>;
 }
 
 function RenderPermissions({ allowedPermissions, selectedPermissions, userId, onChange }: { allowedPermissions: string[], selectedPermissions: string[], userId: number, onChange: (permissions) => any }) {

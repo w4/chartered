@@ -52,7 +52,7 @@ pub async fn handle_get(
 }
 
 #[derive(Deserialize)]
-pub struct PatchRequest {
+pub struct PutOrPatchRequest {
     user_id: i32,
     permissions: Permission,
 }
@@ -61,7 +61,7 @@ pub async fn handle_patch(
     extract::Path((_session_key, name)): extract::Path<(String, String)>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(user): extract::Extension<Arc<User>>,
-    extract::Json(req): extract::Json<PatchRequest>,
+    extract::Json(req): extract::Json<PutOrPatchRequest>,
 ) -> Result<Json<ErrorResponse>, Error> {
     let crate_ = Crate::find_by_name(db.clone(), name)
         .await?
@@ -75,6 +75,25 @@ pub async fn handle_patch(
     if affected_rows == 0 {
         return Err(Error::UpdateConflictRemoved);
     }
+
+    Ok(Json(ErrorResponse { error: None }))
+}
+
+pub async fn handle_put(
+    extract::Path((_session_key, name)): extract::Path<(String, String)>,
+    extract::Extension(db): extract::Extension<ConnectionPool>,
+    extract::Extension(user): extract::Extension<Arc<User>>,
+    extract::Json(req): extract::Json<PutOrPatchRequest>,
+) -> Result<Json<ErrorResponse>, Error> {
+    let crate_ = Crate::find_by_name(db.clone(), name)
+        .await?
+        .ok_or(Error::NoCrate)
+        .map(std::sync::Arc::new)?;
+    ensure_has_crate_perm!(db, user, crate_, Permission::VISIBLE | -> Error::NoCrate, Permission::MANAGE_USERS | -> Error::NoPermission);
+
+    crate_
+        .insert_permissions(db, req.user_id, req.permissions)
+        .await?;
 
     Ok(Json(ErrorResponse { error: None }))
 }

@@ -76,12 +76,17 @@ async fn main() {
         )
         .route(
             "/crates/:crate/members",
-            patch(endpoints::web_api::crates::update_members)
+            patch(endpoints::web_api::crates::update_member)
+        )
+        .route(
+            "/crates/:crate/members",
+            put(endpoints::web_api::crates::insert_member)
         )
         .route(
             "/crates/:crate/members",
             delete(endpoints::web_api::crates::delete_member)
         )
+        .route("/users/search", get(endpoints::web_api::search_users))
         .route("/ssh-key", get(endpoints::web_api::get_ssh_keys))
         .route("/ssh-key", put(endpoints::web_api::add_ssh_key))
         .route("/ssh-key/:id", delete(endpoints::web_api::delete_ssh_key)))

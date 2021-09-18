@@ -16,6 +16,24 @@ pub struct User {
 }
 
 impl User {
+    pub async fn search(
+        conn: ConnectionPool,
+        given_query: String,
+        limit: i64,
+    ) -> Result<Vec<User>> {
+        use crate::schema::users::dsl::username;
+
+        tokio::task::spawn_blocking(move || {
+            let conn = conn.get()?;
+
+            Ok(crate::schema::users::table
+                .filter(username.like(format!("%{}%", given_query)))
+                .limit(limit)
+                .load(&conn)?)
+        })
+        .await?
+    }
+
     pub async fn find_by_username(
         conn: ConnectionPool,
         given_username: String,
