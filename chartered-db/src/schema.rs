@@ -5,11 +5,6 @@ table! {
         version -> Text,
         filesystem_object -> Text,
         yanked -> Bool,
-        readme -> Nullable<Text>,
-        description -> Nullable<Text>,
-        repository -> Nullable<Text>,
-        homepage -> Nullable<Text>,
-        documentation -> Nullable<Text>,
         checksum -> Text,
         dependencies -> Binary,
         features -> Binary,
@@ -21,6 +16,11 @@ table! {
     crates (id) {
         id -> Integer,
         name -> Text,
+        readme -> Nullable<Text>,
+        description -> Nullable<Text>,
+        repository -> Nullable<Text>,
+        homepage -> Nullable<Text>,
+        documentation -> Nullable<Text>,
     }
 }
 

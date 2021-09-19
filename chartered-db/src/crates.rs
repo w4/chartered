@@ -13,69 +13,12 @@ use std::{collections::HashMap, sync::Arc};
 pub struct Crate {
     pub id: i32,
     pub name: String,
-}
-
-#[derive(Identifiable, Queryable, Associations, PartialEq, Debug)]
-#[belongs_to(Crate)]
-pub struct CrateVersion<'a> {
-    pub id: i32,
-    pub crate_id: i32,
-    pub version: String,
-    pub filesystem_object: String,
-    pub yanked: bool,
-    // TODO: readme should be versioned in the db so we can just pass a reference rather
-    // than this massive blob for each version - or just update the readme for the whole
-    // crate and don't version it at all? we also need tags, etc too in a pivot table
     pub readme: Option<String>,
     pub description: Option<String>,
     pub repository: Option<String>,
     pub homepage: Option<String>,
     pub documentation: Option<String>,
-    pub checksum: String,
-    pub dependencies: CrateDependencies<'a>,
-    pub features: CrateFeatures,
-    pub links: Option<String>,
 }
-
-impl<'a> CrateVersion<'a> {
-    #[must_use]
-    pub fn into_cargo_format(
-        self,
-        crate_: &'a Crate,
-    ) -> (
-        chartered_types::cargo::CrateVersion<'a>,
-        chartered_types::cargo::CrateVersionMetadata,
-    ) {
-        (
-            chartered_types::cargo::CrateVersion {
-                name: crate_.name.as_str().into(),
-                vers: self.version.into(),
-                deps: self.dependencies.0,
-                features: self.features.0,
-                links: self.links.map(Into::into),
-            },
-            chartered_types::cargo::CrateVersionMetadata {
-                description: self.description,
-                readme: self.readme,
-                repository: self.repository,
-                homepage: self.homepage,
-                documentation: self.documentation,
-            },
-        )
-    }
-}
-
-#[derive(Serialize, Deserialize, FromSqlRow, AsExpression, Debug, Clone, PartialEq, Eq)]
-#[sql_type = "diesel::sql_types::Blob"]
-pub struct CrateDependencies<'a>(pub Vec<chartered_types::cargo::CrateDependency<'a>>);
-
-derive_diesel_json!(CrateDependencies<'a>);
-
-#[derive(Serialize, Deserialize, FromSqlRow, AsExpression, Debug, Clone, PartialEq, Eq)]
-#[sql_type = "diesel::sql_types::Blob"]
-pub struct CrateFeatures(pub chartered_types::cargo::CrateFeatures);
-
-derive_diesel_json!(CrateFeatures);
 
 impl Crate {
     pub async fn all_with_versions(
@@ -279,29 +222,41 @@ impl Crate {
         metadata: chartered_types::cargo::CrateVersionMetadata,
     ) -> Result<()> {
         use crate::schema::crate_versions::dsl::{
-            checksum, crate_id, crate_versions, dependencies, description, documentation, features,
-            filesystem_object, homepage, links, readme, repository, version,
+            checksum, crate_id, crate_versions, dependencies, features, filesystem_object, links,
+            version,
+        };
+        use crate::schema::crates::dsl::{
+            crates, description, documentation, homepage, id, readme, repository,
         };
 
         tokio::task::spawn_blocking(move || {
             let conn = conn.get()?;
 
-            insert_into(crate_versions)
-                .values((
-                    crate_id.eq(self.id),
-                    filesystem_object.eq(file_identifier.to_string()),
-                    checksum.eq(file_checksum),
-                    version.eq(given.vers),
-                    dependencies.eq(CrateDependencies(given.deps)),
-                    features.eq(CrateFeatures(given.features)),
-                    links.eq(given.links),
-                    description.eq(metadata.description),
-                    readme.eq(metadata.readme),
-                    repository.eq(metadata.repository),
-                    homepage.eq(metadata.homepage),
-                    documentation.eq(metadata.documentation),
-                ))
-                .execute(&conn)?;
+            conn.transaction::<_, crate::Error, _>(|| {
+                diesel::update(crates.filter(id.eq(self.id)))
+                    .set((
+                        description.eq(metadata.description),
+                        readme.eq(metadata.readme),
+                        repository.eq(metadata.repository),
+                        homepage.eq(metadata.homepage),
+                        documentation.eq(metadata.documentation),
+                    ))
+                    .execute(&conn)?;
+
+                insert_into(crate_versions)
+                    .values((
+                        crate_id.eq(self.id),
+                        filesystem_object.eq(file_identifier.to_string()),
+                        checksum.eq(file_checksum),
+                        version.eq(given.vers),
+                        dependencies.eq(CrateDependencies(given.deps)),
+                        features.eq(CrateFeatures(given.features)),
+                        links.eq(given.links),
+                    ))
+                    .execute(&conn)?;
+
+                Ok(())
+            })?;
 
             Ok(())
         })
@@ -333,11 +288,50 @@ impl Crate {
     }
 }
 
+#[derive(Identifiable, Queryable, Associations, PartialEq, Debug)]
+#[belongs_to(Crate)]
+pub struct CrateVersion<'a> {
+    pub id: i32,
+    pub crate_id: i32,
+    pub version: String,
+    pub filesystem_object: String,
+    pub yanked: bool,
+    pub checksum: String,
+    pub dependencies: CrateDependencies<'a>,
+    pub features: CrateFeatures,
+    pub links: Option<String>,
+}
+
+impl<'a> CrateVersion<'a> {
+    #[must_use]
+    pub fn into_cargo_format(self, crate_: &'a Crate) -> chartered_types::cargo::CrateVersion<'a> {
+        chartered_types::cargo::CrateVersion {
+            name: crate_.name.as_str().into(),
+            vers: self.version.into(),
+            deps: self.dependencies.0,
+            features: self.features.0,
+            links: self.links.map(Into::into),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, FromSqlRow, AsExpression, Debug, Clone, PartialEq, Eq)]
+#[sql_type = "diesel::sql_types::Blob"]
+pub struct CrateDependencies<'a>(pub Vec<chartered_types::cargo::CrateDependency<'a>>);
+
+derive_diesel_json!(CrateDependencies<'a>);
+
 impl<'a> From<Vec<chartered_types::cargo::CrateDependency<'a>>> for CrateDependencies<'a> {
     fn from(o: Vec<chartered_types::cargo::CrateDependency<'a>>) -> Self {
         Self(o)
     }
 }
+
+#[derive(Serialize, Deserialize, FromSqlRow, AsExpression, Debug, Clone, PartialEq, Eq)]
+#[sql_type = "diesel::sql_types::Blob"]
+pub struct CrateFeatures(pub chartered_types::cargo::CrateFeatures);
+
+derive_diesel_json!(CrateFeatures);
 
 impl<'a> From<chartered_types::cargo::CrateFeatures> for CrateFeatures {
     fn from(o: chartered_types::cargo::CrateFeatures) -> Self {

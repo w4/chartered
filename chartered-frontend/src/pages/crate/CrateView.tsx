@@ -18,15 +18,17 @@ import Members from "./Members";
 type Tab = "readme" | "versions" | "members";
 
 export interface CrateInfo {
+  name: string;
+  readme?: string;
+  description?: string;
+  repository?: string;
+  homepage?: string;
+  documentation?: string;
   versions: CrateInfoVersion[];
 }
 
 export interface CrateInfoVersion {
   vers: string;
-  homepage: string | null;
-  description: string | null;
-  documentation: string | null;
-  repository: string | null;
   deps: CrateInfoVersionDependency[];
 }
 
@@ -74,7 +76,7 @@ export default function SingleCrate() {
                   <h2 className="text-secondary m-0">{crateVersion.vers}</h2>
                 </div>
 
-                <p className="m-0">{crateVersion.description}</p>
+                <p className="m-0">{crateInfo.description}</p>
               </div>
             </div>
           </div>
@@ -83,15 +85,13 @@ export default function SingleCrate() {
             <div className="card border-0 shadow-sm text-black h-100">
               <div className="card-body">
                 <HouseDoor />{" "}
-                <a href={crateVersion.homepage}>{crateVersion.homepage}</a>
+                <a href={crateInfo.homepage}>{crateInfo.homepage}</a>
                 <br />
                 <Book />{" "}
-                <a href={crateVersion.documentation}>
-                  {crateVersion.documentation}
-                </a>
+                <a href={crateInfo.documentation}>{crateInfo.documentation}</a>
                 <br />
                 <Building />{" "}
-                <a href={crateVersion.repository}>{crateVersion.repository}</a>
+                <a href={crateInfo.repository}>{crateInfo.repository}</a>
               </div>
             </div>
           </div>
@@ -148,11 +148,7 @@ export default function SingleCrate() {
               </div>
 
               <div className="card-body">
-                {currentTab == "readme" ? (
-                  <ReadMe crateInfo={crateVersion} />
-                ) : (
-                  <></>
-                )}
+                {currentTab == "readme" ? <ReadMe crate={crateInfo} /> : <></>}
                 {currentTab == "versions" ? <>Versions</> : <></>}
                 {currentTab == "members" ? <Members crate={crate} /> : <></>}
               </div>
@@ -195,10 +191,10 @@ export default function SingleCrate() {
   );
 }
 
-function ReadMe(props: { crateInfo: any }) {
+function ReadMe(props: { crate: CrateInfo }) {
   return (
     <ReactMarkdown
-      children={props.crateInfo.readme}
+      children={props.crate.readme}
       remarkPlugins={[remarkGfm]}
       components={{
         code({ node, inline, className, children, ...props }) {

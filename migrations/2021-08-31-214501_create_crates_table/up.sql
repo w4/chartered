@@ -1,6 +1,11 @@
 CREATE TABLE crates (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    name VARCHAR(255) NOT NULL UNIQUE
+    name VARCHAR(255) NOT NULL UNIQUE,
+    readme TEXT,
+    description VARCHAR(255),
+    repository VARCHAR(255),
+    homepage VARCHAR(255),
+    documentation VARCHAR(255)
 );
 
 CREATE TABLE crate_versions (
@@ -9,11 +14,6 @@ CREATE TABLE crate_versions (
     version VARCHAR(255) NOT NULL,
     filesystem_object VARCHAR(255) NOT NULL,
     yanked BOOLEAN NOT NULL DEFAULT FALSE,
-    readme TEXT,
-    description VARCHAR(255),
-    repository VARCHAR(255),
-    homepage VARCHAR(255),
-    documentation VARCHAR(255),
     checksum VARCHAR(255) NOT NULL,
     dependencies BLOB NOT NULL,
     features BLOB NOT NULL,
