@@ -100,15 +100,33 @@ export default function SingleCrate() {
 
           <div className="col-md-6">
             <div className="card border-0 shadow-sm text-black h-100">
-              <div className="card-body">
-                <HouseDoor />{" "}
-                <a href={crateInfo.homepage}>{crateInfo.homepage}</a>
-                <br />
-                <Book />{" "}
-                <a href={crateInfo.documentation}>{crateInfo.documentation}</a>
-                <br />
-                <Building />{" "}
-                <a href={crateInfo.repository}>{crateInfo.repository}</a>
+              <div className="card-body d-flex flex-column justify-content-center">
+                {crateInfo.homepage ? (
+                  <div>
+                    <HouseDoor />{" "}
+                    <a href={crateInfo.homepage}>{crateInfo.homepage}</a>
+                  </div>
+                ) : (
+                  <></>
+                )}
+                {crateInfo.documentation ? (
+                  <div>
+                    <Book />{" "}
+                    <a href={crateInfo.documentation}>
+                      {crateInfo.documentation}
+                    </a>
+                  </div>
+                ) : (
+                  <></>
+                )}
+                {crateInfo.repository ? (
+                  <div>
+                    <Building />{" "}
+                    <a href={crateInfo.repository}>{crateInfo.repository}</a>
+                  </div>
+                ) : (
+                  <></>
+                )}
               </div>
             </div>
           </div>
