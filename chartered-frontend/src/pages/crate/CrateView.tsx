@@ -18,7 +18,7 @@ import {
   Check,
   Square,
 } from "react-bootstrap-icons";
-import { useParams } from "react-router-dom";
+import { useParams, NavLink, Redirect } from "react-router-dom";
 import { useAuthenticatedRequest } from "../../util";
 
 import Prism from "react-syntax-highlighter/dist/cjs/prism";
@@ -56,9 +56,12 @@ export interface CrateInfoVersionDependency {
 
 export default function SingleCrate() {
   const auth = useAuth();
-  const { crate } = useParams();
+  const { crate, subview } = useParams();
+  const currentTab: Tab | undefined = subview;
 
-  const [currentTab, setCurrentTab] = useState<Tab>("readme");
+  if (!currentTab) {
+    return <Redirect to={`/crates/${crate}/readme`} />
+  }
 
   const { response: crateInfo, error } = useAuthenticatedRequest<CrateInfo>({
     auth,
@@ -138,46 +141,22 @@ export default function SingleCrate() {
               <div className="card-header">
                 <ul className="nav nav-pills card-header-pills">
                   <li className="nav-item">
-                    <a
-                      className={`nav-link ${
-                        currentTab == "readme"
-                          ? "bg-primary bg-gradient active"
-                          : ""
-                      }`}
-                      href="#"
-                      onClick={() => setCurrentTab("readme")}
-                    >
+                    <NavLink to={`/crates/${crate}/readme`} className="nav-link" activeClassName="bg-primary bg-gradient active">
                       Readme
-                    </a>
+                    </NavLink>
                   </li>
                   <li className="nav-item">
-                    <a
-                      className={`nav-link ${
-                        currentTab == "versions"
-                          ? "bg-primary bg-gradient active"
-                          : ""
-                      }`}
-                      href="#"
-                      onClick={() => setCurrentTab("versions")}
-                    >
+                    <NavLink to={`/crates/${crate}/versions`} className="nav-link" activeClassName="bg-primary bg-gradient active">
                       Versions
                       <span className={`badge rounded-pill bg-danger ms-1`}>
                         {crateInfo.versions.length}
                       </span>
-                    </a>
+                    </NavLink>
                   </li>
                   <li className="nav-item">
-                    <a
-                      className={`nav-link ${
-                        currentTab == "members"
-                          ? "bg-primary bg-gradient active"
-                          : ""
-                      }`}
-                      href="#"
-                      onClick={() => setCurrentTab("members")}
-                    >
+                    <NavLink to={`/crates/${crate}/members`} className="nav-link" activeClassName="bg-primary bg-gradient active">
                       Members
-                    </a>
+                    </NavLink>
                   </li>
                 </ul>
               </div>

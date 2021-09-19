@@ -44,7 +44,7 @@ function App() {
           />
           <PrivateRoute
             exact
-            path="/crates/:crate"
+            path="/crates/:crate/:subview?"
             component={() => <CrateView />}
           />
           <PrivateRoute
