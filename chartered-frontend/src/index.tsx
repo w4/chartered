@@ -96,7 +96,10 @@ function PublicRoute({
         } else {
           return (
             <Redirect
-              to={{ pathname: "/dashboard", state: { from: props.location } }}
+              to={{
+                pathname: props.location.state?.from?.pathname ?? "/dashboard",
+                state: { from: props.location },
+              }}
             />
           );
         }
