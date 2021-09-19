@@ -6,6 +6,7 @@ use chartered_db::{
     users::{User, UserCratePermissionValue as Permission},
     ConnectionPool,
 };
+use chrono::TimeZone;
 use chartered_types::cargo::CrateVersion;
 use serde::Serialize;
 use std::sync::Arc;
@@ -40,7 +41,7 @@ pub async fn handle(
     extract::Extension(user): extract::Extension<Arc<User>>,
 ) -> Result<axum::http::Response<Full<Bytes>>, Error> {
     let crate_ = get_crate_with_permissions(db.clone(), user, name, &[Permission::VISIBLE]).await?;
-    let versions = crate_.clone().versions(db).await?;
+    let versions = crate_.clone().versions_with_uploader(db).await?;
 
     // returning a Response instead of Json here so we don't have to close
     // every Crate/CrateVersion etc, would be easier if we just had an owned
@@ -51,7 +52,12 @@ pub async fn handle(
         info: crate_.as_ref().into(),
         versions: versions
             .into_iter()
-            .map(|v| v.into_cargo_format(&crate_))
+            .map(|(v, user)| ResponseVersion {
+                size: v.size,
+                created_at: chrono::Utc.from_local_datetime(&v.created_at).unwrap(),
+                inner: v.into_cargo_format(&crate_),
+                uploader: user.username,
+            })
             .collect(),
     })
     .into_response())
@@ -61,7 +67,16 @@ pub async fn handle(
 pub struct Response<'a> {
     #[serde(flatten)]
     info: ResponseInfo<'a>,
-    versions: Vec<CrateVersion<'a>>,
+    versions: Vec<ResponseVersion<'a>>,
+}
+
+#[derive(Serialize)]
+pub struct ResponseVersion<'a> {
+    #[serde(flatten)]
+    inner: CrateVersion<'a>,
+    size: i32,
+    created_at: chrono::DateTime<chrono::Utc>,
+    uploader: String,
 }
 
 #[derive(Serialize)]

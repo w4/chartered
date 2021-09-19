@@ -4,11 +4,14 @@ table! {
         crate_id -> Integer,
         version -> Text,
         filesystem_object -> Text,
+        size -> Integer,
         yanked -> Bool,
         checksum -> Text,
         dependencies -> Binary,
         features -> Binary,
         links -> Nullable<Text>,
+        user_id -> Integer,
+        created_at -> Timestamp,
     }
 }
 
@@ -66,6 +69,7 @@ table! {
 }
 
 joinable!(crate_versions -> crates (crate_id));
+joinable!(crate_versions -> users (user_id));
 joinable!(user_crate_permissions -> crates (crate_id));
 joinable!(user_crate_permissions -> users (user_id));
 joinable!(user_sessions -> user_ssh_keys (user_ssh_key_id));

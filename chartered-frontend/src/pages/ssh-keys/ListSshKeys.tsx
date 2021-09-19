@@ -7,7 +7,7 @@ import { useAuth } from "../../useAuth";
 import { useAuthenticatedRequest, authenticatedEndpoint } from "../../util";
 
 import { Plus, Trash } from "react-bootstrap-icons";
-import { Button, Modal } from "react-bootstrap";
+import { Button, Modal, OverlayTrigger, Tooltip } from "react-bootstrap";
 import HumanTime from "react-human-time";
 import ErrorPage from "../ErrorPage";
 import Loading from "../Loading";
@@ -108,10 +108,22 @@ export default function ListSshKeys() {
                       <h6 className="m-0 lh-sm">{key.name}</h6>
                       <pre className="m-0">{key.fingerprint}</pre>
                       <div className="lh-sm" style={{ fontSize: ".75rem" }}>
-                        <span className="text-muted">
-                          Added <HumanTime time={key.created_at} />
-                        </span>
-                        <span className="mx-2"></span>
+                        <div className="text-muted d-inline-block me-3">
+                          Added{" "}
+                          <OverlayTrigger
+                            overlay={
+                              <Tooltip id={`${key.uuid}-created-at`}>
+                                {new Date(key.created_at).toLocaleString()}
+                              </Tooltip>
+                            }
+                          >
+                            <span className="text-decoration-underline-dotted">
+                              <HumanTime
+                                time={new Date(key.created_at).getTime()}
+                              />
+                            </span>
+                          </OverlayTrigger>
+                        </div>
                         <span
                           className={`text-${
                             key.last_used_at
@@ -123,7 +135,19 @@ export default function ListSshKeys() {
                         >
                           Last used{" "}
                           {key.last_used_at ? (
-                            <HumanTime time={key.last_used_at} />
+                            <OverlayTrigger
+                              overlay={
+                                <Tooltip id={`${key.uuid}-last-used`}>
+                                  {new Date(key.last_used_at).toLocaleString()}
+                                </Tooltip>
+                              }
+                            >
+                              <span className="text-decoration-underline-dotted">
+                                <HumanTime
+                                  time={new Date(key.last_used_at).getTime()}
+                                />
+                              </span>
+                            </OverlayTrigger>
                           ) : (
                             <>never</>
                           )}

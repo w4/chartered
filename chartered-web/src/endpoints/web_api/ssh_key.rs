@@ -2,7 +2,7 @@ use chartered_db::{users::User, ConnectionPool};
 
 use axum::{extract, Json};
 use chartered_db::uuid::Uuid;
-use chrono::NaiveDateTime;
+use chrono::{DateTime, Utc, TimeZone};
 use log::warn;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -20,8 +20,8 @@ pub struct GetResponseKey {
     uuid: Uuid,
     name: String,
     fingerprint: String,
-    created_at: NaiveDateTime,
-    last_used_at: Option<NaiveDateTime>,
+    created_at: DateTime<Utc>,
+    last_used_at: Option<DateTime<Utc>>,
 }
 
 pub async fn handle_get(
@@ -39,8 +39,8 @@ pub async fn handle_get(
                 "INVALID".to_string()
             }),
             name: key.name,
-            created_at: key.created_at,
-            last_used_at: key.last_used_at,
+            created_at: Utc.from_local_datetime(&key.created_at).unwrap(),
+            last_used_at: key.last_used_at.and_then(|v| Utc.from_local_datetime(&v).single()),
         })
         .collect();
 

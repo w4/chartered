@@ -60,7 +60,7 @@ pub async fn handle(
 
     let crate_ = get_crate_with_permissions(
         db.clone(),
-        user,
+        user.clone(),
         metadata.inner.name.to_string(),
         &[Permission::VISIBLE, Permission::PUBLISH_VERSION],
     )
@@ -71,8 +71,10 @@ pub async fn handle(
     crate_
         .publish_version(
             db,
+            user,
             file_ref,
             hex::encode(Sha256::digest(crate_bytes)),
+            metadata_bytes.len().try_into().unwrap(),
             metadata.inner.into_owned(),
             metadata.meta,
         )

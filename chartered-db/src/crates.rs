@@ -1,7 +1,7 @@
-use crate::users::UserCratePermission;
+use crate::users::{UserCratePermission, User};
 
 use super::{
-    schema::{crate_versions, crates},
+    schema::{crate_versions, crates, users},
     BitwiseExpressionMethods, ConnectionPool, Result,
 };
 use diesel::{insert_into, prelude::*, Associations, Identifiable, Queryable};
@@ -74,14 +74,14 @@ impl Crate {
         .await?
     }
 
-    pub async fn versions(
+    pub async fn versions_with_uploader(
         self: Arc<Self>,
         conn: ConnectionPool,
-    ) -> Result<Vec<CrateVersion<'static>>> {
+    ) -> Result<Vec<(CrateVersion<'static>, User)>> {
         tokio::task::spawn_blocking(move || {
             let conn = conn.get()?;
 
-            Ok(CrateVersion::belonging_to(&*self).load::<CrateVersion>(&conn)?)
+            Ok(CrateVersion::belonging_to(&*self).inner_join(users::table).load::<(CrateVersion, User)>(&conn)?)
         })
         .await?
     }
@@ -216,14 +216,16 @@ impl Crate {
     pub async fn publish_version(
         self: Arc<Self>,
         conn: ConnectionPool,
+        user: Arc<User>,
         file_identifier: chartered_fs::FileReference,
         file_checksum: String,
+        file_size: i32,
         given: chartered_types::cargo::CrateVersion<'static>,
         metadata: chartered_types::cargo::CrateVersionMetadata,
     ) -> Result<()> {
         use crate::schema::crate_versions::dsl::{
             checksum, crate_id, crate_versions, dependencies, features, filesystem_object, links,
-            version,
+            version, size, user_id,
         };
         use crate::schema::crates::dsl::{
             crates, description, documentation, homepage, id, readme, repository,
@@ -247,11 +249,13 @@ impl Crate {
                     .values((
                         crate_id.eq(self.id),
                         filesystem_object.eq(file_identifier.to_string()),
+                        size.eq(file_size),
                         checksum.eq(file_checksum),
                         version.eq(given.vers),
                         dependencies.eq(CrateDependencies(given.deps)),
                         features.eq(CrateFeatures(given.features)),
                         links.eq(given.links),
+                        user_id.eq(user.id),
                     ))
                     .execute(&conn)?;
 
@@ -290,16 +294,20 @@ impl Crate {
 
 #[derive(Identifiable, Queryable, Associations, PartialEq, Debug)]
 #[belongs_to(Crate)]
+#[belongs_to(User)]
 pub struct CrateVersion<'a> {
     pub id: i32,
     pub crate_id: i32,
     pub version: String,
     pub filesystem_object: String,
+    pub size: i32,
     pub yanked: bool,
     pub checksum: String,
     pub dependencies: CrateDependencies<'a>,
     pub features: CrateFeatures,
     pub links: Option<String>,
+    pub user_id: i32,
+    pub created_at: chrono::NaiveDateTime,
 }
 
 impl<'a> CrateVersion<'a> {

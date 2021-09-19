@@ -6,7 +6,18 @@ import { useAuth } from "../../useAuth";
 import Nav from "../../sections/Nav";
 import Loading from "../Loading";
 import ErrorPage from "../ErrorPage";
-import { Box, HouseDoor, Book, Building } from "react-bootstrap-icons";
+import {
+  BoxSeam,
+  HouseDoor,
+  Book,
+  Building,
+  Calendar3,
+  Check2Square,
+  Hdd,
+  CheckSquare,
+  Check,
+  Square,
+} from "react-bootstrap-icons";
 import { useParams } from "react-router-dom";
 import { useAuthenticatedRequest } from "../../util";
 
@@ -14,6 +25,8 @@ import Prism from "react-syntax-highlighter/dist/cjs/prism";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import Members from "./Members";
+import { OverlayTrigger, Tooltip } from "react-bootstrap";
+import HumanTime from "react-human-time";
 
 type Tab = "readme" | "versions" | "members";
 
@@ -30,6 +43,10 @@ export interface CrateInfo {
 export interface CrateInfoVersion {
   vers: string;
   deps: CrateInfoVersionDependency[];
+  features: any[];
+  size: number;
+  uploader: string;
+  created_at: string;
 }
 
 export interface CrateInfoVersionDependency {
@@ -70,7 +87,7 @@ export default function SingleCrate() {
                     className="text-white circle bg-primary bg-gradient d-inline rounded-circle d-inline-flex justify-content-center align-items-center"
                     style={{ width: "2rem", height: "2rem" }}
                   >
-                    <Box />
+                    <BoxSeam />
                   </div>
                   <h1 className="text-primary d-inline px-2">{crate}</h1>
                   <h2 className="text-secondary m-0">{crateVersion.vers}</h2>
@@ -149,7 +166,11 @@ export default function SingleCrate() {
 
               <div className="card-body">
                 {currentTab == "readme" ? <ReadMe crate={crateInfo} /> : <></>}
-                {currentTab == "versions" ? <>Versions</> : <></>}
+                {currentTab == "versions" ? (
+                  <Versions crate={crateInfo} />
+                ) : (
+                  <></>
+                )}
                 {currentTab == "members" ? <Members crate={crate} /> : <></>}
               </div>
             </div>
@@ -187,6 +208,104 @@ export default function SingleCrate() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function Versions(props: { crate: CrateInfo }) {
+  const humanFileSize = (size) => {
+    var i = Math.floor(Math.log(size) / Math.log(1024));
+    return (
+      Number((size / Math.pow(1024, i)).toFixed(2)) +
+      " " +
+      ["B", "kB", "MB", "GB", "TB"][i]
+    );
+  };
+
+  return (
+    <div>
+      {[...props.crate.versions].reverse().map((version, index) => (
+        <div
+          key={index}
+          className={`card text-white bg-gradient ${
+            index == 0 ? "bg-primary" : "bg-dark mt-2"
+          }`}
+        >
+          <div className="card-body d-flex align-items-center">
+            <h5 className="m-0">{version.vers}</h5>
+
+            <div className="text-uppercase ms-4" style={{ fontSize: ".75rem" }}>
+              <div>
+                <div className="d-inline-block">
+                  By
+                  <img
+                    src="http://placekitten.com/22/22"
+                    className="rounded-circle ms-1 me-1"
+                  />
+                  {version.uploader}
+                </div>
+
+                <div className="ms-3 d-inline-block">
+                  <OverlayTrigger
+                    overlay={
+                      <Tooltip
+                        id={`tooltip-${props.crate.name}-version-${version.vers}-date`}
+                      >
+                        {new Date(version.created_at).toLocaleString()}
+                      </Tooltip>
+                    }
+                  >
+                    <span>
+                      <Calendar3 />{" "}
+                      <HumanTime
+                        time={new Date(version.created_at).getTime()}
+                      />
+                    </span>
+                  </OverlayTrigger>
+                </div>
+              </div>
+
+              <div>
+                <div className="d-inline-block">
+                  <Hdd /> {humanFileSize(version.size)}
+                </div>
+
+                <div className="ms-3 d-inline-block">
+                  <OverlayTrigger
+                    overlay={
+                      <Tooltip
+                        id={`tooltip-${props.crate.name}-version-${version.vers}-feature-${index}`}
+                      >
+                        <div className="text-start m-2">
+                          {Object.keys(version.features).map(
+                            (feature, index) => (
+                              <div key={index}>
+                                {version.features["default"].includes(
+                                  feature
+                                ) ? (
+                                  <CheckSquare className="me-2" />
+                                ) : (
+                                  <Square className="me-2" />
+                                )}
+                                {feature}
+                              </div>
+                            )
+                          )}
+                        </div>
+                      </Tooltip>
+                    }
+                  >
+                    <span>
+                      <Check2Square /> {Object.keys(version.features).length}{" "}
+                      Features
+                    </span>
+                  </OverlayTrigger>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

@@ -13,12 +13,16 @@ CREATE TABLE crate_versions (
     crate_id INTEGER NOT NULL,
     version VARCHAR(255) NOT NULL,
     filesystem_object VARCHAR(255) NOT NULL,
+    size INTEGER NOT NULL,
     yanked BOOLEAN NOT NULL DEFAULT FALSE,
     checksum VARCHAR(255) NOT NULL,
     dependencies BLOB NOT NULL,
     features BLOB NOT NULL,
     links VARCHAR(255),
+    user_id INTEGER NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (crate_id, version),
+    FOREIGN KEY (user_id) REFERENCES users (id)
     FOREIGN KEY (crate_id) REFERENCES crates (id)
 );
 
