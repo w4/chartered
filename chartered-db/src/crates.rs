@@ -1,4 +1,4 @@
-use crate::users::{UserCratePermission, User};
+use crate::users::{User, UserCratePermission};
 
 use super::{
     schema::{crate_versions, crates, users},
@@ -21,21 +21,6 @@ pub struct Crate {
 }
 
 impl Crate {
-    pub async fn all_with_versions(
-        conn: ConnectionPool,
-    ) -> Result<HashMap<Crate, Vec<CrateVersion<'static>>>> {
-        tokio::task::spawn_blocking(move || {
-            let conn = conn.get()?;
-
-            let crate_versions = crates::table
-                .inner_join(crate_versions::table)
-                .load(&conn)?;
-
-            Ok(crate_versions.into_iter().into_grouping_map().collect())
-        })
-        .await?
-    }
-
     pub async fn all_visible_with_versions(
         conn: ConnectionPool,
         given_user_id: i32,
@@ -56,6 +41,32 @@ impl Crate {
                 .load(&conn)?;
 
             Ok(crate_versions.into_iter().into_grouping_map().collect())
+        })
+        .await?
+    }
+
+    pub async fn list_recently_updated(
+        conn: ConnectionPool,
+        given_user_id: i32,
+    ) -> Result<Vec<(Crate, CrateVersion<'static>)>> {
+        tokio::task::spawn_blocking(move || {
+            let conn = conn.get()?;
+
+            let crates = crates::table
+                .inner_join(crate::schema::user_crate_permissions::table)
+                .filter(
+                    crate::schema::user_crate_permissions::permissions
+                        .bitwise_and(crate::users::UserCratePermissionValue::VISIBLE.bits())
+                        .ne(0),
+                )
+                .filter(crate::schema::user_crate_permissions::dsl::user_id.eq(given_user_id))
+                .inner_join(crate_versions::table)
+                .order_by(crate::schema::crate_versions::dsl::id.desc())
+                .select((crates::all_columns, crate_versions::all_columns))
+                .limit(10)
+                .load(&conn)?;
+
+            Ok(crates)
         })
         .await?
     }
@@ -81,7 +92,9 @@ impl Crate {
         tokio::task::spawn_blocking(move || {
             let conn = conn.get()?;
 
-            Ok(CrateVersion::belonging_to(&*self).inner_join(users::table).load::<(CrateVersion, User)>(&conn)?)
+            Ok(CrateVersion::belonging_to(&*self)
+                .inner_join(users::table)
+                .load::<(CrateVersion, User)>(&conn)?)
         })
         .await?
     }
@@ -225,7 +238,7 @@ impl Crate {
     ) -> Result<()> {
         use crate::schema::crate_versions::dsl::{
             checksum, crate_id, crate_versions, dependencies, features, filesystem_object, links,
-            version, size, user_id,
+            size, user_id, version,
         };
         use crate::schema::crates::dsl::{
             crates, description, documentation, homepage, id, readme, repository,

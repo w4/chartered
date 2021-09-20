@@ -4,20 +4,23 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../useAuth";
 import Nav from "../sections/Nav";
 import { ChevronRight } from "react-bootstrap-icons";
+import { useAuthenticatedRequest } from "../util";
+
+interface RecentlyUpdatedResponse {
+  versions: RecentlyUpdatedResponseVersions,
+}
+
+interface RecentlyUpdatedResponseVersions {
+  [i: number]: { name: string, version: string, },
+}
 
 export default function Dashboard() {
   const auth = useAuth();
 
-  const recentlyUpdated = [
-    {
-      name: "hello-world-rs",
-      version: "0.0.1",
-    },
-    {
-      name: "cool-beans-rs",
-      version: "0.0.1",
-    },
-  ];
+  const { response: recentlyUpdated, error } = useAuthenticatedRequest<RecentlyUpdatedResponse>({
+    auth,
+    endpoint: "crates/recently-updated",
+  });
 
   return (
     <div className="text-white">
@@ -41,25 +44,19 @@ export default function Dashboard() {
         <hr />
 
         <div className="row">
-          <div className="col-md-4">
+          <div className="col-12 col-md-4">
             <h4>Your Crates</h4>
-            {recentlyUpdated.map((v) => (
-              <CrateCard key={v.name} crate={v} />
-            ))}
           </div>
 
-          <div className="col-md-4">
+          <div className="col-12 col-md-4">
             <h4>Recently Updated</h4>
-            {recentlyUpdated.map((v) => (
+            {(recentlyUpdated?.versions || []).map((v) => (
               <CrateCard key={v.name} crate={v} />
             ))}
           </div>
 
-          <div className="col-md-4">
+          <div className="col-12 col-md-4">
             <h4>Most Downloaded</h4>
-            {recentlyUpdated.map((v) => (
-              <CrateCard key={v.name} crate={v} />
-            ))}
           </div>
         </div>
       </div>

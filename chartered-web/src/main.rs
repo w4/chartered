@@ -87,6 +87,10 @@ async fn main() {
             "/crates/:crate/members",
             delete(endpoints::web_api::crates::delete_member)
         )
+        .route(
+            "/crates/recently-updated",
+            get(endpoints::web_api::crates::list_recently_updated)
+        )
         .route("/users/search", get(endpoints::web_api::search_users))
         .route("/ssh-key", get(endpoints::web_api::get_ssh_keys))
         .route("/ssh-key", put(endpoints::web_api::add_ssh_key))

@@ -2,7 +2,7 @@ use chartered_db::{users::User, ConnectionPool};
 
 use axum::{extract, Json};
 use chartered_db::uuid::Uuid;
-use chrono::{DateTime, Utc, TimeZone};
+use chrono::{DateTime, TimeZone, Utc};
 use log::warn;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -40,7 +40,9 @@ pub async fn handle_get(
             }),
             name: key.name,
             created_at: Utc.from_local_datetime(&key.created_at).unwrap(),
-            last_used_at: key.last_used_at.and_then(|v| Utc.from_local_datetime(&v).single()),
+            last_used_at: key
+                .last_used_at
+                .and_then(|v| Utc.from_local_datetime(&v).single()),
         })
         .collect();
 

@@ -6,8 +6,8 @@ use chartered_db::{
     users::{User, UserCratePermissionValue as Permission},
     ConnectionPool,
 };
-use chrono::TimeZone;
 use chartered_types::cargo::CrateVersion;
+use chrono::TimeZone;
 use serde::Serialize;
 use std::sync::Arc;
 use thiserror::Error;
@@ -16,8 +16,6 @@ use thiserror::Error;
 pub enum Error {
     #[error("Failed to query database")]
     Database(#[from] chartered_db::Error),
-    #[error("Failed to fetch crate file")]
-    File(#[from] std::io::Error),
     #[error("{0}")]
     CrateFetch(#[from] crate::models::crates::CrateFetchError),
 }
@@ -27,7 +25,7 @@ impl Error {
         use axum::http::StatusCode;
 
         match self {
-            Self::Database(_) | Self::File(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::CrateFetch(e) => e.status_code(),
         }
     }
