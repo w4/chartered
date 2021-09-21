@@ -401,21 +401,28 @@ impl CrateWithPermissions {
                     ))
                     .execute(&conn)?;
 
-                insert_into(crate_versions)
+                let res = insert_into(crate_versions)
                     .values((
                         crate_id.eq(self.crate_.id),
                         filesystem_object.eq(file_identifier.to_string()),
                         size.eq(file_size),
                         checksum.eq(file_checksum),
-                        version.eq(given.vers),
+                        version.eq(&given.vers),
                         dependencies.eq(CrateDependencies(given.deps)),
                         features.eq(CrateFeatures(given.features)),
                         links.eq(given.links),
                         user_id.eq(user.id),
                     ))
-                    .execute(&conn)?;
+                    .execute(&conn);
 
-                Ok(())
+                use diesel::result::{DatabaseErrorKind, Error as DieselError};
+                match res {
+                    Ok(_) => Ok(()),
+                    Err(DieselError::DatabaseError(DatabaseErrorKind::UniqueViolation, _)) => {
+                        Err(Error::VersionConflict(given.vers.into_owned()))
+                    }
+                    Err(e) => Err(e.into()),
+                }
             })?;
 
             Ok(())

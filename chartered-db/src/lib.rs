@@ -69,6 +69,8 @@ pub enum Error {
     MissingPermission(crate::users::UserCratePermissionValue),
     /// The requested crate does not exist
     MissingCrate,
+    /// Version {0} already exists for this crate
+    VersionConflict(String),
 }
 
 impl Error {
@@ -82,7 +84,7 @@ impl Error {
                 http::StatusCode::NOT_FOUND
             }
             Self::MissingPermission(_) => http::StatusCode::FORBIDDEN,
-            Self::KeyParse(_) => http::StatusCode::BAD_REQUEST,
+            Self::KeyParse(_) | Self::VersionConflict(_) => http::StatusCode::BAD_REQUEST,
             _ => http::StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
