@@ -9,6 +9,7 @@ pub use uuid::Uuid;
 pub struct SqlUuid(pub uuid::Uuid);
 
 impl SqlUuid {
+    #[must_use]
     pub fn random() -> Self {
         Self(uuid::Uuid::new_v4())
     }

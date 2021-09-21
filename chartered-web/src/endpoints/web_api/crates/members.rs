@@ -1,6 +1,6 @@
-use crate::models::crates::get_crate_with_permissions;
 use axum::{extract, Json};
 use chartered_db::{
+    crates::Crate,
     users::{User, UserCratePermissionValue as Permission},
     uuid::Uuid,
     ConnectionPool,
@@ -25,19 +25,14 @@ pub struct GetResponseMember {
 }
 
 pub async fn handle_get(
-    extract::Path((_session_key, name)): extract::Path<(String, String)>,
+    extract::Path((_session_key, organisation, name)): extract::Path<(String, String, String)>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(user): extract::Extension<Arc<User>>,
 ) -> Result<Json<GetResponse>, Error> {
-    let crate_ = get_crate_with_permissions(
-        db.clone(),
-        user,
-        name,
-        &[Permission::VISIBLE, Permission::MANAGE_USERS],
-    )
-    .await?;
+    let crate_with_permissions =
+        Arc::new(Crate::find_by_name(db.clone(), user.id, organisation, name).await?);
 
-    let members = crate_
+    let members = crate_with_permissions
         .members(db)
         .await?
         .into_iter()
@@ -61,24 +56,19 @@ pub struct PutOrPatchRequest {
 }
 
 pub async fn handle_patch(
-    extract::Path((_session_key, name)): extract::Path<(String, String)>,
+    extract::Path((_session_key, organisation, name)): extract::Path<(String, String, String)>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(user): extract::Extension<Arc<User>>,
     extract::Json(req): extract::Json<PutOrPatchRequest>,
 ) -> Result<Json<ErrorResponse>, Error> {
-    let crate_ = get_crate_with_permissions(
-        db.clone(),
-        user,
-        name,
-        &[Permission::VISIBLE, Permission::MANAGE_USERS],
-    )
-    .await?;
+    let crate_with_permissions =
+        Arc::new(Crate::find_by_name(db.clone(), user.id, organisation, name).await?);
 
     let action_user = User::find_by_uuid(db.clone(), req.user_uuid)
         .await?
         .ok_or(Error::InvalidUserId)?;
 
-    let affected_rows = crate_
+    let affected_rows = crate_with_permissions
         .update_permissions(db, action_user.id, req.permissions)
         .await?;
     if affected_rows == 0 {
@@ -89,24 +79,19 @@ pub async fn handle_patch(
 }
 
 pub async fn handle_put(
-    extract::Path((_session_key, name)): extract::Path<(String, String)>,
+    extract::Path((_session_key, organisation, name)): extract::Path<(String, String, String)>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(user): extract::Extension<Arc<User>>,
     extract::Json(req): extract::Json<PutOrPatchRequest>,
 ) -> Result<Json<ErrorResponse>, Error> {
-    let crate_ = get_crate_with_permissions(
-        db.clone(),
-        user,
-        name,
-        &[Permission::VISIBLE, Permission::MANAGE_USERS],
-    )
-    .await?;
+    let crate_with_permissions =
+        Arc::new(Crate::find_by_name(db.clone(), user.id, organisation, name).await?);
 
     let action_user = User::find_by_uuid(db.clone(), req.user_uuid)
         .await?
         .ok_or(Error::InvalidUserId)?;
 
-    crate_
+    crate_with_permissions
         .insert_permissions(db, action_user.id, req.permissions)
         .await?;
 
@@ -119,34 +104,29 @@ pub struct DeleteRequest {
 }
 
 pub async fn handle_delete(
-    extract::Path((_session_key, name)): extract::Path<(String, String)>,
+    extract::Path((_session_key, organisation, name)): extract::Path<(String, String, String)>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(user): extract::Extension<Arc<User>>,
     extract::Json(req): extract::Json<DeleteRequest>,
 ) -> Result<Json<ErrorResponse>, Error> {
-    let crate_ = get_crate_with_permissions(
-        db.clone(),
-        user,
-        name,
-        &[Permission::VISIBLE, Permission::MANAGE_USERS],
-    )
-    .await?;
+    let crate_with_permissions =
+        Arc::new(Crate::find_by_name(db.clone(), user.id, organisation, name).await?);
 
     let action_user = User::find_by_uuid(db.clone(), req.user_uuid)
         .await?
         .ok_or(Error::InvalidUserId)?;
 
-    crate_.delete_member(db, action_user.id).await?;
+    crate_with_permissions
+        .delete_member(db, action_user.id)
+        .await?;
 
     Ok(Json(ErrorResponse { error: None }))
 }
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("Failed to query database")]
-    Database(#[from] chartered_db::Error),
     #[error("{0}")]
-    CrateFetch(#[from] crate::models::crates::CrateFetchError),
+    Database(#[from] chartered_db::Error),
     #[error("Permissions update conflict, user was removed as a member of the crate")]
     UpdateConflictRemoved,
     #[error("An invalid user id was given")]
@@ -158,8 +138,7 @@ impl Error {
         use axum::http::StatusCode;
 
         match self {
-            Self::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            Self::CrateFetch(e) => e.status_code(),
+            Self::Database(e) => e.status_code(),
             Self::UpdateConflictRemoved => StatusCode::CONFLICT,
             Self::InvalidUserId => StatusCode::BAD_REQUEST,
         }

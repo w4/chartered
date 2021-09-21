@@ -1,10 +1,6 @@
-use crate::models::crates::get_crate_with_permissions;
 use axum::extract;
 use bytes::Bytes;
-use chartered_db::{
-    users::{User, UserCratePermissionValue as Permission},
-    ConnectionPool,
-};
+use chartered_db::{crates::Crate, users::User, ConnectionPool};
 use chartered_fs::FileSystem;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -13,10 +9,8 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("Failed to query database")]
-    Database(#[from] chartered_db::Error),
     #[error("{0}")]
-    CrateFetch(#[from] crate::models::crates::CrateFetchError),
+    Database(#[from] chartered_db::Error),
     #[error("Invalid JSON from client: {0}")]
     JsonParse(#[from] serde_json::Error),
     #[error("Invalid body")]
@@ -28,8 +22,7 @@ impl Error {
         use axum::http::StatusCode;
 
         match self {
-            Self::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            Self::CrateFetch(e) => e.status_code(),
+            Self::Database(e) => e.status_code(),
             Self::JsonParse(_) | Self::MetadataParse => StatusCode::BAD_REQUEST,
         }
     }
@@ -50,6 +43,7 @@ pub struct PublishCrateResponseWarnings {
 }
 
 pub async fn handle(
+    extract::Path((_session_key, organisation)): extract::Path<(String, String)>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(user): extract::Extension<Arc<User>>,
     body: Bytes,
@@ -58,17 +52,32 @@ pub async fn handle(
         parse(body.as_ref()).map_err(|_| Error::MetadataParse)?;
     let metadata: Metadata = serde_json::from_slice(metadata_bytes)?;
 
-    let crate_ = get_crate_with_permissions(
+    let crate_with_permissions = Crate::find_by_name(
         db.clone(),
-        user.clone(),
+        user.id,
+        organisation.clone(),
         metadata.inner.name.to_string(),
-        &[Permission::VISIBLE, Permission::PUBLISH_VERSION],
     )
-    .await?;
+    .await;
+
+    let crate_with_permissions = match crate_with_permissions {
+        Ok(v) => Arc::new(v),
+        Err(chartered_db::Error::MissingCrate) => {
+            let new_crate = Crate::create(
+                db.clone(),
+                user.id,
+                organisation,
+                metadata.inner.name.to_string(),
+            )
+            .await?;
+            Arc::new(new_crate)
+        }
+        Err(e) => return Err(e.into()),
+    };
 
     let file_ref = chartered_fs::Local.write(crate_bytes).await.unwrap();
 
-    crate_
+    crate_with_permissions
         .publish_version(
             db,
             user,

@@ -58,6 +58,7 @@ impl server::Server for Server {
             db: self.db.clone(),
             user: None,
             user_ssh_key: None,
+            organisation: None,
         }
     }
 }
@@ -70,6 +71,7 @@ struct Handler {
     db: chartered_db::ConnectionPool,
     user: Option<chartered_db::users::User>,
     user_ssh_key: Option<Arc<chartered_db::users::UserSshKey>>,
+    organisation: Option<String>,
 }
 
 impl Handler {
@@ -88,6 +90,13 @@ impl Handler {
         match self.user {
             Some(ref user) => Ok(user),
             None => anyhow::bail!("user not set after auth"),
+        }
+    }
+
+    fn org_name(&self) -> Result<&str, anyhow::Error> {
+        match self.organisation {
+            Some(ref org) => Ok(org.as_str()),
+            None => anyhow::bail!("org not set after auth"),
         }
     }
 
@@ -136,28 +145,43 @@ impl server::Handler for Handler {
         data: &[u8],
         mut session: Session,
     ) -> Self::FutureUnit {
-        eprintln!("exec {:x?}", data);
-
-        let git_upload_pack = data.starts_with(b"git-upload-pack ");
+        let data = match std::str::from_utf8(data) {
+            Ok(data) => data,
+            Err(e) => return Box::pin(futures::future::err(e.into())),
+        };
+        let args = shlex::split(data);
 
         Box::pin(async move {
-            if git_upload_pack {
-                // TODO: check GIT_PROTOCOL=version=2 set
-                self.write(PktLine::Data(b"version 2\n"))?;
-                self.write(PktLine::Data(b"agent=chartered/0.1.0\n"))?;
-                self.write(PktLine::Data(b"ls-refs=unborn\n"))?;
-                self.write(PktLine::Data(b"fetch=shallow wait-for-done\n"))?;
-                self.write(PktLine::Data(b"server-option\n"))?;
-                self.write(PktLine::Data(b"object-info\n"))?;
-                self.write(PktLine::Flush)?;
-                self.flush(&mut session, channel);
+            let mut args = args.into_iter().map(|v| v.into_iter()).flatten();
+
+            if args.next().as_deref() != Some("git-upload-pack") {
+                anyhow::bail!("not git-upload-pack");
+            }
+
+            if let Some(org) = args.next().filter(|v| v.as_str() != "/") {
+                let org = org
+                    .trim_start_matches('/')
+                    .trim_end_matches('/')
+                    .to_string();
+                self.organisation = Some(org);
             } else {
-                session.data(
-                    channel,
-                    CryptoVec::from_slice(b"Sorry, I have no clue who you are\r\n"),
-                );
+                session.extended_data(channel, 1, CryptoVec::from_slice(indoc::indoc! {b"
+                    \r\nNo organisation was given in the path part of the SSH URI. A chartered registry should be defined in your .cargo/config.toml as follows:
+                        [registries]
+                        chartered = {{ index = \"ssh://domain.to.registry.com/my-organisation\" }}\r\n
+                "}));
                 session.close(channel);
             }
+
+            // TODO: check GIT_PROTOCOL=version=2 set
+            self.write(PktLine::Data(b"version 2\n"))?;
+            self.write(PktLine::Data(b"agent=chartered/0.1.0\n"))?;
+            self.write(PktLine::Data(b"ls-refs=unborn\n"))?;
+            self.write(PktLine::Data(b"fetch=shallow wait-for-done\n"))?;
+            self.write(PktLine::Data(b"server-option\n"))?;
+            self.write(PktLine::Data(b"object-info\n"))?;
+            self.write(PktLine::Flush)?;
+            self.flush(&mut session, channel);
 
             Ok((self, session))
         })
@@ -256,13 +280,14 @@ impl server::Handler for Handler {
 
             // TODO: key should be cached
             let config = format!(
-                r#"{{"dl":"http://127.0.0.1:8888/a/{key}/api/v1/crates","api":"http://127.0.0.1:8888/a/{key}"}}"#,
+                r#"{{"dl":"http://127.0.0.1:8888/a/{key}/o/{organisation}/api/v1/crates","api":"http://127.0.0.1:8888/a/{key}/o/{organisation}"}}"#,
                 key = self
                     .user_ssh_key()?
                     .clone()
                     .get_or_insert_session(self.db.clone(), self.ip.map(|v| v.to_string()))
                     .await?
                     .session_key,
+                organisation = self.org_name()?,
             );
             let config_file = PackFileEntry::Blob(config.as_bytes());
 
@@ -275,7 +300,12 @@ impl server::Handler for Handler {
 
             // todo: the whole tree needs caching and then we can filter in code rather than at
             //  the database
-            let tree = fetch_tree(self.db.clone(), self.user()?.id).await;
+            let tree = fetch_tree(
+                self.db.clone(),
+                self.user()?.id,
+                self.org_name()?.to_string(),
+            )
+            .await;
             build_tree(&mut root_tree, &mut pack_file_entries, &tree)?;
 
             let root_tree = PackFileEntry::Tree(root_tree);
@@ -356,13 +386,17 @@ pub type TwoCharTree<T> = BTreeMap<[u8; 2], T>;
 async fn fetch_tree(
     db: chartered_db::ConnectionPool,
     user_id: i32,
+    org_name: String,
 ) -> TwoCharTree<TwoCharTree<BTreeMap<String, String>>> {
     use chartered_db::crates::Crate;
 
     let mut tree: TwoCharTree<TwoCharTree<BTreeMap<String, String>>> = BTreeMap::new();
 
     // todo: handle files with 1/2/3 characters
-    for (crate_def, versions) in Crate::all_visible_with_versions(db, user_id).await.unwrap() {
+    for (crate_def, versions) in Crate::list_with_versions(db, user_id, org_name)
+        .await
+        .unwrap()
+    {
         let mut name_chars = crate_def.name.as_bytes().iter();
         let first_dir = [*name_chars.next().unwrap(), *name_chars.next().unwrap()];
         let second_dir = [*name_chars.next().unwrap(), *name_chars.next().unwrap()];

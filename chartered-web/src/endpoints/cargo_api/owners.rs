@@ -1,28 +1,19 @@
-use crate::models::crates::get_crate_with_permissions;
 use axum::{extract, Json};
-use chartered_db::{
-    users::{User, UserCratePermissionValue as Permission},
-    ConnectionPool,
-};
+use chartered_db::{crates::Crate, users::User, ConnectionPool};
 use serde::Serialize;
 use std::sync::Arc;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("Failed to query database")]
-    Database(#[from] chartered_db::Error),
     #[error("{0}")]
-    CrateFetch(#[from] crate::models::crates::CrateFetchError),
+    Database(#[from] chartered_db::Error),
 }
 
 impl Error {
     pub fn status_code(&self) -> axum::http::StatusCode {
-        use axum::http::StatusCode;
-
         match self {
-            Self::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            Self::CrateFetch(e) => e.status_code(),
+            Self::Database(e) => e.status_code(),
         }
     }
 }
@@ -43,13 +34,14 @@ pub struct GetResponseUser {
 }
 
 pub async fn handle_get(
-    extract::Path((_session_key, name)): extract::Path<(String, String)>,
+    extract::Path((_session_key, organisation, name)): extract::Path<(String, String, String)>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(user): extract::Extension<Arc<User>>,
 ) -> Result<Json<GetResponse>, Error> {
-    let crate_ = get_crate_with_permissions(db.clone(), user, name, &[Permission::VISIBLE]).await?;
+    let crate_with_permissions =
+        Arc::new(Crate::find_by_name(db.clone(), user.id, organisation, name).await?);
 
-    let users = crate_
+    let users = crate_with_permissions
         .owners(db)
         .await?
         .into_iter()

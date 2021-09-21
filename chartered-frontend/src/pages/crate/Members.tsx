@@ -25,13 +25,19 @@ interface Member {
   permissions: string[];
 }
 
-export default function Members({ crate }: { crate: string }) {
+export default function Members({
+  organisation,
+  crate,
+}: {
+  organisation: string;
+  crate: string;
+}) {
   const auth = useAuth();
   const [reload, setReload] = useState(0);
   const { response, error } = useAuthenticatedRequest<CratesMembersResponse>(
     {
       auth,
-      endpoint: `crates/${crate}/members`,
+      endpoint: `crates/${organisation}/${crate}/members`,
     },
     [reload]
   );
@@ -72,6 +78,7 @@ export default function Members({ crate }: { crate: string }) {
             {response.members.map((member, index) => (
               <MemberListItem
                 key={index}
+                organisation={organisation}
                 crate={crate}
                 member={member}
                 prospectiveMember={false}
@@ -83,6 +90,7 @@ export default function Members({ crate }: { crate: string }) {
             {prospectiveMembers.map((member, index) => (
               <MemberListItem
                 key={index}
+                organisation={organisation}
                 crate={crate}
                 member={member}
                 prospectiveMember={true}
@@ -112,12 +120,14 @@ export default function Members({ crate }: { crate: string }) {
 }
 
 function MemberListItem({
+  organisation,
   crate,
   member,
   prospectiveMember,
   allowedPermissions,
   onUpdateComplete,
 }: {
+  organisation: string;
   crate: string;
   member: Member;
   prospectiveMember: boolean;
@@ -139,7 +149,7 @@ function MemberListItem({
 
     try {
       let res = await fetch(
-        authenticatedEndpoint(auth, `crates/${crate}/members`),
+        authenticatedEndpoint(auth, `crates/${organisation}/${crate}/members`),
         {
           method: prospectiveMember ? "PUT" : "PATCH",
           headers: {
@@ -171,7 +181,7 @@ function MemberListItem({
 
     try {
       let res = await fetch(
-        authenticatedEndpoint(auth, `crates/${crate}/members`),
+        authenticatedEndpoint(auth, `crates/${organisation}/${crate}/members`),
         {
           method: "DELETE",
           headers: {

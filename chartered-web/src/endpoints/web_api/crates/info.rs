@@ -1,11 +1,6 @@
-use crate::models::crates::get_crate_with_permissions;
 use axum::{body::Full, extract, response::IntoResponse, Json};
 use bytes::Bytes;
-use chartered_db::{
-    crates::Crate,
-    users::{User, UserCratePermissionValue as Permission},
-    ConnectionPool,
-};
+use chartered_db::{crates::Crate, users::User, ConnectionPool};
 use chartered_types::cargo::CrateVersion;
 use chrono::TimeZone;
 use serde::Serialize;
@@ -14,19 +9,14 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("Failed to query database")]
-    Database(#[from] chartered_db::Error),
     #[error("{0}")]
-    CrateFetch(#[from] crate::models::crates::CrateFetchError),
+    Database(#[from] chartered_db::Error),
 }
 
 impl Error {
     pub fn status_code(&self) -> axum::http::StatusCode {
-        use axum::http::StatusCode;
-
         match self {
-            Self::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            Self::CrateFetch(e) => e.status_code(),
+            Self::Database(e) => e.status_code(),
         }
     }
 }
@@ -34,12 +24,17 @@ impl Error {
 define_error_response!(Error);
 
 pub async fn handle(
-    extract::Path((_session_key, name)): extract::Path<(String, String)>,
+    extract::Path((_session_key, organisation, name)): extract::Path<(String, String, String)>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(user): extract::Extension<Arc<User>>,
 ) -> Result<axum::http::Response<Full<Bytes>>, Error> {
-    let crate_ = get_crate_with_permissions(db.clone(), user, name, &[Permission::VISIBLE]).await?;
-    let versions = crate_.clone().versions_with_uploader(db).await?;
+    let crate_with_permissions =
+        Arc::new(Crate::find_by_name(db.clone(), user.id, organisation, name).await?);
+
+    let versions = crate_with_permissions
+        .clone()
+        .versions_with_uploader(db)
+        .await?;
 
     // returning a Response instead of Json here so we don't have to close
     // every Crate/CrateVersion etc, would be easier if we just had an owned
@@ -47,13 +42,13 @@ pub async fn handle(
     // diesel which requires `'static' which basically forces us to use Arc
     // if we want to keep a reference to anything ourselves.
     Ok(Json(Response {
-        info: crate_.as_ref().into(),
+        info: (&crate_with_permissions.crate_).into(),
         versions: versions
             .into_iter()
             .map(|(v, user)| ResponseVersion {
                 size: v.size,
                 created_at: chrono::Utc.from_local_datetime(&v.created_at).unwrap(),
-                inner: v.into_cargo_format(&crate_),
+                inner: v.into_cargo_format(&crate_with_permissions.crate_),
                 uploader: user.username,
             })
             .collect(),

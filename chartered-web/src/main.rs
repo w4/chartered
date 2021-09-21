@@ -3,7 +3,6 @@
 
 mod endpoints;
 mod middleware;
-mod models;
 
 use axum::{
     handler::{delete, get, patch, post, put},
@@ -70,21 +69,21 @@ async fn main() {
         axum_box_after_every_route!(Router::new().route("/login", post(endpoints::web_api::login)));
 
     let web_authenticated = axum_box_after_every_route!(Router::new()
-        .route("/crates/:crate", get(endpoints::web_api::crates::info))
+        .route("/crates/:org/:crate", get(endpoints::web_api::crates::info))
         .route(
-            "/crates/:crate/members",
+            "/crates/:org/:crate/members",
             get(endpoints::web_api::crates::get_members)
         )
         .route(
-            "/crates/:crate/members",
+            "/crates/:org/:crate/members",
             patch(endpoints::web_api::crates::update_member)
         )
         .route(
-            "/crates/:crate/members",
+            "/crates/:org/:crate/members",
             put(endpoints::web_api::crates::insert_member)
         )
         .route(
-            "/crates/:crate/members",
+            "/crates/:org/:crate/members",
             delete(endpoints::web_api::crates::delete_member)
         )
         .route(
@@ -109,7 +108,7 @@ async fn main() {
         .route("/", get(hello_world))
         .nest("/a/:key/web/v1", web_authenticated)
         .nest("/a/-/web/v1", web_unauthenticated)
-        .nest("/a/:key/api/v1", api_authenticated)
+        .nest("/a/:key/o/:organisation/api/v1", api_authenticated)
         .layer(middleware_stack)
         // TODO!!!
         .layer(

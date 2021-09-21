@@ -7,20 +7,23 @@ import { ChevronRight } from "react-bootstrap-icons";
 import { useAuthenticatedRequest } from "../util";
 
 interface RecentlyUpdatedResponse {
-  versions: RecentlyUpdatedResponseVersions,
+  versions: RecentlyUpdatedResponseVersion[];
 }
 
-interface RecentlyUpdatedResponseVersions {
-  [i: number]: { name: string, version: string, },
+interface RecentlyUpdatedResponseVersion {
+  name: string;
+  version: string;
+  organisation: string;
 }
 
 export default function Dashboard() {
   const auth = useAuth();
 
-  const { response: recentlyUpdated, error } = useAuthenticatedRequest<RecentlyUpdatedResponse>({
-    auth,
-    endpoint: "crates/recently-updated",
-  });
+  const { response: recentlyUpdated, error } =
+    useAuthenticatedRequest<RecentlyUpdatedResponse>({
+      auth,
+      endpoint: "crates/recently-updated",
+    });
 
   return (
     <div className="text-white">
@@ -67,15 +70,22 @@ export default function Dashboard() {
 interface Crate {
   name: string;
   version: string;
+  organisation: string;
 }
 
 function CrateCard({ crate }: { crate: Crate }) {
   return (
-    <Link to={`/crates/${crate.name}`} className="text-decoration-none">
+    <Link
+      to={`/crates/${crate.organisation}/${crate.name}`}
+      className="text-decoration-none"
+    >
       <div className="card border-0 mb-2 shadow-sm">
         <div className="card-body text-black d-flex flex-row">
           <div className="flex-grow-1 align-self-center">
-            <h6 className="text-primary my-0">{crate.name}</h6>
+            <h6 className="text-primary my-0">
+              <span className="text-secondary">{crate.organisation}/</span>
+              {crate.name}
+            </h6>
             <small className="text-secondary">v{crate.version}</small>
           </div>
 

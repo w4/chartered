@@ -1,5 +1,5 @@
 use super::{
-    schema::{user_crate_permissions, user_sessions, user_ssh_keys, users},
+    schema::{organisations, user_crate_permissions, user_sessions, user_ssh_keys, users},
     uuid::SqlUuid,
     ConnectionPool, Result,
 };
@@ -9,6 +9,13 @@ use option_set::{option_set, OptionSet};
 use rand::{thread_rng, Rng};
 use std::sync::Arc;
 use thrussh_keys::PublicKeyBase64;
+
+#[derive(Identifiable, Queryable, Associations, PartialEq, Eq, Hash, Debug)]
+pub struct Organisation {
+    pub id: i32,
+    pub uuid: SqlUuid,
+    pub name: String,
+}
 
 #[derive(Identifiable, Queryable, Associations, PartialEq, Eq, Hash, Debug)]
 pub struct User {
@@ -279,10 +286,12 @@ option_set! {
         const PUBLISH_VERSION = 0b0000_0000_0000_0000_0000_0000_0000_0010;
         const YANK_VERSION    = 0b0000_0000_0000_0000_0000_0000_0000_0100;
         const MANAGE_USERS    = 0b0000_0000_0000_0000_0000_0000_0000_1000;
+        const CREATE_CRATE    = 0b0000_0000_0000_0000_0000_0000_0001_0000;
     }
 }
 
 impl UserCratePermissionValue {
+    #[must_use]
     pub fn names() -> &'static [&'static str] {
         Self::NAMES
     }

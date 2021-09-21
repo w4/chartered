@@ -1,5 +1,7 @@
 #![deny(clippy::pedantic)]
 #![allow(clippy::missing_errors_doc)]
+#![allow(clippy::module_name_repetitions)]
+#![allow(clippy::doc_markdown)] // `sql_function` fails this check
 
 macro_rules! derive_diesel_json {
     ($typ:ident$(<$lt:lifetime>)?) => {
@@ -38,8 +40,9 @@ pub mod uuid;
 extern crate diesel;
 
 use diesel::{
-    expression::{AsExpression, Expression},
+    expression::{grouped::Grouped, AsExpression, Expression},
     r2d2::{ConnectionManager, Pool},
+    sql_types::{Integer, Nullable},
 };
 use displaydoc::Display;
 use std::sync::Arc;
@@ -54,25 +57,56 @@ pub fn init() -> Result<ConnectionPool> {
 
 #[derive(Error, Display, Debug)]
 pub enum Error {
-    /// Failed to initialise to database connection pool: `{0}`
+    /// Failed to initialise to database connection pool
     Connection(#[from] diesel::r2d2::PoolError),
-    /// Failed to run query: `{0}`
+    /// Failed to run query
     Query(#[from] diesel::result::Error),
-    /// Failed to complete query task: `{0}`
+    /// Failed to complete query task
     TaskJoin(#[from] tokio::task::JoinError),
     /// Key parse failure: `{0}`
     KeyParse(#[from] thrussh_keys::Error),
+    /// You don't have the {0:?} permission for this crate
+    MissingPermission(crate::users::UserCratePermissionValue),
+    /// The requested crate does not exist
+    MissingCrate,
 }
 
-diesel_infix_operator!(BitwiseAnd, " & ", diesel::sql_types::Integer);
-
-trait BitwiseExpressionMethods: Expression<SqlType = diesel::sql_types::Integer> + Sized {
-    fn bitwise_and<T: AsExpression<diesel::sql_types::Integer>>(
-        self,
-        other: T,
-    ) -> BitwiseAnd<Self, T::Expression> {
-        BitwiseAnd::new(self.as_expression(), other.as_expression())
+impl Error {
+    #[must_use]
+    pub fn status_code(&self) -> http::StatusCode {
+        match self {
+            Self::MissingCrate => http::StatusCode::NOT_FOUND,
+            Self::MissingPermission(v)
+                if v.contains(crate::users::UserCratePermissionValue::VISIBLE) =>
+            {
+                http::StatusCode::NOT_FOUND
+            }
+            Self::MissingPermission(_) => http::StatusCode::FORBIDDEN,
+            Self::KeyParse(_) => http::StatusCode::BAD_REQUEST,
+            _ => http::StatusCode::INTERNAL_SERVER_ERROR,
+        }
     }
 }
 
-impl<T: Expression<SqlType = diesel::sql_types::Integer>> BitwiseExpressionMethods for T {}
+sql_function!(fn coalesce(x: Nullable<Integer>, y: Integer) -> Integer);
+
+diesel_infix_operator!(BitwiseAnd, " & ", Integer);
+diesel_infix_operator!(BitwiseOr, " | ", Integer);
+
+trait BitwiseExpressionMethods: Expression<SqlType = Integer> + Sized {
+    fn bitwise_and<T: AsExpression<Integer>>(
+        self,
+        other: T,
+    ) -> Grouped<BitwiseAnd<Self, T::Expression>> {
+        Grouped(BitwiseAnd::new(self.as_expression(), other.as_expression()))
+    }
+
+    fn bitwise_or<T: AsExpression<Integer>>(
+        self,
+        other: T,
+    ) -> Grouped<BitwiseOr<Self, T::Expression>> {
+        Grouped(BitwiseOr::new(self.as_expression(), other.as_expression()))
+    }
+}
+
+impl<T: Expression<SqlType = Integer>> BitwiseExpressionMethods for T {}

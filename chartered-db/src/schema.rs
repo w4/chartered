@@ -19,6 +19,7 @@ table! {
     crates (id) {
         id -> Integer,
         name -> Text,
+        organisation_id -> Integer,
         readme -> Nullable<Text>,
         description -> Nullable<Text>,
         repository -> Nullable<Text>,
@@ -28,10 +29,27 @@ table! {
 }
 
 table! {
+    organisations (id) {
+        id -> Integer,
+        uuid -> Binary,
+        name -> Text,
+    }
+}
+
+table! {
     user_crate_permissions (id) {
         id -> Integer,
         user_id -> Integer,
         crate_id -> Integer,
+        permissions -> Integer,
+    }
+}
+
+table! {
+    user_organisation_permissions (id) {
+        id -> Integer,
+        user_id -> Integer,
+        organisation_id -> Integer,
         permissions -> Integer,
     }
 }
@@ -70,8 +88,11 @@ table! {
 
 joinable!(crate_versions -> crates (crate_id));
 joinable!(crate_versions -> users (user_id));
+joinable!(crates -> organisations (organisation_id));
 joinable!(user_crate_permissions -> crates (crate_id));
 joinable!(user_crate_permissions -> users (user_id));
+joinable!(user_organisation_permissions -> organisations (organisation_id));
+joinable!(user_organisation_permissions -> users (user_id));
 joinable!(user_sessions -> user_ssh_keys (user_ssh_key_id));
 joinable!(user_sessions -> users (user_id));
 joinable!(user_ssh_keys -> users (user_id));
@@ -79,7 +100,9 @@ joinable!(user_ssh_keys -> users (user_id));
 allow_tables_to_appear_in_same_query!(
     crate_versions,
     crates,
+    organisations,
     user_crate_permissions,
+    user_organisation_permissions,
     user_sessions,
     user_ssh_keys,
     users,

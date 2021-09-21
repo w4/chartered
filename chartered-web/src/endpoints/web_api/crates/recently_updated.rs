@@ -6,19 +6,14 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("Failed to query database")]
-    Database(#[from] chartered_db::Error),
     #[error("{0}")]
-    CrateFetch(#[from] crate::models::crates::CrateFetchError),
+    Database(#[from] chartered_db::Error),
 }
 
 impl Error {
     pub fn status_code(&self) -> axum::http::StatusCode {
-        use axum::http::StatusCode;
-
         match self {
-            Self::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            Self::CrateFetch(e) => e.status_code(),
+            Self::Database(e) => e.status_code(),
         }
     }
 }
@@ -34,9 +29,10 @@ pub async fn handle(
     Ok(Json(Response {
         versions: crates_with_versions
             .into_iter()
-            .map(|(crate_, version)| ResponseVersion {
+            .map(|(crate_, version, organisation)| ResponseVersion {
                 name: crate_.name,
                 version: version.version,
+                organisation: organisation.name,
             })
             .collect(),
     }))
@@ -51,4 +47,5 @@ pub struct Response {
 pub struct ResponseVersion {
     name: String,
     version: String,
+    organisation: String,
 }

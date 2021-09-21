@@ -56,16 +56,16 @@ export interface CrateInfoVersionDependency {
 
 export default function SingleCrate() {
   const auth = useAuth();
-  const { crate, subview } = useParams();
+  const { organisation, crate, subview } = useParams();
   const currentTab: Tab | undefined = subview;
 
   if (!currentTab) {
-    return <Redirect to={`/crates/${crate}/readme`} />
+    return <Redirect to={`/crates/${organisation}/${crate}/readme`} />;
   }
 
   const { response: crateInfo, error } = useAuthenticatedRequest<CrateInfo>({
     auth,
-    endpoint: `crates/${crate}`,
+    endpoint: `crates/${organisation}/${crate}`,
   });
 
   if (error) {
@@ -141,12 +141,20 @@ export default function SingleCrate() {
               <div className="card-header">
                 <ul className="nav nav-pills card-header-pills">
                   <li className="nav-item">
-                    <NavLink to={`/crates/${crate}/readme`} className="nav-link" activeClassName="bg-primary bg-gradient active">
+                    <NavLink
+                      to={`/crates/${organisation}/${crate}/readme`}
+                      className="nav-link"
+                      activeClassName="bg-primary bg-gradient active"
+                    >
                       Readme
                     </NavLink>
                   </li>
                   <li className="nav-item">
-                    <NavLink to={`/crates/${crate}/versions`} className="nav-link" activeClassName="bg-primary bg-gradient active">
+                    <NavLink
+                      to={`/crates/${organisation}/${crate}/versions`}
+                      className="nav-link"
+                      activeClassName="bg-primary bg-gradient active"
+                    >
                       Versions
                       <span className={`badge rounded-pill bg-danger ms-1`}>
                         {crateInfo.versions.length}
@@ -154,7 +162,11 @@ export default function SingleCrate() {
                     </NavLink>
                   </li>
                   <li className="nav-item">
-                    <NavLink to={`/crates/${crate}/members`} className="nav-link" activeClassName="bg-primary bg-gradient active">
+                    <NavLink
+                      to={`/crates/${organisation}/${crate}/members`}
+                      className="nav-link"
+                      activeClassName="bg-primary bg-gradient active"
+                    >
                       Members
                     </NavLink>
                   </li>
@@ -168,7 +180,11 @@ export default function SingleCrate() {
                 ) : (
                   <></>
                 )}
-                {currentTab == "members" ? <Members crate={crate} /> : <></>}
+                {currentTab == "members" ? (
+                  <Members crate={crate} organisation={organisation} />
+                ) : (
+                  <></>
+                )}
               </div>
             </div>
           </div>
