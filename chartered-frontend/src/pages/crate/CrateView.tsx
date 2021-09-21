@@ -82,7 +82,7 @@ export default function SingleCrate() {
 
       <div className="container mt-4 pb-4">
         <div className="row align-items-stretch">
-          <div className="col-md-6">
+          <div className="col-12 col-md-6 mb-3 mb-md-0">
             <div className="card border-0 shadow-sm text-black h-100">
               <div className="card-body">
                 <div className="d-flex flex-row align-items-center">
@@ -101,7 +101,7 @@ export default function SingleCrate() {
             </div>
           </div>
 
-          <div className="col-md-6">
+          <div className="col-12 col-md-6">
             <div className="card border-0 shadow-sm text-black h-100">
               <div className="card-body d-flex flex-column justify-content-center">
                 {crateInfo.homepage ? (
@@ -136,7 +136,7 @@ export default function SingleCrate() {
         </div>
 
         <div className="row my-4">
-          <div className="col-md-9">
+          <div className="col-12 col-md-9 mb-3 mb-md-0">
             <div className="card border-0 shadow-sm text-black">
               <div className="card-header">
                 <ul className="nav nav-pills card-header-pills">
@@ -189,7 +189,7 @@ export default function SingleCrate() {
             </div>
           </div>
 
-          <div className="col-md-3">
+          <div className="col-12 col-md-3">
             <div className="card border-0 shadow-sm text-black">
               <div className="card-body pb-0">
                 <h5 className="card-title">Dependencies</h5>
