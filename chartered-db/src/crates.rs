@@ -1,16 +1,46 @@
-use crate::organisations::Organisation;
-use crate::users::{User, UserCratePermission};
-
 use super::{
     coalesce,
-    schema::{crate_versions, crates, organisations, users},
-    users::UserCratePermissionValue as Permissions,
+    organisations::Organisation,
+    permissions::UserPermission,
+    schema::{crate_versions, crates, organisations, user_crate_permissions, users},
+    users::User,
     BitwiseExpressionMethods, ConnectionPool, Error, Result,
 };
 use diesel::{insert_into, prelude::*, Associations, Identifiable, Queryable};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, sync::Arc};
+
+#[derive(Identifiable, Queryable, Associations, Default, PartialEq, Eq, Hash, Debug)]
+#[belongs_to(User)]
+#[belongs_to(Crate)]
+pub struct UserCratePermission {
+    pub id: i32,
+    pub user_id: i32,
+    pub crate_id: i32,
+    pub permissions: UserPermission,
+}
+
+impl UserCratePermission {
+    pub async fn find(
+        conn: ConnectionPool,
+        given_user_id: i32,
+        given_crate_id: i32,
+    ) -> Result<Option<UserCratePermission>> {
+        use crate::schema::user_crate_permissions::dsl::{crate_id, user_id};
+
+        tokio::task::spawn_blocking(move || {
+            let conn = conn.get()?;
+
+            Ok(crate::schema::user_crate_permissions::table
+                .filter(user_id.eq(given_user_id))
+                .filter(crate_id.eq(given_crate_id))
+                .get_result(&conn)
+                .optional()?)
+        })
+        .await?
+    }
+}
 
 #[derive(Identifiable, Queryable, Associations, PartialEq, Eq, Hash, Debug)]
 #[belongs_to(Organisation)]
@@ -77,8 +107,8 @@ impl Crate {
                 .filter(org_name.eq(given_org_name))
                 .filter(
                     select_permissions!()
-                        .bitwise_and(Permissions::VISIBLE.bits())
-                        .eq(Permissions::VISIBLE.bits()),
+                        .bitwise_and(UserPermission::VISIBLE.bits())
+                        .eq(UserPermission::VISIBLE.bits()),
                 )
                 .inner_join(crate_versions::table)
                 .select((crates::all_columns, crate_versions::all_columns))
@@ -99,8 +129,8 @@ impl Crate {
             let crates = crate_with_permissions!(requesting_user_id)
                 .filter(
                     select_permissions!()
-                        .bitwise_and(Permissions::VISIBLE.bits())
-                        .eq(Permissions::VISIBLE.bits()),
+                        .bitwise_and(UserPermission::VISIBLE.bits())
+                        .eq(UserPermission::VISIBLE.bits()),
                 )
                 .inner_join(organisations::table)
                 .inner_join(crate_versions::table)
@@ -135,17 +165,17 @@ impl Crate {
                 .filter(org_name.eq(given_org_name))
                 .filter(crate_name.eq(given_crate_name))
                 .select((crate::schema::crates::all_columns, select_permissions!()))
-                .first::<(Crate, Permissions)>(&conn)
+                .first::<(Crate, UserPermission)>(&conn)
                 .optional()?
                 .ok_or(Error::MissingCrate)?;
 
-            if permissions.contains(Permissions::VISIBLE) {
+            if permissions.contains(UserPermission::VISIBLE) {
                 Ok(CrateWithPermissions {
                     crate_,
                     permissions,
                 })
             } else {
-                Err(Error::MissingCratePermission(Permissions::VISIBLE))
+                Err(Error::MissingCratePermission(UserPermission::VISIBLE))
             }
         })
         .await?
@@ -172,13 +202,13 @@ impl Crate {
                         .on(organisation_id.eq(id).and(user_id.eq(requesting_user_id))),
                 )
                 .select((id, permissions))
-                .first::<(i32, Permissions)>(&conn)?;
+                .first::<(i32, UserPermission)>(&conn)?;
 
             #[allow(clippy::if_not_else)]
-            if !perms.contains(Permissions::VISIBLE) {
-                Err(Error::MissingCratePermission(Permissions::VISIBLE))
-            } else if !perms.contains(Permissions::CREATE_CRATE) {
-                Err(Error::MissingCratePermission(Permissions::CREATE_CRATE))
+            if !perms.contains(UserPermission::VISIBLE) {
+                Err(Error::MissingCratePermission(UserPermission::VISIBLE))
+            } else if !perms.contains(UserPermission::CREATE_CRATE) {
+                Err(Error::MissingCratePermission(UserPermission::CREATE_CRATE))
             } else {
                 use crate::schema::crates::dsl::{crates, name, organisation_id};
 
@@ -204,7 +234,7 @@ impl Crate {
 #[derive(Debug)]
 pub struct CrateWithPermissions {
     pub crate_: Crate,
-    pub permissions: Permissions,
+    pub permissions: UserPermission,
 }
 
 impl CrateWithPermissions {
@@ -249,7 +279,7 @@ impl CrateWithPermissions {
             Ok(UserCratePermission::belonging_to(&self.crate_)
                 .filter(
                     permissions
-                        .bitwise_and(crate::users::UserCratePermissionValue::MANAGE_USERS.bits())
+                        .bitwise_and(UserPermission::MANAGE_USERS.bits())
                         .ne(0),
                 )
                 .inner_join(crate::schema::users::dsl::users)
@@ -262,20 +292,17 @@ impl CrateWithPermissions {
     pub async fn members(
         self: Arc<Self>,
         conn: ConnectionPool,
-    ) -> Result<Vec<(crate::users::User, crate::users::UserCratePermissionValue)>> {
-        if !self.permissions.contains(Permissions::MANAGE_USERS) {
-            return Err(Error::MissingCratePermission(Permissions::MANAGE_USERS));
+    ) -> Result<Vec<(crate::users::User, UserPermission)>> {
+        if !self.permissions.contains(UserPermission::MANAGE_USERS) {
+            return Err(Error::MissingCratePermission(UserPermission::MANAGE_USERS));
         }
 
         tokio::task::spawn_blocking(move || {
             let conn = conn.get()?;
 
             Ok(UserCratePermission::belonging_to(&self.crate_)
-                .inner_join(crate::schema::users::dsl::users)
-                .select((
-                    crate::schema::users::all_columns,
-                    crate::schema::user_crate_permissions::permissions,
-                ))
+                .inner_join(users::dsl::users)
+                .select((users::all_columns, user_crate_permissions::permissions))
                 .load(&conn)?)
         })
         .await?
@@ -285,10 +312,10 @@ impl CrateWithPermissions {
         self: Arc<Self>,
         conn: ConnectionPool,
         given_user_id: i32,
-        given_permissions: crate::users::UserCratePermissionValue,
+        given_permissions: UserPermission,
     ) -> Result<usize> {
-        if !self.permissions.contains(Permissions::MANAGE_USERS) {
-            return Err(Error::MissingCratePermission(Permissions::MANAGE_USERS));
+        if !self.permissions.contains(UserPermission::MANAGE_USERS) {
+            return Err(Error::MissingCratePermission(UserPermission::MANAGE_USERS));
         }
 
         tokio::task::spawn_blocking(move || {
@@ -313,10 +340,10 @@ impl CrateWithPermissions {
         self: Arc<Self>,
         conn: ConnectionPool,
         given_user_id: i32,
-        given_permissions: crate::users::UserCratePermissionValue,
+        given_permissions: UserPermission,
     ) -> Result<usize> {
-        if !self.permissions.contains(Permissions::MANAGE_USERS) {
-            return Err(Error::MissingCratePermission(Permissions::MANAGE_USERS));
+        if !self.permissions.contains(UserPermission::MANAGE_USERS) {
+            return Err(Error::MissingCratePermission(UserPermission::MANAGE_USERS));
         }
 
         tokio::task::spawn_blocking(move || {
@@ -342,8 +369,8 @@ impl CrateWithPermissions {
         conn: ConnectionPool,
         given_user_id: i32,
     ) -> Result<()> {
-        if !self.permissions.contains(Permissions::MANAGE_USERS) {
-            return Err(Error::MissingCratePermission(Permissions::MANAGE_USERS));
+        if !self.permissions.contains(UserPermission::MANAGE_USERS) {
+            return Err(Error::MissingCratePermission(UserPermission::MANAGE_USERS));
         }
 
         tokio::task::spawn_blocking(move || {
@@ -376,16 +403,20 @@ impl CrateWithPermissions {
         given: chartered_types::cargo::CrateVersion<'static>,
         metadata: chartered_types::cargo::CrateVersionMetadata,
     ) -> Result<()> {
-        use crate::schema::crate_versions::dsl::{
-            checksum, crate_id, crate_versions, dependencies, features, filesystem_object, links,
-            size, user_id, version,
-        };
-        use crate::schema::crates::dsl::{
-            crates, description, documentation, homepage, id, name, readme, repository,
+        use crate::schema::{
+            crate_versions::dsl::{
+                checksum, crate_id, crate_versions, dependencies, features, filesystem_object,
+                links, size, user_id, version,
+            },
+            crates::dsl::{
+                crates, description, documentation, homepage, id, name, readme, repository,
+            },
         };
 
-        if !self.permissions.contains(Permissions::PUBLISH_VERSION) {
-            return Err(Error::MissingCratePermission(Permissions::PUBLISH_VERSION));
+        if !self.permissions.contains(UserPermission::PUBLISH_VERSION) {
+            return Err(Error::MissingCratePermission(
+                UserPermission::PUBLISH_VERSION,
+            ));
         }
 
         tokio::task::spawn_blocking(move || {
@@ -441,8 +472,8 @@ impl CrateWithPermissions {
     ) -> Result<()> {
         use crate::schema::crate_versions::dsl::{crate_id, crate_versions, version, yanked};
 
-        if !self.permissions.contains(Permissions::YANK_VERSION) {
-            return Err(Error::MissingCratePermission(Permissions::YANK_VERSION));
+        if !self.permissions.contains(UserPermission::YANK_VERSION) {
+            return Err(Error::MissingCratePermission(UserPermission::YANK_VERSION));
         }
 
         tokio::task::spawn_blocking(move || {

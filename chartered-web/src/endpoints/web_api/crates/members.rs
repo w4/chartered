@@ -1,9 +1,6 @@
 use axum::{extract, Json};
 use chartered_db::{
-    crates::Crate,
-    users::{User, UserCratePermissionValue as Permission},
-    uuid::Uuid,
-    ConnectionPool,
+    crates::Crate, permissions::UserPermission, users::User, uuid::Uuid, ConnectionPool,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -21,7 +18,7 @@ pub struct GetResponse {
 pub struct GetResponseMember {
     uuid: Uuid,
     username: String,
-    permissions: Permission,
+    permissions: UserPermission,
 }
 
 pub async fn handle_get(
@@ -44,7 +41,7 @@ pub async fn handle_get(
         .collect();
 
     Ok(Json(GetResponse {
-        allowed_permissions: Permission::names(),
+        allowed_permissions: UserPermission::names(),
         members,
     }))
 }
@@ -52,7 +49,7 @@ pub async fn handle_get(
 #[derive(Deserialize)]
 pub struct PutOrPatchRequest {
     user_uuid: chartered_db::uuid::Uuid,
-    permissions: Permission,
+    permissions: UserPermission,
 }
 
 pub async fn handle_patch(

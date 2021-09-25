@@ -1,8 +1,6 @@
 use axum::{extract, Json};
 use chartered_db::{
-    organisations::Organisation,
-    users::{User, UserCratePermissionValue as Permission},
-    ConnectionPool,
+    organisations::Organisation, permissions::UserPermission, users::User, ConnectionPool,
 };
 use serde::Deserialize;
 use std::sync::Arc;
@@ -13,7 +11,7 @@ use crate::endpoints::ErrorResponse;
 #[derive(Deserialize)]
 pub struct PutOrPatchRequest {
     user_uuid: chartered_db::uuid::Uuid,
-    permissions: Permission,
+    permissions: UserPermission,
 }
 
 pub async fn handle_patch(

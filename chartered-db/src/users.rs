@@ -1,11 +1,11 @@
 use super::{
+    crates::UserCratePermission,
+    permissions::UserPermission,
     schema::{user_crate_permissions, user_sessions, user_ssh_keys, users},
     uuid::SqlUuid,
     ConnectionPool, Result,
 };
-use bitflags::bitflags;
 use diesel::{insert_into, prelude::*, Associations, Identifiable, Queryable};
-use option_set::{option_set, OptionSet};
 use rand::{thread_rng, Rng};
 use std::sync::Arc;
 use thrussh_keys::PublicKeyBase64;
@@ -192,7 +192,7 @@ impl User {
     pub async fn accessible_crates(
         self: Arc<Self>,
         conn: ConnectionPool,
-    ) -> Result<Vec<(UserCratePermissionValue, crate::crates::Crate)>> {
+    ) -> Result<Vec<(UserPermission, crate::crates::Crate)>> {
         use crate::schema::crates;
 
         tokio::task::spawn_blocking(move || {
@@ -210,7 +210,7 @@ impl User {
         self: Arc<Self>,
         conn: ConnectionPool,
         crate_id: i32,
-    ) -> Result<UserCratePermissionValue> {
+    ) -> Result<UserPermission> {
         Ok(UserCratePermission::find(conn, self.id, crate_id)
             .await?
             .unwrap_or_default()
@@ -267,69 +267,6 @@ impl UserSession {
             Ok(crate::schema::user_sessions::table
                 .filter(session_key.eq(generated_session_key))
                 .get_result(&conn)?)
-        })
-        .await?
-    }
-}
-
-option_set! {
-    #[derive(FromSqlRow, AsExpression)]
-    pub struct UserCratePermissionValue: Identity + i32 {
-        const VISIBLE         = 0b0000_0000_0000_0000_0000_0000_0000_0001;
-        const PUBLISH_VERSION = 0b0000_0000_0000_0000_0000_0000_0000_0010;
-        const YANK_VERSION    = 0b0000_0000_0000_0000_0000_0000_0000_0100;
-        const MANAGE_USERS    = 0b0000_0000_0000_0000_0000_0000_0000_1000;
-        const CREATE_CRATE    = 0b0000_0000_0000_0000_0000_0000_0001_0000;
-    }
-}
-
-impl UserCratePermissionValue {
-    #[must_use]
-    pub fn names() -> &'static [&'static str] {
-        Self::NAMES
-    }
-}
-
-impl<B: diesel::backend::Backend> diesel::deserialize::FromSql<diesel::sql_types::Integer, B>
-    for UserCratePermissionValue
-where
-    i32: diesel::deserialize::FromSql<diesel::sql_types::Integer, B>,
-{
-    fn from_sql(
-        bytes: Option<&B::RawValue>,
-    ) -> std::result::Result<UserCratePermissionValue, Box<dyn std::error::Error + Send + Sync>>
-    {
-        let val = i32::from_sql(bytes)?;
-        Ok(UserCratePermissionValue::from_bits_truncate(val))
-    }
-}
-
-#[derive(Identifiable, Queryable, Associations, Default, PartialEq, Eq, Hash, Debug)]
-#[belongs_to(User)]
-#[belongs_to(super::crates::Crate)]
-pub struct UserCratePermission {
-    pub id: i32,
-    pub user_id: i32,
-    pub crate_id: i32,
-    pub permissions: UserCratePermissionValue,
-}
-
-impl UserCratePermission {
-    pub async fn find(
-        conn: ConnectionPool,
-        given_user_id: i32,
-        given_crate_id: i32,
-    ) -> Result<Option<UserCratePermission>> {
-        use crate::schema::user_crate_permissions::dsl::{crate_id, user_id};
-
-        tokio::task::spawn_blocking(move || {
-            let conn = conn.get()?;
-
-            Ok(crate::schema::user_crate_permissions::table
-                .filter(user_id.eq(given_user_id))
-                .filter(crate_id.eq(given_crate_id))
-                .get_result(&conn)
-                .optional()?)
         })
         .await?
     }

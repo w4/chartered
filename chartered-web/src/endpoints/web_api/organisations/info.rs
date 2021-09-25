@@ -1,8 +1,6 @@
 use axum::{extract, Json};
 use chartered_db::{
-    organisations::Organisation,
-    users::{User, UserCratePermissionValue as Permission},
-    ConnectionPool,
+    organisations::Organisation, permissions::UserPermission, users::User, ConnectionPool,
 };
 use serde::Serialize;
 use std::sync::Arc;
@@ -34,7 +32,7 @@ pub async fn handle_get(
 
     let can_manage_users = organisation
         .permissions()
-        .contains(Permission::MANAGE_USERS);
+        .contains(UserPermission::MANAGE_USERS);
 
     let (crates, users) = tokio::try_join!(
         organisation.clone().crates(db.clone()),
@@ -42,7 +40,7 @@ pub async fn handle_get(
     )?;
 
     Ok(Json(Response {
-        possible_permissions: can_manage_users.then(Permission::all),
+        possible_permissions: can_manage_users.then(UserPermission::all),
         crates: crates
             .into_iter()
             .map(|v| ResponseCrate {
@@ -63,7 +61,7 @@ pub async fn handle_get(
 
 #[derive(Serialize)]
 pub struct Response {
-    possible_permissions: Option<Permission>,
+    possible_permissions: Option<UserPermission>,
     crates: Vec<ResponseCrate>,
     members: Vec<ResponseUser>,
 }
@@ -78,5 +76,5 @@ pub struct ResponseCrate {
 pub struct ResponseUser {
     uuid: String,
     username: String,
-    permissions: Option<Permission>,
+    permissions: Option<UserPermission>,
 }

@@ -1,8 +1,4 @@
-use crate::{
-    crates::Crate,
-    users::{User, UserCratePermissionValue as Permission},
-    Error,
-};
+use crate::{crates::Crate, permissions::UserPermission, users::User, Error};
 
 use super::{
     schema::{organisations, user_organisation_permissions, users},
@@ -46,12 +42,13 @@ impl Organisation {
                     user_organisation_permissions::dsl::permissions.nullable(),
                     organisations::all_columns,
                 ))
-                .get_result::<(Option<Permission>, _)>(&conn)
+                .get_result::<(Option<UserPermission>, _)>(&conn)
                 .optional()?
                 .ok_or(Error::MissingOrganisation)?;
 
-            let permissions =
-                permissions.ok_or(Error::MissingOrganisationPermission(Permission::VISIBLE))?;
+            let permissions = permissions.ok_or(Error::MissingOrganisationPermission(
+                UserPermission::VISIBLE,
+            ))?;
 
             Ok(OrganisationWithPermissions {
                 organisation,
@@ -64,18 +61,20 @@ impl Organisation {
 
 pub struct OrganisationWithPermissions {
     organisation: Organisation,
-    permissions: Permission,
+    permissions: UserPermission,
 }
 
 impl OrganisationWithPermissions {
     #[must_use]
-    pub fn permissions(&self) -> Permission {
+    pub fn permissions(&self) -> UserPermission {
         self.permissions
     }
 
     pub async fn crates(self: Arc<Self>, conn: ConnectionPool) -> Result<Vec<Crate>> {
-        if !self.permissions.contains(Permission::VISIBLE) {
-            return Err(Error::MissingOrganisationPermission(Permission::VISIBLE));
+        if !self.permissions.contains(UserPermission::VISIBLE) {
+            return Err(Error::MissingOrganisationPermission(
+                UserPermission::VISIBLE,
+            ));
         }
 
         tokio::task::spawn_blocking(move || {
@@ -87,9 +86,14 @@ impl OrganisationWithPermissions {
         .await?
     }
 
-    pub async fn members(self: Arc<Self>, conn: ConnectionPool) -> Result<Vec<(User, Permission)>> {
-        if !self.permissions.contains(Permission::VISIBLE) {
-            return Err(Error::MissingOrganisationPermission(Permission::VISIBLE));
+    pub async fn members(
+        self: Arc<Self>,
+        conn: ConnectionPool,
+    ) -> Result<Vec<(User, UserPermission)>> {
+        if !self.permissions.contains(UserPermission::VISIBLE) {
+            return Err(Error::MissingOrganisationPermission(
+                UserPermission::VISIBLE,
+            ));
         }
 
         tokio::task::spawn_blocking(move || {
@@ -113,10 +117,10 @@ impl OrganisationWithPermissions {
         self: Arc<Self>,
         conn: ConnectionPool,
         given_user_id: i32,
-        given_permissions: crate::users::UserCratePermissionValue,
+        given_permissions: UserPermission,
     ) -> Result<usize> {
-        if !self.permissions.contains(Permission::MANAGE_USERS) {
-            return Err(Error::MissingCratePermission(Permission::MANAGE_USERS));
+        if !self.permissions.contains(UserPermission::MANAGE_USERS) {
+            return Err(Error::MissingCratePermission(UserPermission::MANAGE_USERS));
         }
 
         tokio::task::spawn_blocking(move || {
@@ -141,10 +145,10 @@ impl OrganisationWithPermissions {
         self: Arc<Self>,
         conn: ConnectionPool,
         given_user_id: i32,
-        given_permissions: crate::users::UserCratePermissionValue,
+        given_permissions: UserPermission,
     ) -> Result<usize> {
-        if !self.permissions.contains(Permission::MANAGE_USERS) {
-            return Err(Error::MissingCratePermission(Permission::MANAGE_USERS));
+        if !self.permissions.contains(UserPermission::MANAGE_USERS) {
+            return Err(Error::MissingCratePermission(UserPermission::MANAGE_USERS));
         }
 
         tokio::task::spawn_blocking(move || {
@@ -170,8 +174,8 @@ impl OrganisationWithPermissions {
         conn: ConnectionPool,
         given_user_id: i32,
     ) -> Result<()> {
-        if !self.permissions.contains(Permission::MANAGE_USERS) {
-            return Err(Error::MissingCratePermission(Permission::MANAGE_USERS));
+        if !self.permissions.contains(UserPermission::MANAGE_USERS) {
+            return Err(Error::MissingCratePermission(UserPermission::MANAGE_USERS));
         }
 
         tokio::task::spawn_blocking(move || {

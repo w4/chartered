@@ -33,6 +33,7 @@ macro_rules! derive_diesel_json {
 
 pub mod crates;
 pub mod organisations;
+pub mod permissions;
 pub mod schema;
 pub mod users;
 pub mod uuid;
@@ -68,9 +69,9 @@ pub enum Error {
     /// Key parse failure: `{0}`
     KeyParse(#[from] thrussh_keys::Error),
     /// You don't have the {0:?} permission for this crate
-    MissingCratePermission(crate::users::UserCratePermissionValue),
+    MissingCratePermission(crate::permissions::UserPermission),
     /// You don't have the {0:?} permission for this organisation
-    MissingOrganisationPermission(crate::users::UserCratePermissionValue),
+    MissingOrganisationPermission(crate::permissions::UserPermission),
     /// The requested crate does not exist
     MissingCrate,
     /// The requested organisation does not exist
@@ -85,7 +86,7 @@ impl Error {
         match self {
             Self::MissingCrate => http::StatusCode::NOT_FOUND,
             Self::MissingCratePermission(v) | Self::MissingOrganisationPermission(v)
-                if v.contains(crate::users::UserCratePermissionValue::VISIBLE) =>
+                if v.contains(crate::permissions::UserPermission::VISIBLE) =>
             {
                 http::StatusCode::NOT_FOUND
             }
