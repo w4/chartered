@@ -24,6 +24,7 @@ interface OrganisationDetails {
   possible_permissions?: string[];
   crates: Crate[];
   members: Member[];
+  description: string;
 }
 
 interface Crate {
@@ -63,8 +64,6 @@ export default function ShowOrganisation() {
     return <Loading />;
   }
 
-  const description = "a collection of things and stuff.";
-
   return (
     <div className="text-white">
       <Nav />
@@ -82,7 +81,7 @@ export default function ShowOrganisation() {
 
                   <div className="px-2">
                     <h1 className="text-primary my-0">{organisation}</h1>
-                    <p className="m-0">{description}</p>
+                    <p className="m-0">{organisationDetails.description}</p>
                   </div>
                 </div>
               </div>

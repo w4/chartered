@@ -15,6 +15,7 @@ pub struct Organisation {
     pub id: i32,
     pub uuid: SqlUuid,
     pub name: String,
+    pub description: String,
 }
 
 impl Organisation {
@@ -68,6 +69,11 @@ impl OrganisationWithPermissions {
     #[must_use]
     pub fn permissions(&self) -> UserPermission {
         self.permissions
+    }
+
+    #[must_use]
+    pub fn organisation(&self) -> &Organisation {
+        &self.organisation
     }
 
     pub async fn crates(self: Arc<Self>, conn: ConnectionPool) -> Result<Vec<Crate>> {

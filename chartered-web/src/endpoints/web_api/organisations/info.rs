@@ -40,6 +40,7 @@ pub async fn handle_get(
     )?;
 
     Ok(Json(Response {
+        description: organisation.organisation().description.to_string(),
         possible_permissions: can_manage_users.then(UserPermission::all),
         crates: crates
             .into_iter()
@@ -61,6 +62,7 @@ pub async fn handle_get(
 
 #[derive(Serialize)]
 pub struct Response {
+    description: String,
     possible_permissions: Option<UserPermission>,
     crates: Vec<ResponseCrate>,
     members: Vec<ResponseUser>,

@@ -33,6 +33,7 @@ table! {
         id -> Integer,
         uuid -> Binary,
         name -> Text,
+        description -> Text,
     }
 }
 
