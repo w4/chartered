@@ -32,6 +32,7 @@ macro_rules! derive_diesel_json {
 }
 
 pub mod crates;
+pub mod organisations;
 pub mod schema;
 pub mod users;
 pub mod uuid;
@@ -44,11 +45,12 @@ use diesel::{
     r2d2::{ConnectionManager, Pool},
     sql_types::{Integer, Nullable},
 };
+use diesel_logger::LoggingConnection;
 use displaydoc::Display;
 use std::sync::Arc;
 use thiserror::Error;
 
-pub type ConnectionPool = Arc<Pool<ConnectionManager<diesel::SqliteConnection>>>;
+pub type ConnectionPool = Arc<Pool<ConnectionManager<LoggingConnection<diesel::SqliteConnection>>>>;
 pub type Result<T> = std::result::Result<T, Error>;
 
 pub fn init() -> Result<ConnectionPool> {
@@ -66,9 +68,13 @@ pub enum Error {
     /// Key parse failure: `{0}`
     KeyParse(#[from] thrussh_keys::Error),
     /// You don't have the {0:?} permission for this crate
-    MissingPermission(crate::users::UserCratePermissionValue),
+    MissingCratePermission(crate::users::UserCratePermissionValue),
+    /// You don't have the {0:?} permission for this organisation
+    MissingOrganisationPermission(crate::users::UserCratePermissionValue),
     /// The requested crate does not exist
     MissingCrate,
+    /// The requested organisation does not exist
+    MissingOrganisation,
     /// Version {0} already exists for this crate
     VersionConflict(String),
 }
@@ -78,12 +84,14 @@ impl Error {
     pub fn status_code(&self) -> http::StatusCode {
         match self {
             Self::MissingCrate => http::StatusCode::NOT_FOUND,
-            Self::MissingPermission(v)
+            Self::MissingCratePermission(v) | Self::MissingOrganisationPermission(v)
                 if v.contains(crate::users::UserCratePermissionValue::VISIBLE) =>
             {
                 http::StatusCode::NOT_FOUND
             }
-            Self::MissingPermission(_) => http::StatusCode::FORBIDDEN,
+            Self::MissingCratePermission(_) | Self::MissingOrganisationPermission(_) => {
+                http::StatusCode::FORBIDDEN
+            }
             Self::KeyParse(_) | Self::VersionConflict(_) => http::StatusCode::BAD_REQUEST,
             _ => http::StatusCode::INTERNAL_SERVER_ERROR,
         }

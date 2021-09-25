@@ -19,6 +19,8 @@ import Dashboard from "./pages/Dashboard";
 import CrateView from "./pages/crate/CrateView";
 import ListSshKeys from "./pages/ssh-keys/ListSshKeys";
 import AddSshKeys from "./pages/ssh-keys/AddSshKeys";
+import ListOrganisations from "./pages/organisations/ListOrganisations";
+import OrganisationView from "./pages/crate/OrganisationView";
 
 function App() {
   return (
@@ -44,8 +46,18 @@ function App() {
           />
           <PrivateRoute
             exact
+            path="/crates/:organisation"
+            component={() => <OrganisationView />}
+          />
+          <PrivateRoute
+            exact
             path="/crates/:organisation/:crate/:subview?"
             component={() => <CrateView />}
+          />
+          <PrivateRoute
+            exact
+            path="/ssh-keys"
+            component={() => <Redirect to="/ssh-keys/list" />}
           />
           <PrivateRoute
             exact
@@ -56,6 +68,16 @@ function App() {
             exact
             path="/ssh-keys/add"
             component={() => <AddSshKeys />}
+          />
+          <PrivateRoute
+            exact
+            path="/organisations"
+            component={() => <Redirect to="/organisations/list" />}
+          />
+          <PrivateRoute
+            exact
+            path="/organisations/list"
+            component={() => <ListOrganisations />}
           />
         </Switch>
       </Router>

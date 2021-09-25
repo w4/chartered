@@ -1,4 +1,5 @@
-use crate::users::{Organisation, User, UserCratePermission};
+use crate::organisations::Organisation;
+use crate::users::{User, UserCratePermission};
 
 use super::{
     coalesce,
@@ -144,7 +145,7 @@ impl Crate {
                     permissions,
                 })
             } else {
-                Err(Error::MissingPermission(Permissions::VISIBLE))
+                Err(Error::MissingCratePermission(Permissions::VISIBLE))
             }
         })
         .await?
@@ -173,10 +174,11 @@ impl Crate {
                 .select((id, permissions))
                 .first::<(i32, Permissions)>(&conn)?;
 
+            #[allow(clippy::if_not_else)]
             if !perms.contains(Permissions::VISIBLE) {
-                Err(Error::MissingPermission(Permissions::VISIBLE))
+                Err(Error::MissingCratePermission(Permissions::VISIBLE))
             } else if !perms.contains(Permissions::CREATE_CRATE) {
-                Err(Error::MissingPermission(Permissions::CREATE_CRATE))
+                Err(Error::MissingCratePermission(Permissions::CREATE_CRATE))
             } else {
                 use crate::schema::crates::dsl::{crates, name, organisation_id};
 
@@ -262,7 +264,7 @@ impl CrateWithPermissions {
         conn: ConnectionPool,
     ) -> Result<Vec<(crate::users::User, crate::users::UserCratePermissionValue)>> {
         if !self.permissions.contains(Permissions::MANAGE_USERS) {
-            return Err(Error::MissingPermission(Permissions::MANAGE_USERS));
+            return Err(Error::MissingCratePermission(Permissions::MANAGE_USERS));
         }
 
         tokio::task::spawn_blocking(move || {
@@ -286,7 +288,7 @@ impl CrateWithPermissions {
         given_permissions: crate::users::UserCratePermissionValue,
     ) -> Result<usize> {
         if !self.permissions.contains(Permissions::MANAGE_USERS) {
-            return Err(Error::MissingPermission(Permissions::MANAGE_USERS));
+            return Err(Error::MissingCratePermission(Permissions::MANAGE_USERS));
         }
 
         tokio::task::spawn_blocking(move || {
@@ -314,7 +316,7 @@ impl CrateWithPermissions {
         given_permissions: crate::users::UserCratePermissionValue,
     ) -> Result<usize> {
         if !self.permissions.contains(Permissions::MANAGE_USERS) {
-            return Err(Error::MissingPermission(Permissions::MANAGE_USERS));
+            return Err(Error::MissingCratePermission(Permissions::MANAGE_USERS));
         }
 
         tokio::task::spawn_blocking(move || {
@@ -341,7 +343,7 @@ impl CrateWithPermissions {
         given_user_id: i32,
     ) -> Result<()> {
         if !self.permissions.contains(Permissions::MANAGE_USERS) {
-            return Err(Error::MissingPermission(Permissions::MANAGE_USERS));
+            return Err(Error::MissingCratePermission(Permissions::MANAGE_USERS));
         }
 
         tokio::task::spawn_blocking(move || {
@@ -383,10 +385,12 @@ impl CrateWithPermissions {
         };
 
         if !self.permissions.contains(Permissions::PUBLISH_VERSION) {
-            return Err(Error::MissingPermission(Permissions::PUBLISH_VERSION));
+            return Err(Error::MissingCratePermission(Permissions::PUBLISH_VERSION));
         }
 
         tokio::task::spawn_blocking(move || {
+            use diesel::result::{DatabaseErrorKind, Error as DieselError};
+
             let conn = conn.get()?;
 
             conn.transaction::<_, crate::Error, _>(|| {
@@ -415,7 +419,6 @@ impl CrateWithPermissions {
                     ))
                     .execute(&conn);
 
-                use diesel::result::{DatabaseErrorKind, Error as DieselError};
                 match res {
                     Ok(_) => Ok(()),
                     Err(DieselError::DatabaseError(DatabaseErrorKind::UniqueViolation, _)) => {
@@ -439,7 +442,7 @@ impl CrateWithPermissions {
         use crate::schema::crate_versions::dsl::{crate_id, crate_versions, version, yanked};
 
         if !self.permissions.contains(Permissions::YANK_VERSION) {
-            return Err(Error::MissingPermission(Permissions::YANK_VERSION));
+            return Err(Error::MissingCratePermission(Permissions::YANK_VERSION));
         }
 
         tokio::task::spawn_blocking(move || {

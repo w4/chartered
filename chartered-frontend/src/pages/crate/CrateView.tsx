@@ -19,12 +19,12 @@ import {
   Square,
 } from "react-bootstrap-icons";
 import { useParams, NavLink, Redirect } from "react-router-dom";
-import { useAuthenticatedRequest } from "../../util";
+import { authenticatedEndpoint, useAuthenticatedRequest } from "../../util";
 
 import Prism from "react-syntax-highlighter/dist/cjs/prism";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import Members from "./Members";
+import CommonMembers from "./Members";
 import { OverlayTrigger, Tooltip } from "react-bootstrap";
 import HumanTime from "react-human-time";
 
@@ -76,13 +76,16 @@ export default function SingleCrate() {
 
   const crateVersion = crateInfo.versions[crateInfo.versions.length - 1];
 
+  const showLinks =
+    crateInfo.homepage || crateInfo.documentation || crateInfo.repository;
+
   return (
     <div className="text-white">
       <Nav />
 
       <div className="container mt-4 pb-4">
         <div className="row align-items-stretch">
-          <div className="col-12 col-md-6 mb-3 mb-md-0">
+          <div className={`col-12 col-md-${showLinks ? 6 : 12} mb-3 mb-md-0`}>
             <div className="card border-0 shadow-sm text-black h-100">
               <div className="card-body">
                 <div className="d-flex flex-row align-items-center">
@@ -92,7 +95,10 @@ export default function SingleCrate() {
                   >
                     <BoxSeam />
                   </div>
-                  <h1 className="text-primary d-inline px-2">{crate}</h1>
+                  <h1 className="text-primary d-inline px-2">
+                    <span className="text-secondary">{organisation}/</span>
+                    {crate}
+                  </h1>
                   <h2 className="text-secondary m-0">{crateVersion.vers}</h2>
                 </div>
 
@@ -101,38 +107,42 @@ export default function SingleCrate() {
             </div>
           </div>
 
-          <div className="col-12 col-md-6">
-            <div className="card border-0 shadow-sm text-black h-100">
-              <div className="card-body d-flex flex-column justify-content-center">
-                {crateInfo.homepage ? (
-                  <div>
-                    <HouseDoor />{" "}
-                    <a href={crateInfo.homepage}>{crateInfo.homepage}</a>
-                  </div>
-                ) : (
-                  <></>
-                )}
-                {crateInfo.documentation ? (
-                  <div>
-                    <Book />{" "}
-                    <a href={crateInfo.documentation}>
-                      {crateInfo.documentation}
-                    </a>
-                  </div>
-                ) : (
-                  <></>
-                )}
-                {crateInfo.repository ? (
-                  <div>
-                    <Building />{" "}
-                    <a href={crateInfo.repository}>{crateInfo.repository}</a>
-                  </div>
-                ) : (
-                  <></>
-                )}
+          {showLinks ? (
+            <div className="col-12 col-md-6">
+              <div className="card border-0 shadow-sm text-black h-100">
+                <div className="card-body d-flex flex-column justify-content-center">
+                  {crateInfo.homepage ? (
+                    <div>
+                      <HouseDoor />{" "}
+                      <a href={crateInfo.homepage}>{crateInfo.homepage}</a>
+                    </div>
+                  ) : (
+                    <></>
+                  )}
+                  {crateInfo.documentation ? (
+                    <div>
+                      <Book />{" "}
+                      <a href={crateInfo.documentation}>
+                        {crateInfo.documentation}
+                      </a>
+                    </div>
+                  ) : (
+                    <></>
+                  )}
+                  {crateInfo.repository ? (
+                    <div>
+                      <Building />{" "}
+                      <a href={crateInfo.repository}>{crateInfo.repository}</a>
+                    </div>
+                  ) : (
+                    <></>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <></>
+          )}
         </div>
 
         <div className="row my-4">
@@ -196,6 +206,13 @@ export default function SingleCrate() {
               </div>
 
               <ul className="list-group list-group-flush mb-2">
+                {crateVersion.deps.length === 0 ? (
+                  <li className="list-group-item">
+                    This crate has no dependencies
+                  </li>
+                ) : (
+                  <></>
+                )}
                 {crateVersion.deps.map((dep) => (
                   <li
                     key={`${dep.name}-${dep.version_req}`}
@@ -222,6 +239,107 @@ export default function SingleCrate() {
         </div>
       </div>
     </div>
+  );
+}
+
+interface CratesMembersResponse {
+  allowed_permissions: string[];
+  members: Member[];
+}
+
+interface Member {
+  uuid: string;
+  username: string;
+  permissions: string[];
+}
+
+function Members({
+  organisation,
+  crate,
+}: {
+  organisation: string;
+  crate: string;
+}) {
+  const auth = useAuth();
+  const [reload, setReload] = useState(0);
+  const { response, error } = useAuthenticatedRequest<CratesMembersResponse>(
+    {
+      auth,
+      endpoint: `crates/${organisation}/${crate}/members`,
+    },
+    [reload]
+  );
+
+  if (error) {
+    return <>{error}</>;
+  } else if (!response) {
+    return (
+      <div className="d-flex justify-content-center align-items-center">
+        <div className="spinner-border text-light" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    );
+  }
+
+  const saveMemberPermissions = async (
+    prospectiveMember,
+    uuid,
+    selectedPermissions
+  ) => {
+    let res = await fetch(
+      authenticatedEndpoint(auth, `crates/${organisation}/${crate}/members`),
+      {
+        method: prospectiveMember ? "PUT" : "PATCH",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_uuid: uuid,
+          permissions: selectedPermissions,
+        }),
+      }
+    );
+    let json = await res.json();
+
+    if (json.error) {
+      throw new Error(json.error);
+    }
+
+    setReload(reload + 1);
+  };
+
+  const deleteMember = async (uuid) => {
+    let res = await fetch(
+      authenticatedEndpoint(auth, `crates/${organisation}/${crate}/members`),
+      {
+        method: "DELETE",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_uuid: uuid,
+        }),
+      }
+    );
+    let json = await res.json();
+
+    if (json.error) {
+      throw new Error(json.error);
+    }
+
+    setReload(reload + 1);
+  };
+
+  return (
+    <CommonMembers
+      members={response.members}
+      possiblePermissions={response.allowed_permissions}
+      saveMemberPermissions={saveMemberPermissions}
+      deleteMember={deleteMember}
+    />
   );
 }
 
@@ -324,6 +442,10 @@ function Versions(props: { crate: CrateInfo }) {
 }
 
 function ReadMe(props: { crate: CrateInfo }) {
+  if (!props.crate.readme) {
+    return <>This crate has not added a README.</>;
+  }
+
   return (
     <ReactMarkdown
       children={props.crate.readme}

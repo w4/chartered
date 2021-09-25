@@ -1,5 +1,5 @@
 use super::{
-    schema::{organisations, user_crate_permissions, user_sessions, user_ssh_keys, users},
+    schema::{user_crate_permissions, user_sessions, user_ssh_keys, users},
     uuid::SqlUuid,
     ConnectionPool, Result,
 };
@@ -9,13 +9,6 @@ use option_set::{option_set, OptionSet};
 use rand::{thread_rng, Rng};
 use std::sync::Arc;
 use thrussh_keys::PublicKeyBase64;
-
-#[derive(Identifiable, Queryable, Associations, PartialEq, Eq, Hash, Debug)]
-pub struct Organisation {
-    pub id: i32,
-    pub uuid: SqlUuid,
-    pub name: String,
-}
 
 #[derive(Identifiable, Queryable, Associations, PartialEq, Eq, Hash, Debug)]
 pub struct User {

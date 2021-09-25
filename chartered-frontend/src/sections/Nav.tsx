@@ -38,8 +38,13 @@ export default function Nav() {
               </NavLink>
             </li>
             <li className="nav-item">
-              <NavLink to="/ssh-keys/list" className="nav-link">
+              <NavLink to="/ssh-keys" className="nav-link">
                 SSH Keys
+              </NavLink>
+            </li>
+            <li className="nav-item">
+              <NavLink to="/organisations" className="nav-link">
+                Organisations
               </NavLink>
             </li>
           </ul>

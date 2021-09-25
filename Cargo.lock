@@ -199,6 +199,7 @@ dependencies = [
  "chartered-types",
  "chrono",
  "diesel",
+ "diesel_logger",
  "displaydoc",
  "dotenv",
  "hex",
@@ -407,6 +408,16 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "diesel_logger"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1793935ad14586bf2aa51574a7157932640c345205ccfb2db431846d846e3db7"
+dependencies = [
+ "diesel",
+ "log",
 ]
 
 [[package]]

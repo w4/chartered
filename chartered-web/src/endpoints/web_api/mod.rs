@@ -1,5 +1,6 @@
 pub mod crates;
 mod login;
+pub mod organisations;
 mod search_users;
 mod ssh_key;
 

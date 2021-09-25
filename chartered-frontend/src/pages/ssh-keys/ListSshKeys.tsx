@@ -99,6 +99,11 @@ export default function ListSshKeys() {
         </div>
 
         <div className="card border-0 shadow-sm text-black">
+          {sshKeys.keys.length == 0 ? (
+            <div className="card-body">You haven't added any SSH keys yet</div>
+          ) : (
+            <></>
+          )}
           <div className="table-responsive">
             <table className="table table-striped">
               <tbody>

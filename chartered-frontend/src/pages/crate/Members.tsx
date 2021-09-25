@@ -14,127 +14,104 @@ import { AsyncTypeahead } from "react-bootstrap-typeahead";
 import { debounce } from "lodash";
 import _ = require("lodash");
 
-interface CratesMembersResponse {
-  allowed_permissions: string[];
-  members: Member[];
-}
-
 interface Member {
   uuid: string;
+  permissions?: string[];
   username: string;
-  permissions: string[];
 }
 
 export default function Members({
-  organisation,
-  crate,
+  members,
+  possiblePermissions,
+  saveMemberPermissions,
+  deleteMember,
 }: {
-  organisation: string;
-  crate: string;
+  members: Member[];
+  possiblePermissions?: string[];
+  saveMemberPermissions: (
+    prospectiveMember: boolean,
+    uuid: string,
+    selectedPermissions: string[]
+  ) => Promise<any>;
+  deleteMember: (uuid: string) => Promise<any>;
 }) {
-  const auth = useAuth();
-  const [reload, setReload] = useState(0);
-  const { response, error } = useAuthenticatedRequest<CratesMembersResponse>(
-    {
-      auth,
-      endpoint: `crates/${organisation}/${crate}/members`,
-    },
-    [reload]
-  );
   const [prospectiveMembers, setProspectiveMembers] = useState([]);
 
   React.useEffect(() => {
-    if (response && response.members) {
-      setProspectiveMembers(
-        prospectiveMembers.filter((prospectiveMember) => {
-          _.findIndex(
-            response.members,
-            (responseMember) => responseMember.uuid === prospectiveMember.uuid
-          ) === -1;
-        })
-      );
-    }
-  }, [response]);
-
-  if (error) {
-    return <>{error}</>;
-  } else if (!response) {
-    return (
-      <div className="d-flex justify-content-center align-items-center">
-        <div className="spinner-border text-light" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </div>
-      </div>
+    setProspectiveMembers(
+      prospectiveMembers.filter((prospectiveMember) => {
+        _.findIndex(
+          members,
+          (member) => member.uuid === prospectiveMember.uuid
+        ) === -1;
+      })
     );
-  }
-
-  const allowedPermissions = response.allowed_permissions;
+  }, [members]);
 
   return (
-    <div className="container-fluid g-0">
-      <div className={/*"table-responsive"*/ ""}>
-        <table className="table table-striped">
-          <tbody>
-            {response.members.map((member, index) => (
-              <MemberListItem
-                key={index}
-                organisation={organisation}
-                crate={crate}
-                member={member}
-                prospectiveMember={false}
-                allowedPermissions={allowedPermissions}
-                onUpdateComplete={() => setReload(reload + 1)}
-              />
-            ))}
+    <table className="table table-striped">
+      <tbody>
+        {members.map((member, index) => (
+          <MemberListItem
+            key={index}
+            member={member}
+            prospectiveMember={false}
+            possiblePermissions={possiblePermissions}
+            saveMemberPermissions={saveMemberPermissions}
+            deleteMember={deleteMember}
+          />
+        ))}
 
-            {prospectiveMembers.map((member, index) => (
-              <MemberListItem
-                key={index}
-                organisation={organisation}
-                crate={crate}
-                member={member}
-                prospectiveMember={true}
-                allowedPermissions={allowedPermissions}
-                onUpdateComplete={() => setReload(reload + 1)}
-              />
-            ))}
+        {prospectiveMembers.map((member, index) => (
+          <MemberListItem
+            key={index}
+            member={member}
+            prospectiveMember={true}
+            possiblePermissions={possiblePermissions}
+            saveMemberPermissions={saveMemberPermissions}
+            deleteMember={deleteMember}
+          />
+        ))}
 
-            <MemberListInserter
-              onInsert={(username, userUuid) =>
-                setProspectiveMembers([
-                  ...prospectiveMembers,
-                  {
-                    uuid: userUuid,
-                    username,
-                    permissions: ["VISIBLE"],
-                  },
-                ])
-              }
-              existingMembers={response.members}
-            />
-          </tbody>
-        </table>
-      </div>
-    </div>
+        {possiblePermissions ? (
+          <MemberListInserter
+            onInsert={(username, userUuid) =>
+              setProspectiveMembers([
+                ...prospectiveMembers,
+                {
+                  uuid: userUuid,
+                  username,
+                  permissions: ["VISIBLE"],
+                },
+              ])
+            }
+            existingMembers={members}
+          />
+        ) : (
+          <></>
+        )}
+      </tbody>
+    </table>
   );
 }
 
 function MemberListItem({
-  organisation,
-  crate,
   member,
   prospectiveMember,
-  allowedPermissions,
-  onUpdateComplete,
+  possiblePermissions,
+  saveMemberPermissions,
+  deleteMember,
 }: {
-  organisation: string;
-  crate: string;
   member: Member;
   prospectiveMember: boolean;
-  allowedPermissions: string[];
-  onUpdateComplete: () => any;
+  possiblePermissions?: string[];
+  saveMemberPermissions: (
+    prospectiveMember: boolean,
+    uuid: string,
+    selectedPermissions: string[]
+  ) => Promise<any>;
+  deleteMember: (uuid: string) => Promise<any>;
 }) {
-  const auth = useAuth();
   const [selectedPermissions, setSelectedPermissions] = useState(
     member.permissions
   );
@@ -144,31 +121,15 @@ function MemberListItem({
 
   let itemAction = <></>;
 
-  const saveUserPermissions = async () => {
+  const doSaveMemberPermissions = async () => {
     setSaving(true);
 
     try {
-      let res = await fetch(
-        authenticatedEndpoint(auth, `crates/${organisation}/${crate}/members`),
-        {
-          method: prospectiveMember ? "PUT" : "PATCH",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            user_uuid: member.uuid,
-            permissions: selectedPermissions,
-          }),
-        }
+      await saveMemberPermissions(
+        prospectiveMember,
+        member.uuid,
+        selectedPermissions
       );
-      let json = await res.json();
-
-      if (json.error) {
-        throw new Error(json.error);
-      }
-
-      onUpdateComplete();
     } catch (e) {
       setError(error);
     } finally {
@@ -180,26 +141,7 @@ function MemberListItem({
     setSaving(true);
 
     try {
-      let res = await fetch(
-        authenticatedEndpoint(auth, `crates/${organisation}/${crate}/members`),
-        {
-          method: "DELETE",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            user_uuid: member.uuid,
-          }),
-        }
-      );
-      let json = await res.json();
-
-      if (json.error) {
-        throw new Error(json.error);
-      }
-
-      onUpdateComplete();
+      deleteMember(member.uuid);
     } catch (e) {
       setError(error);
     } finally {
@@ -207,7 +149,9 @@ function MemberListItem({
     }
   };
 
-  if (saving) {
+  if (!possiblePermissions) {
+    // the current user can't perform any actions
+  } else if (saving) {
     itemAction = (
       <button type="button" className="btn">
         <div
@@ -239,7 +183,7 @@ function MemberListItem({
       <button
         type="button"
         className="btn text-success"
-        onClick={saveUserPermissions}
+        onClick={doSaveMemberPermissions}
       >
         <CheckLg />
       </button>
@@ -264,20 +208,26 @@ function MemberListItem({
 
         <td className="align-middle">
           <strong>{member.username}</strong>
-          <br />
-          <em>(that's you!)</em>
+          {/*<br />
+          <em>(that's you!)</em>*/}
         </td>
 
-        <td className="align-middle">
-          <RenderPermissions
-            allowedPermissions={allowedPermissions}
-            selectedPermissions={selectedPermissions}
-            userUuid={member.uuid}
-            onChange={setSelectedPermissions}
-          />
-        </td>
+        {possiblePermissions && member.permissions ? (
+          <>
+            <td className="align-middle">
+              <RenderPermissions
+                possiblePermissions={possiblePermissions}
+                selectedPermissions={selectedPermissions}
+                userUuid={member.uuid}
+                onChange={setSelectedPermissions}
+              />
+            </td>
 
-        <td className="align-middle fit">{itemAction}</td>
+            <td className="align-middle fit">{itemAction}</td>
+          </>
+        ) : (
+          <></>
+        )}
       </tr>
     </>
   );
@@ -304,7 +254,7 @@ function MemberListInserter({
       let res = await fetch(
         authenticatedEndpoint(
           auth,
-          `users/search?q=` + encodeURIComponent(query)
+          `users/search?q=${encodeURIComponent(query)}`
         )
       );
       let json = await res.json();
@@ -385,20 +335,23 @@ function MemberListInserter({
 }
 
 function RenderPermissions({
-  allowedPermissions,
+  possiblePermissions,
   selectedPermissions,
   userUuid,
   onChange,
 }: {
-  allowedPermissions: string[];
+  possiblePermissions: string[];
   selectedPermissions: string[];
-  userUuid: number;
+  userUuid: string;
   onChange: (permissions) => any;
 }) {
   return (
-    <div className="row ms-2">
-      {allowedPermissions.map((permission) => (
-        <div key={permission + userUuid} className="form-check col-12 col-md-6">
+    <div className="grid" style={{ "--bs-gap": 0 }}>
+      {possiblePermissions.map((permission) => (
+        <div
+          key={permission + userUuid}
+          className="form-check g-col-12 g-col-md-4"
+        >
           <input
             className="form-check-input"
             type="checkbox"

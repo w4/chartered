@@ -152,7 +152,7 @@ impl server::Handler for Handler {
         let args = shlex::split(data);
 
         Box::pin(async move {
-            let mut args = args.into_iter().map(|v| v.into_iter()).flatten();
+            let mut args = args.into_iter().flat_map(Vec::into_iter);
 
             if args.next().as_deref() != Some("git-upload-pack") {
                 anyhow::bail!("not git-upload-pack");

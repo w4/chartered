@@ -33,6 +33,7 @@ macro_rules! axum_box_after_every_route {
 
 #[tokio::main]
 #[allow(clippy::semicolon_if_nothing_returned)] // lint breaks with tokio::main
+#[allow(clippy::too_many_lines)] // todo: refactor
 async fn main() {
     env_logger::init();
 
@@ -69,6 +70,24 @@ async fn main() {
         axum_box_after_every_route!(Router::new().route("/login", post(endpoints::web_api::login)));
 
     let web_authenticated = axum_box_after_every_route!(Router::new()
+        // organisations endpoints
+        .route(
+            "/organisations/:org",
+            get(endpoints::web_api::organisations::info)
+        )
+        .route(
+            "/organisations/:org/members",
+            patch(endpoints::web_api::organisations::update_member)
+        )
+        .route(
+            "/organisations/:org/members",
+            put(endpoints::web_api::organisations::insert_member)
+        )
+        .route(
+            "/organisations/:org/members",
+            delete(endpoints::web_api::organisations::delete_member)
+        )
+        // crate endpoints
         .route("/crates/:org/:crate", get(endpoints::web_api::crates::info))
         .route(
             "/crates/:org/:crate/members",
@@ -90,6 +109,7 @@ async fn main() {
             "/crates/recently-updated",
             get(endpoints::web_api::crates::list_recently_updated)
         )
+        // users endpoints
         .route("/users/search", get(endpoints::web_api::search_users))
         .route("/ssh-key", get(endpoints::web_api::get_ssh_keys))
         .route("/ssh-key", put(endpoints::web_api::add_ssh_key))
