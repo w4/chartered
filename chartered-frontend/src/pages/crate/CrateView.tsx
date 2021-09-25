@@ -18,7 +18,7 @@ import {
   Check,
   Square,
 } from "react-bootstrap-icons";
-import { useParams, NavLink, Redirect } from "react-router-dom";
+import { useParams, NavLink, Redirect, Link } from "react-router-dom";
 import { authenticatedEndpoint, useAuthenticatedRequest } from "../../util";
 
 import Prism from "react-syntax-highlighter/dist/cjs/prism";
@@ -96,7 +96,12 @@ export default function SingleCrate() {
                     <BoxSeam />
                   </div>
                   <h1 className="text-primary d-inline px-2">
-                    <span className="text-secondary">{organisation}/</span>
+                    <Link
+                      to={`/crates/${organisation}`}
+                      className="text-secondary text-decoration-none"
+                    >
+                      {organisation}/
+                    </Link>
                     {crate}
                   </h1>
                   <h2 className="text-secondary m-0">{crateVersion.vers}</h2>
