@@ -7,12 +7,13 @@ import {
   Save,
   PlusLg,
 } from "react-bootstrap-icons";
-import { authenticatedEndpoint, useAuthenticatedRequest } from "../../util";
+import { authenticatedEndpoint, RoundedPicture, RoundedPicture, useAuthenticatedRequest } from "../../util";
 import { useAuth } from "../../useAuth";
 import { Button, Modal } from "react-bootstrap";
 import { AsyncTypeahead } from "react-bootstrap-typeahead";
 import { debounce } from "lodash";
 import _ = require("lodash");
+import ReactPlaceholder from "react-placeholder";
 
 interface Member {
   uuid: string;
@@ -203,7 +204,7 @@ function MemberListItem({
 
       <tr>
         <td className="align-middle fit">
-          <img src="http://placekitten.com/48/48" className="rounded-circle" />
+          <RoundedPicture src="http://placekitten.com/48/48" height="48px" width="48px" />
         </td>
 
         <td className="align-middle">
@@ -310,10 +311,11 @@ function MemberListInserter({
           ref={searchRef}
           renderMenuItemChildren={(option, props) => (
             <>
-              <img
-                alt={option.username}
+              <RoundedPicture
                 src="http://placekitten.com/24/24"
-                className="rounded-circle me-2"
+                height="24px"
+                width="24px"
+                className="me-2"
               />
               <span>{option.username}</span>
             </>

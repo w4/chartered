@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 
 import Nav from "../../sections/Nav";
 import { useAuth } from "../../useAuth";
-import { useAuthenticatedRequest } from "../../util";
+import { RoundedPicture, useAuthenticatedRequest } from "../../util";
 import ErrorPage from "../ErrorPage";
 import Loading from "../Loading";
 
@@ -48,10 +48,7 @@ export default function ListOrganisations() {
                 {list.organisations.map((v, i) => (
                   <tr key={i}>
                     <td className="align-middle fit">
-                      <img
-                        src="http://placekitten.com/48/48"
-                        className="rounded-circle"
-                      />
+                      <RoundedPicture src="http://placekitten.com/48/48" height="48px" width="48px" />
                     </td>
 
                     <td className="align-middle" style={{ lineHeight: "1.1" }}>

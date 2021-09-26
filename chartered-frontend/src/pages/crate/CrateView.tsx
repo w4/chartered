@@ -19,7 +19,7 @@ import {
   Square,
 } from "react-bootstrap-icons";
 import { useParams, NavLink, Redirect, Link } from "react-router-dom";
-import { authenticatedEndpoint, useAuthenticatedRequest } from "../../util";
+import { authenticatedEndpoint, RoundedPicture, RoundedPicture, useAuthenticatedRequest } from "../../util";
 
 import Prism from "react-syntax-highlighter/dist/cjs/prism";
 import ReactMarkdown from "react-markdown";
@@ -374,9 +374,11 @@ function Versions(props: { crate: CrateInfo }) {
               <div>
                 <div className="d-inline-block">
                   By
-                  <img
+                  <RoundedPicture
                     src="http://placekitten.com/22/22"
-                    className="rounded-circle ms-1 me-1"
+                    height="22px"
+                    width="22px"
+                    className="ms-1 me-1"
                   />
                   {version.uploader}
                 </div>
