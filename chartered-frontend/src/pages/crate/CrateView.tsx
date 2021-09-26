@@ -188,7 +188,7 @@ export default function SingleCrate() {
                 </ul>
               </div>
 
-              <div className="card-body">
+              <div className={currentTab != 'members' ? 'card-body' : ''}>
                 {currentTab == "readme" ? <ReadMe crate={crateInfo} /> : <></>}
                 {currentTab == "versions" ? (
                   <Versions crate={crateInfo} />
