@@ -19,7 +19,12 @@ import {
   Square,
 } from "react-bootstrap-icons";
 import { useParams, NavLink, Redirect, Link } from "react-router-dom";
-import { authenticatedEndpoint, RoundedPicture, RoundedPicture, useAuthenticatedRequest } from "../../util";
+import {
+  authenticatedEndpoint,
+  RoundedPicture,
+  RoundedPicture,
+  useAuthenticatedRequest,
+} from "../../util";
 
 import Prism from "react-syntax-highlighter/dist/cjs/prism";
 import ReactMarkdown from "react-markdown";
@@ -188,7 +193,7 @@ export default function SingleCrate() {
                 </ul>
               </div>
 
-              <div className={currentTab != 'members' ? 'card-body' : ''}>
+              <div className={currentTab != "members" ? "card-body" : ""}>
                 {currentTab == "readme" ? <ReadMe crate={crateInfo} /> : <></>}
                 {currentTab == "versions" ? (
                   <Versions crate={crateInfo} />

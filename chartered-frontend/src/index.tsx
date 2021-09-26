@@ -21,6 +21,7 @@ import ListSshKeys from "./pages/ssh-keys/ListSshKeys";
 import AddSshKeys from "./pages/ssh-keys/AddSshKeys";
 import ListOrganisations from "./pages/organisations/ListOrganisations";
 import OrganisationView from "./pages/crate/OrganisationView";
+import CreateOrganisation from "./pages/organisations/CreateOrganisation";
 
 function App() {
   return (
@@ -78,6 +79,11 @@ function App() {
             exact
             path="/organisations/list"
             component={() => <ListOrganisations />}
+          />
+          <PrivateRoute
+            exact
+            path="/organisations/create"
+            component={() => <CreateOrganisation />}
           />
         </Switch>
       </Router>

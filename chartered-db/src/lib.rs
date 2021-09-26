@@ -62,7 +62,7 @@ pub fn init() -> Result<ConnectionPool> {
 pub enum Error {
     /// Failed to initialise to database connection pool
     Connection(#[from] diesel::r2d2::PoolError),
-    /// Failed to run query
+    /// {0}
     Query(#[from] diesel::result::Error),
     /// Failed to complete query task
     TaskJoin(#[from] tokio::task::JoinError),

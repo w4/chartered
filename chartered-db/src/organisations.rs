@@ -87,6 +87,50 @@ impl Organisation {
         })
         .await?
     }
+
+    pub async fn create(
+        conn: ConnectionPool,
+        given_name: String,
+        given_description: String,
+        requesting_user_id: i32,
+    ) -> Result<()> {
+        tokio::task::spawn_blocking(move || {
+            let conn = conn.get()?;
+
+            conn.transaction::<_, crate::Error, _>(|| {
+                use organisations::dsl::{description, id, name, uuid};
+                use user_organisation_permissions::dsl::{organisation_id, permissions, user_id};
+
+                let generated_uuid = SqlUuid::random();
+
+                diesel::insert_into(organisations::table)
+                    .values((
+                        uuid.eq(generated_uuid),
+                        name.eq(given_name),
+                        description.eq(given_description),
+                    ))
+                    .execute(&conn)?;
+
+                let inserted_id: i32 = organisations::table
+                    .filter(uuid.eq(generated_uuid))
+                    .select(id)
+                    .get_result(&conn)?;
+
+                diesel::insert_into(user_organisation_permissions::table)
+                    .values((
+                        user_id.eq(requesting_user_id),
+                        organisation_id.eq(inserted_id),
+                        permissions.eq(UserPermission::all().bits()),
+                    ))
+                    .execute(&conn)?;
+
+                Ok(())
+            })?;
+
+            Ok(())
+        })
+        .await?
+    }
 }
 
 pub struct OrganisationWithPermissions {

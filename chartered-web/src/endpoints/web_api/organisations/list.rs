@@ -1,7 +1,5 @@
 use axum::{extract, Json};
-use chartered_db::{
-    organisations::Organisation, users::User, ConnectionPool,
-};
+use chartered_db::{organisations::Organisation, users::User, ConnectionPool};
 use serde::Serialize;
 use std::sync::Arc;
 use thiserror::Error;

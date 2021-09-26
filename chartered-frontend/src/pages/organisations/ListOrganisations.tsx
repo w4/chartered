@@ -1,4 +1,5 @@
 import React = require("react");
+import { Plus } from "react-bootstrap-icons";
 import { Link } from "react-router-dom";
 
 import Nav from "../../sections/Nav";
@@ -48,7 +49,11 @@ export default function ListOrganisations() {
                 {list.organisations.map((v, i) => (
                   <tr key={i}>
                     <td className="align-middle fit">
-                      <RoundedPicture src="http://placekitten.com/48/48" height="48px" width="48px" />
+                      <RoundedPicture
+                        src="http://placekitten.com/48/48"
+                        height="48px"
+                        width="48px"
+                      />
                     </td>
 
                     <td className="align-middle" style={{ lineHeight: "1.1" }}>
@@ -67,6 +72,13 @@ export default function ListOrganisations() {
             </table>
           )}
         </div>
+
+        <Link
+          to="/organisations/create"
+          className="btn btn-outline-light mt-2 float-end"
+        >
+          <Plus /> Create
+        </Link>
       </div>
     </div>
   );

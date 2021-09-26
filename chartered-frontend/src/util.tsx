@@ -40,14 +40,38 @@ export function useAuthenticatedRequest<S>(
   return { response, error };
 }
 
-export function RoundedPicture({ src, height, width, className }: { src: string, height: string, width: string, className?: string }) {
+export function RoundedPicture({
+  src,
+  height,
+  width,
+  className,
+}: {
+  src: string;
+  height: string;
+  width: string;
+  className?: string;
+}) {
   const [imageLoaded, setImageLoaded] = React.useState(false);
 
   return (
-    <div className={`position-relative d-inline-block ${className || ''}`} style={{height, width}}>
-      <ReactPlaceholder showLoadingAnimation type="round" style={{height, width, position: "absolute"}} ready={imageLoaded}><></></ReactPlaceholder>
+    <div
+      className={`position-relative d-inline-block ${className || ""}`}
+      style={{ height, width }}
+    >
+      <ReactPlaceholder
+        showLoadingAnimation
+        type="round"
+        style={{ height, width, position: "absolute" }}
+        ready={imageLoaded}
+      >
+        <></>
+      </ReactPlaceholder>
       <img
-        style={{visibility: imageLoaded ? "visible" : "hidden", height, width}}
+        style={{
+          visibility: imageLoaded ? "visible" : "hidden",
+          height,
+          width,
+        }}
         src={src}
         onLoad={() => setImageLoaded(true)}
         className="rounded-circle"

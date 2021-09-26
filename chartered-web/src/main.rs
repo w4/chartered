@@ -76,6 +76,10 @@ async fn main() {
             get(endpoints::web_api::organisations::list)
         )
         .route(
+            "/organisations",
+            put(endpoints::web_api::organisations::create)
+        )
+        .route(
             "/organisations/:org",
             get(endpoints::web_api::organisations::info)
         )

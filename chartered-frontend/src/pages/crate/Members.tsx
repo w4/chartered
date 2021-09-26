@@ -7,7 +7,12 @@ import {
   Save,
   PlusLg,
 } from "react-bootstrap-icons";
-import { authenticatedEndpoint, RoundedPicture, RoundedPicture, useAuthenticatedRequest } from "../../util";
+import {
+  authenticatedEndpoint,
+  RoundedPicture,
+  RoundedPicture,
+  useAuthenticatedRequest,
+} from "../../util";
 import { useAuth } from "../../useAuth";
 import { Button, Modal } from "react-bootstrap";
 import { AsyncTypeahead } from "react-bootstrap-typeahead";
@@ -204,7 +209,11 @@ function MemberListItem({
 
       <tr>
         <td className="align-middle fit">
-          <RoundedPicture src="http://placekitten.com/48/48" height="48px" width="48px" />
+          <RoundedPicture
+            src="http://placekitten.com/48/48"
+            height="48px"
+            width="48px"
+          />
         </td>
 
         <td className="align-middle">

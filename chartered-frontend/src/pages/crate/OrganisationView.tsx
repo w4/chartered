@@ -4,7 +4,11 @@ import { Link, useParams } from "react-router-dom";
 
 import Nav from "../../sections/Nav";
 import { useAuth } from "../../useAuth";
-import { useAuthenticatedRequest, authenticatedEndpoint, RoundedPicture } from "../../util";
+import {
+  useAuthenticatedRequest,
+  authenticatedEndpoint,
+  RoundedPicture,
+} from "../../util";
 
 import { BoxSeam, Plus, Trash } from "react-bootstrap-icons";
 import {
@@ -76,12 +80,26 @@ export default function ShowOrganisation() {
             <div className="card border-0 shadow-sm text-black h-100">
               <div className="card-body">
                 <div className="d-flex flex-row align-items-center">
-                  <RoundedPicture src="http://placekitten.com/96/96" height="96px" width="96px" />
+                  <RoundedPicture
+                    src="http://placekitten.com/96/96"
+                    height="96px"
+                    width="96px"
+                  />
 
                   <div className="px-2">
                     <h1 className="text-primary my-0">{organisation}</h1>
-                    <ReactPlaceholder showLoadingAnimation type="text" rows={1} ready={ready} style={{height: "1.4rem"}}>
-                      <p className="m-0">{organisationDetails?.description || <i>No description given.</i>}</p>
+                    <ReactPlaceholder
+                      showLoadingAnimation
+                      type="text"
+                      rows={1}
+                      ready={ready}
+                      style={{ height: "1.4rem" }}
+                    >
+                      <p className="m-0">
+                        {organisationDetails?.description || (
+                          <i>No description given.</i>
+                        )}
+                      </p>
                     </ReactPlaceholder>
                   </div>
                 </div>
@@ -136,7 +154,9 @@ export default function ShowOrganisation() {
                     <ListMembers
                       organisation={organisation}
                       members={organisationDetails.members}
-                      possiblePermissions={organisationDetails.possible_permissions}
+                      possiblePermissions={
+                        organisationDetails.possible_permissions
+                      }
                       reload={() => setReload(reload + 1)}
                     />
                   ) : (
