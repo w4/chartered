@@ -1,24 +1,35 @@
 import React = require("react");
-import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 
 import Nav from "../../sections/Nav";
 import { useAuth } from "../../useAuth";
-import { useAuthenticatedRequest, authenticatedEndpoint } from "../../util";
-
-import { Plus, Trash } from "react-bootstrap-icons";
-import {
-  Button,
-  Dropdown,
-  Modal,
-  OverlayTrigger,
-  Tooltip,
-} from "react-bootstrap";
-import HumanTime from "react-human-time";
+import { useAuthenticatedRequest } from "../../util";
 import ErrorPage from "../ErrorPage";
 import Loading from "../Loading";
 
+interface Response {
+  organisations: ResponseOrganisations[];
+}
+
+interface ResponseOrganisations {
+  name: string;
+  description: string;
+}
+
 export default function ListOrganisations() {
+  const auth = useAuth();
+
+  const { response: list, error } = useAuthenticatedRequest<Response>({
+    auth,
+    endpoint: "organisations",
+  });
+
+  if (error) {
+    return <ErrorPage message={error} />;
+  } else if (!list) {
+    return <Loading />;
+  }
+
   return (
     <div className="text-white">
       <Nav />
@@ -27,33 +38,37 @@ export default function ListOrganisations() {
         <h1>Your Organisations</h1>
 
         <div className="card border-0 shadow-sm text-black">
-          <table className="table table-striped">
-            <tbody>
-              <tr>
-                <td className="align-middle fit">
-                  <img
-                    src="http://placekitten.com/48/48"
-                    className="rounded-circle"
-                  />
-                </td>
+          {list.organisations.length === 0 ? (
+            <div className="card-body">
+              You don't belong to any organisations yet.
+            </div>
+          ) : (
+            <table className="table table-striped">
+              <tbody>
+                {list.organisations.map((v, i) => (
+                  <tr key={i}>
+                    <td className="align-middle fit">
+                      <img
+                        src="http://placekitten.com/48/48"
+                        className="rounded-circle"
+                      />
+                    </td>
 
-                <td className="align-middle">
-                  <Link to="/crates/core">core</Link>
-                </td>
-
-                <td className="fit align-middle">
-                  <Dropdown>
-                    <Dropdown.Toggle variant=""></Dropdown.Toggle>
-
-                    <Dropdown.Menu>
-                      <Dropdown.Item href="#/action-1">Members</Dropdown.Item>
-                      <Dropdown.Item href="#/action-2">Crates</Dropdown.Item>
-                    </Dropdown.Menu>
-                  </Dropdown>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                    <td className="align-middle" style={{ lineHeight: "1.1" }}>
+                      <div>
+                        <Link to={`/crates/${v.name}`}>{v.name}</Link>
+                      </div>
+                      <div>
+                        <small style={{ fontSize: "0.75rem" }}>
+                          {v.description}
+                        </small>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>

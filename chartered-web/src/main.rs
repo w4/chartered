@@ -72,6 +72,10 @@ async fn main() {
     let web_authenticated = axum_box_after_every_route!(Router::new()
         // organisations endpoints
         .route(
+            "/organisations",
+            get(endpoints::web_api::organisations::list)
+        )
+        .route(
             "/organisations/:org",
             get(endpoints::web_api::organisations::info)
         )

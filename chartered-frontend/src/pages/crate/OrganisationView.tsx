@@ -113,30 +113,24 @@ export default function ShowOrganisation() {
                 </ul>
               </div>
 
-              <div className="card-body">
-                <div className="d-flex flex-row align-items-center">
-                  {activeTab == "crates" ? (
-                    <ListCrates
-                      organisation={organisation}
-                      crates={organisationDetails.crates}
-                    />
-                  ) : (
-                    <></>
-                  )}
-                  {activeTab == "members" ? (
-                    <ListMembers
-                      organisation={organisation}
-                      members={organisationDetails.members}
-                      possiblePermissions={
-                        organisationDetails.possible_permissions
-                      }
-                      reload={() => setReload(reload + 1)}
-                    />
-                  ) : (
-                    <></>
-                  )}
-                </div>
-              </div>
+              {activeTab == "crates" ? (
+                <ListCrates
+                  organisation={organisation}
+                  crates={organisationDetails.crates}
+                />
+              ) : (
+                <></>
+              )}
+              {activeTab == "members" ? (
+                <ListMembers
+                  organisation={organisation}
+                  members={organisationDetails.members}
+                  possiblePermissions={organisationDetails.possible_permissions}
+                  reload={() => setReload(reload + 1)}
+                />
+              ) : (
+                <></>
+              )}
             </div>
           </div>
         </div>
@@ -152,6 +146,14 @@ function ListCrates({
   organisation: string;
   crates: Crate[];
 }) {
+  if (crates.length === 0) {
+    return (
+      <div className="card-body">
+        This organisation doesn't have any crates yet.
+      </div>
+    );
+  }
+
   return (
     <div className="table-responsive w-100">
       <table className="table table-striped">

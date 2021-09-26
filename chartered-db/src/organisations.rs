@@ -1,4 +1,6 @@
-use crate::{crates::Crate, permissions::UserPermission, users::User, Error};
+use crate::{
+    crates::Crate, permissions::UserPermission, users::User, BitwiseExpressionMethods, Error,
+};
 
 use super::{
     schema::{organisations, user_organisation_permissions, users},
@@ -19,6 +21,33 @@ pub struct Organisation {
 }
 
 impl Organisation {
+    pub async fn list(conn: ConnectionPool, requesting_user_id: i32) -> Result<Vec<Organisation>> {
+        use user_organisation_permissions::dsl::permissions;
+
+        tokio::task::spawn_blocking(move || {
+            let conn = conn.get()?;
+
+            organisations::table
+                .inner_join(
+                    user_organisation_permissions::table.on(user_organisation_permissions::user_id
+                        .eq(requesting_user_id)
+                        .and(
+                            user_organisation_permissions::organisation_id
+                                .eq(organisations::dsl::id),
+                        )),
+                )
+                .filter(
+                    permissions
+                        .bitwise_and(UserPermission::VISIBLE.bits())
+                        .eq(UserPermission::VISIBLE.bits()),
+                )
+                .select(organisations::all_columns)
+                .load(&conn)
+                .map_err(Into::into)
+        })
+        .await?
+    }
+
     pub async fn find_by_name(
         conn: ConnectionPool,
         requesting_user_id: i32,
