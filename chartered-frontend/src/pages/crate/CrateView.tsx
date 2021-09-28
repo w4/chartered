@@ -233,18 +233,6 @@ export default function SingleCrate() {
                 ))}
               </ul>
             </div>
-
-            <div className="card border-0 shadow-sm text-black mt-4">
-              <div className="card-body pb-0">
-                <h5 className="card-title">Dependents</h5>
-              </div>
-
-              <ul className="list-group list-group-flush">
-                <li className="list-group-item">An item</li>
-                <li className="list-group-item">A second item</li>
-                <li className="list-group-item">A third item</li>
-              </ul>
-            </div>
           </div>
         </div>
       </div>
