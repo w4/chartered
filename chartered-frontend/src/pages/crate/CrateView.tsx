@@ -57,6 +57,7 @@ export interface CrateInfoVersion {
 export interface CrateInfoVersionDependency {
   name: string;
   version_req: string;
+  registry?: string;
 }
 
 export default function SingleCrate() {
@@ -71,7 +72,7 @@ export default function SingleCrate() {
   const { response: crateInfo, error } = useAuthenticatedRequest<CrateInfo>({
     auth,
     endpoint: `crates/${organisation}/${crate}`,
-  });
+  }, [organisation, crate]);
 
   if (error) {
     return <ErrorPage message={error} />;
@@ -223,14 +224,7 @@ export default function SingleCrate() {
                 ) : (
                   <></>
                 )}
-                {crateVersion.deps.map((dep) => (
-                  <li
-                    key={`${dep.name}-${dep.version_req}`}
-                    className="list-group-item"
-                  >
-                    {dep.name} = "<strong>{dep.version_req}</strong>"
-                  </li>
-                ))}
+                {crateVersion.deps.map((dep) => <Dependency key={`${dep.name}-${dep.version_req}`} organisation={organisation} dep={dep} /> )}
               </ul>
             </div>
           </div>
@@ -249,6 +243,28 @@ interface Member {
   uuid: string;
   username: string;
   permissions: string[];
+}
+
+function Dependency({ organisation, dep }: { organisation: string, dep: CrateInfoVersionDependency }) {
+  let link = <>{dep.name}</>;
+
+  if (dep.registry === null) {
+    link = <a target="_blank" href={`/crates/${organisation}/${dep.name}`}>{link}</a>;
+  } else if (dep.registry === "https://github.com/rust-lang/crates.io-index") {
+    link = <a target="_blank" href={`https://crates.io/crates/${dep.name}`}>{link}</a>;
+  } else if (dep.registry.indexOf("ssh://") === 0) {
+    const parts = dep.registry.split('/');
+    const org = parts[parts.length - 1];
+    if (org) {
+      link = <Link to={`/crates/${org}/${dep.name}`}>{link}</Link>;
+    }
+  }
+
+  return (
+    <li className="list-group-item">
+      {link} = "<strong>{dep.version_req}</strong>"
+    </li>
+  );
 }
 
 function Members({
