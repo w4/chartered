@@ -6,19 +6,18 @@
 window.addEventListener("load", () => {
   let ticking;
 
-  window.addEventListener(
-    "scroll",
-    function (event) {
-      if (!ticking) {
-        ticking = true;
+  const backgroundFix = () => {
+    if (!ticking) {
+      ticking = true;
 
-        window.requestAnimationFrame(() => {
-          document.documentElement.style.backgroundColor =
-            window.scrollY > 70 ? "var(--bs-primary)" : "#fff";
-          ticking = false;
-        });
-      }
-    },
-    false
-  );
+      window.requestAnimationFrame(() => {
+        document.documentElement.style.backgroundColor =
+          window.scrollY > 70 ? "var(--bs-primary)" : "#fff";
+        ticking = false;
+      });
+    }
+  };
+
+  window.addEventListener("scroll", backgroundFix, false);
+  backgroundFix();
 });
