@@ -6,7 +6,7 @@ mod middleware;
 
 use axum::{
     handler::{delete, get, patch, post, put},
-    http::Method,
+    http::{Method, header},
     AddExtensionLayer, Router,
 };
 use tower::ServiceBuilder;
@@ -149,6 +149,7 @@ async fn main() {
                     Method::PUT,
                     Method::OPTIONS,
                 ])
+                .allow_headers(vec![header::CONTENT_TYPE, header::USER_AGENT])
                 .allow_origin(Any)
                 .allow_credentials(false),
         )

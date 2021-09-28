@@ -1,4 +1,5 @@
 use axum::{
+    body::{box_body, Body, BoxBody},
     extract::{self, FromRequest, RequestParts},
     http::{Request, Response, StatusCode},
 };
@@ -10,15 +11,16 @@ use std::{
 };
 use tower::Service;
 
+use crate::endpoints::ErrorResponse;
+
 #[derive(Clone)]
 pub struct AuthMiddleware<S>(pub S);
 
-impl<S, ReqBody, ResBody> Service<Request<ReqBody>> for AuthMiddleware<S>
+impl<S, ReqBody> Service<Request<ReqBody>> for AuthMiddleware<S>
 where
-    S: Service<Request<ReqBody>, Response = Response<ResBody>> + Clone + Send + 'static,
+    S: Service<Request<ReqBody>, Response = Response<BoxBody>> + Clone + Send + 'static,
     S::Future: Send + 'static,
     ReqBody: Send + 'static,
-    ResBody: Default + Send + 'static,
 {
     type Response = S::Response;
     type Error = S::Error;
@@ -58,14 +60,19 @@ where
                 None => {
                     return Ok(Response::builder()
                         .status(StatusCode::UNAUTHORIZED)
-                        .body(ResBody::default())
+                        .body(box_body(Body::from(
+                            serde_json::to_vec(&ErrorResponse {
+                                error: Some("Expired auth token".into()),
+                            })
+                            .unwrap(),
+                        )))
                         .unwrap())
                 }
             };
 
             req.extensions_mut().unwrap().insert(user);
 
-            let response: Response<ResBody> = inner.call(req.try_into_request().unwrap()).await?;
+            let response: Response<BoxBody> = inner.call(req.try_into_request().unwrap()).await?;
 
             Ok(response)
         })

@@ -1,6 +1,8 @@
+use std::borrow::Cow;
+
 #[derive(serde::Serialize)]
 pub struct ErrorResponse {
-    error: Option<String>,
+    pub error: Option<Cow<'static, str>>,
 }
 
 macro_rules! define_error_response {
@@ -13,7 +15,7 @@ macro_rules! define_error_response {
 
             fn into_response(self) -> axum::http::Response<Self::Body> {
                 let body = serde_json::to_vec(&crate::endpoints::ErrorResponse {
-                    error: Some(self.to_string()),
+                    error: Some(self.to_string().into()),
                 })
                 .unwrap();
 

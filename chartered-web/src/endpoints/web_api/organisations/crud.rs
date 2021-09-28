@@ -34,6 +34,6 @@ pub async fn handle_put(
     extract::Json(req): extract::Json<PutRequest>,
 ) -> Result<Json<ErrorResponse>, Error> {
     Organisation::create(db, req.name, req.description, user.id).await?;
-    
+
     Ok(Json(ErrorResponse { error: None }))
 }

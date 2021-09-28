@@ -3,10 +3,9 @@ import { useState, useEffect, useContext, createContext } from "react";
 import { unauthenticatedEndpoint } from "./util";
 
 export interface AuthContext {
-  authKey?: string;
-  expires?: Date;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  getAuthKey: () => Promise<string | null>;
 }
 
 const authContext = createContext<AuthContext | null>(null);
@@ -21,15 +20,17 @@ export const useAuth = (): AuthContext | null => {
 };
 
 function useProvideAuth(): AuthContext {
-  const [authKey, setAuthKey] = useState(() => getAuthStorage().authKey);
-  const [expires, setExpires] = useState(() => getAuthStorage().expires);
+  const [auth, setAuth] = useState(() => {
+    let authStorage = getAuthStorage();
+    return [authStorage.authKey, authStorage.expires];
+  });
 
   useEffect(() => {
     localStorage.setItem(
       "charteredAuthentication",
-      JSON.stringify({ authKey, expires })
+      JSON.stringify({ authKey: auth?.[0], expires: auth?.[1] })
     );
-  }, [authKey, expires]);
+  }, [auth]);
 
   const login = async (username: string, password: string) => {
     let res = await fetch(unauthenticatedEndpoint("login"), {
@@ -46,22 +47,26 @@ function useProvideAuth(): AuthContext {
       throw new Error(json.error);
     }
 
-    setExpires(new Date(json.expires));
-    setAuthKey(json.key);
+    setAuth([json.key, new Date(json.expires)]);
   };
 
   const logout = async () => {
     // todo call the service so we can purge the key from the db
-    localStorage.removeItem("charteredAuthentication");
-    setExpires(null);
-    setAuthKey(null);
+    setAuth(null);
+  };
+
+  const getAuthKey = () => {
+    if (auth?.[1] > new Date()) {
+      return auth[0];
+    } else if (auth) {
+      return null;
+    }
   };
 
   return {
-    authKey,
-    expires,
     login,
     logout,
+    getAuthKey,
   };
 }
 

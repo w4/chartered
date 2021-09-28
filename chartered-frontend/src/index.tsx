@@ -117,8 +117,7 @@ function PublicRoute({
         if (
           !unauthedOnly ||
           !auth ||
-          !auth.authKey ||
-          auth.expires < new Date()
+          !auth?.getAuthKey()
         ) {
           return <Component {...props} />;
         } else {
@@ -150,12 +149,19 @@ function PrivateRoute({
 } & { [r: string]: any }) {
   const auth = useAuth();
 
+  const isAuthenticated = auth?.getAuthKey();
+  React.useEffect(() => {
+    if (!isAuthenticated) {
+      auth.logout();
+    }
+  }, [isAuthenticated]);
+
   return (
     <Route
       {...rest}
       render={(props) => {
         // TODO: check if valid key
-        if (auth && auth?.authKey && auth.expires > new Date()) {
+        if (auth && isAuthenticated) {
           return <Component {...props} />;
         } else {
           return (
