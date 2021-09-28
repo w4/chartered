@@ -515,9 +515,9 @@ dependencies = [
 
 [[package]]
 name = "format-bytes"
-version = "0.1.5"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e244f30e6c9389f9df0c65fe09a81bcd766c766fca74f0f12d0dae34de33a608"
+checksum = "1c4e89040c7fd7b4e6ba2820ac705a45def8a0c098ec78d170ae88f1ef1d5762"
 dependencies = [
  "format-bytes-macros",
  "proc-macro-hack",
@@ -525,9 +525,9 @@ dependencies = [
 
 [[package]]
 name = "format-bytes-macros"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "63987e7c19e6a14fc925a32b82c5d4805c7ca6de815fbdb79c457354ff060e45"
+checksum = "b05089e341a0460449e2210c3bf7b61597860b07f0deae58da38dbed0a4c6b6d"
 dependencies = [
  "proc-macro-hack",
  "proc-macro2",
