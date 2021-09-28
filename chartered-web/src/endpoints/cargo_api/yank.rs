@@ -26,7 +26,7 @@ pub struct Response {
 }
 
 pub async fn handle_yank(
-    extract::Path((_session_key, name, organisation, version)): extract::Path<(
+    extract::Path((_session_key, organisation, name, version)): extract::Path<(
         String,
         String,
         String,
@@ -46,7 +46,7 @@ pub async fn handle_yank(
 }
 
 pub async fn handle_unyank(
-    extract::Path((_session_key, name, organisation, version)): extract::Path<(
+    extract::Path((_session_key, organisation, name, version)): extract::Path<(
         String,
         String,
         String,

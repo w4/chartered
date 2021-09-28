@@ -29,7 +29,7 @@ impl Error {
 define_error_response!(Error);
 
 pub async fn handle(
-    extract::Path((_session_key, name, organisation, version)): extract::Path<(
+    extract::Path((_session_key, organisation, name, version)): extract::Path<(
         String,
         String,
         String,
