@@ -27,19 +27,21 @@ and store crate files in `/tmp/chartered`, configuration away from these default
 Using the recommended setup, S3 & PostgreSQL:
 
 ```toml
-bind-address = "127.0.0.1:8080"
+bind-address = "127.0.0.1:8080" # hint: use a different port for each service
 database-uri = "postgres://user:password@localhost/chartered"
 
-# unlike the above two options, this configuration value should only be supplied
-# for chartered-web
+# the below configuration options should only be set for chartered-web
 crate-store  = "s3://s3-eu-west-1.amazonaws.com/my-cool-crate-store/"
+frontend-url = "https://my.instance.chart.rs" # this is used for CORS
+                                              # if unset defaults to *
 ```
 
-Or, using the defaults as an example:
+Or, using the defaults of `chartered-web` as an example:
 
 ```toml
 bind-address = "127.0.0.1:8899"
 database-uri = "sqlite://chartered.db"
+
 crate-store  = "file:///tmp/chartered"
 ```
 
@@ -58,8 +60,10 @@ static hosting platform, a Dockerfile can also be built which uses [`static-web-
 to run on your own server without another way of hosting static content:
 
 ```sh
-$ DOCKER_BUILDKIT=0 docker build https://github.com/w4/chartered.git#main:chartered-frontend \
-    --build-arg BASE_URL=https://my.instance.chart.rs -t chartered-frontend:master
+$ DOCKER_BUILDKIT=0 docker build \
+    https://github.com/w4/chartered.git#main:chartered-frontend \
+    --build-arg BASE_URL=https://api.my.instance.chart.rs \
+    -t chartered-frontend:master
 $ docker run -p 8080:80 chartered-frontend:master
 $ curl http://127.0.0.1:8080
 <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">...
