@@ -54,7 +54,15 @@ Alternative crate stores will be considered, please consider contributing or
 
 The frontend only needs to be configured to point to the `chartered-web` service. This can be
 done by changing the bundled `config.json`. This can then be hosted in S3/minio/your preferred
-static hosting platform, a Dockerfile is also built which uses [`sfz`][sfz] to run on your own
-server without another way of hosting static content.
+static hosting platform, a Dockerfile can also be built which uses [`static-web-server`][sws]
+to run on your own server without another way of hosting static content:
 
-[sfz]: https://github.com/weihanglo/sfz
+```sh
+$ DOCKER_BUILDKIT=0 docker build https://github.com/w4/chartered.git#main:chartered-frontend \
+    --build-arg BASE_URL=https://my.instance.chart.rs -t chartered-frontend:master
+$ docker run -p 8080:80 chartered-frontend:master
+$ curl http://127.0.0.1:8080
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">...
+```
+
+[sws]: https://github.com/joseluisq/static-web-server
