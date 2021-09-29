@@ -38,8 +38,8 @@ pub mod schema;
 pub mod users;
 pub mod uuid;
 
-#[macro_use]
-extern crate diesel;
+#[macro_use] extern crate diesel;
+#[macro_use] extern crate diesel_migrations;
 
 use diesel::{
     expression::{grouped::Grouped, AsExpression, Expression},
@@ -54,14 +54,22 @@ use thiserror::Error;
 pub type ConnectionPool = Arc<Pool<ConnectionManager<LoggingConnection<diesel::SqliteConnection>>>>;
 pub type Result<T> = std::result::Result<T, Error>;
 
+embed_migrations!();
+
 pub fn init() -> Result<ConnectionPool> {
-    Ok(Arc::new(Pool::new(ConnectionManager::new("chartered.db"))?))
+    let pool = Pool::new(ConnectionManager::new("chartered.db"))?;
+
+    embedded_migrations::run_with_output(&pool.get()?, &mut std::io::stdout())?;
+
+    Ok(Arc::new(pool))
 }
 
 #[derive(Error, Display, Debug)]
 pub enum Error {
     /// Failed to initialise to database connection pool
     Connection(#[from] diesel::r2d2::PoolError),
+    /// Failed to run migrations to bring database schema up-to-date: {0}
+    MigrationError(#[from] diesel_migrations::RunMigrationsError),
     /// {0}
     Query(#[from] diesel::result::Error),
     /// Failed to complete query task

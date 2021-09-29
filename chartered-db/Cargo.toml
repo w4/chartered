@@ -14,10 +14,12 @@ bitflags = "1"
 chrono = "0.4"
 diesel = { version = "1", features = ["sqlite", "r2d2", "chrono"] }
 diesel_logger = "0.1"
+diesel_migrations = "1.4"
 displaydoc = "0.2"
 hex = "0.4"
 http = "0.2"
 itertools = "0.10"
+libsqlite3-sys = { version = "*", features = ["bundled"] } # https://github.com/rusqlite/rusqlite/issues/914
 option_set = "0.1"
 rand = "0.8"
 serde = { version = "1", features = ["derive"] }
