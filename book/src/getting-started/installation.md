@@ -50,6 +50,20 @@ These configuration files can be passed into each binary using the `-c` CLI argu
 Alternative crate stores will be considered, please consider contributing or
 [create an issue on GitHub][gh-issue]. <span style="color: transparent;">MySQL support, however, is a no-go.</span>
 
+`chartered-web` & `chartered-git` can be built from source easily or ran using the
+Dockerfile:
+
+```
+$ docker build https://github.com/w4/chartered.git#main \
+    --target chartered-web \
+    -t chartered-web:master
+$ docker build https://github.com/w4/chartered.git#main \
+    --target chartered-git \
+    -t chartered-git:master
+$ docker run -d chartered-web
+$ docker run -d chartered-git
+```
+
 [gh-issue]: https://github.com/w4/chartered/issues
 
 ### Frontend
@@ -60,11 +74,12 @@ static hosting platform, a Dockerfile can also be built which uses [`static-web-
 to run on your own server without another way of hosting static content:
 
 ```sh
+# buildkit doesn't yet support subdirectories for git repositories
 $ DOCKER_BUILDKIT=0 docker build \
     https://github.com/w4/chartered.git#main:chartered-frontend \
     --build-arg BASE_URL=https://api.my.instance.chart.rs \
     -t chartered-frontend:master
-$ docker run -p 8080:80 chartered-frontend:master
+$ docker run -d -p 8080:80 chartered-frontend:master
 $ curl http://127.0.0.1:8080
 <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">...
 ```
