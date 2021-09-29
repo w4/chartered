@@ -2,7 +2,7 @@ import React = require("react");
 import ReactPlaceholder from "react-placeholder";
 import { AuthContext } from "./useAuth";
 
-export const BASE_URL = "http://localhost:8888";
+export const BASE_URL = process.env.BASE_URL || "http://localhost:8888";
 
 export function unauthenticatedEndpoint(endpoint: string): string {
   return `${BASE_URL}/a/-/web/v1/${endpoint}`;
