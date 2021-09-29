@@ -4,6 +4,8 @@ a little dig at creating a private cargo repository with authenticated downloads
 a git server we setup that we can serve a fake index from generated just for the authenticated user that we can embed
 authentication credentials into.
 
+learn more at https://book.chart.rs/
+
 designed to be easily morphable into a first-class authenticated registry-provider once [one][1] [of][2] the cargo RFCs go
 through.
 

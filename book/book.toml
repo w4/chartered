@@ -4,3 +4,6 @@ language = "en"
 multilingual = false
 src = "src"
 title = "Chartered"
+
+[output.html]
+git-repository-url = "https://github.com/w4/chartered/tree/main/book"
