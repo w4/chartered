@@ -12,7 +12,8 @@ Chartered's server comes in 3 parts:
 
 Each of these services are hosted separately from one another, and could technically be swapped
 out for other implementations - the only shared layer between the three of them is database
-storage for crate lookups and authentication credential vending.
+storage for crate lookups and authentication credential vending. All of the services have the
+ability to be clustered with no extra configuration.
 
 ### Backend Services
 

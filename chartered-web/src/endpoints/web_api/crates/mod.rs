@@ -2,9 +2,29 @@ mod info;
 mod members;
 mod recently_updated;
 
-pub use info::handle as info;
-pub use members::{
-    handle_delete as delete_member, handle_get as get_members, handle_patch as update_member,
-    handle_put as insert_member,
+use axum::{
+    body::{Body, BoxBody},
+    handler::{delete, get, patch, put},
+    http::{Request, Response},
+    Router,
 };
-pub use recently_updated::handle as list_recently_updated;
+use futures::future::Future;
+use std::convert::Infallible;
+
+pub fn routes() -> Router<
+    impl tower::Service<
+            Request<Body>,
+            Response = Response<BoxBody>,
+            Error = Infallible,
+            Future = impl Future<Output = Result<Response<BoxBody>, Infallible>> + Send,
+        > + Clone
+        + Send,
+> {
+    crate::axum_box_after_every_route!(Router::new()
+        .route("/:org/:crate", get(info::handle))
+        .route("/:org/:crate/members", get(members::handle_get))
+        .route("/:org/:crate/members", patch(members::handle_patch))
+        .route("/:org/:crate/members", put(members::handle_put))
+        .route("/:org/:crate/members", delete(members::handle_delete))
+        .route("/recently-updated", get(recently_updated::handle)))
+}

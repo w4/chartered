@@ -2,6 +2,7 @@ import React = require("react");
 import { useState, useEffect, useRef } from "react";
 
 import { useAuth } from "../useAuth";
+import { useUnauthenticatedRequest } from "../util";
 
 export default function Login() {
   const auth = useAuth();
@@ -11,6 +12,8 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const isMountedRef = useRef(null);
+
+  const { response: oauthProviders } = useUnauthenticatedRequest({ endpoint: "login/oauth/providers" });
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -61,36 +64,38 @@ export default function Login() {
             </div>
 
             <form onSubmit={handleSubmit}>
-              <div className="mb-3">
-                <label htmlFor="username" className="form-label">
-                  Username
-                </label>
+              <div className="form-floating">
                 <input
                   type="text"
                   className="form-control"
+                  placeholder="john.smith"
                   id="username"
                   disabled={loading}
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                 />
+
+                <label htmlFor="email" className="form-label">Username</label>
               </div>
-              <div className="mb-3">
-                <label htmlFor="password" className="form-label">
-                  Password
-                </label>
+
+              <div className="form-floating mt-2">
                 <input
                   type="password"
                   className="form-control"
+                  placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"
                   id="password"
                   disabled={loading}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
+
+                <label htmlFor="password" className="form-label">Password</label>
               </div>
-              <div className="ml-auto">
+
+              <div className="mt-2 ml-auto">
                 <button
                   type="submit"
-                  className="btn btn-primary"
+                  className="btn btn-lg btn-primary w-100"
                   style={{ display: !loading ? "block" : "none" }}
                 >
                   Login
@@ -105,6 +110,12 @@ export default function Login() {
                 </div>
               </div>
             </form>
+
+            {oauthProviders?.providers.length > 0 ? (<>
+              <div className="side-lines mt-3">or</div>
+
+              {oauthProviders.providers.map((v, i) => <a href="#" key={i} className="btn btn-lg btn-dark w-100 mt-3">Login with {v}</a>)}
+            </>): <></>}
           </div>
         </div>
       </div>

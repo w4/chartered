@@ -3,8 +3,31 @@ mod owners;
 mod publish;
 mod yank;
 
-pub use download::handle as download;
-pub use owners::handle_get as get_owners;
-pub use publish::handle as publish;
-pub use yank::handle_unyank as unyank;
-pub use yank::handle_yank as yank;
+use axum::{
+    body::{Body, BoxBody},
+    handler::{delete, get, put},
+    http::{Request, Response},
+    Router,
+};
+use futures::future::Future;
+use std::convert::Infallible;
+
+pub fn routes() -> Router<
+    impl tower::Service<
+            Request<Body>,
+            Response = Response<BoxBody>,
+            Error = Infallible,
+            Future = impl Future<Output = Result<Response<BoxBody>, Infallible>> + Send,
+        > + Clone
+        + Send,
+> {
+    crate::axum_box_after_every_route!(Router::new()
+        .route("/crates/new", put(publish::handle))
+        // .route("/crates/search", get(hello_world))
+        .route("/crates/:crate/owners", get(owners::handle_get))
+        // .route("/crates/:crate/owners", put(hello_world))
+        // .route("/crates/:crate/owners", delete(hello_world))
+        .route("/crates/:crate/:version/yank", delete(yank::handle_yank))
+        .route("/crates/:crate/:version/unyank", put(yank::handle_unyank))
+        .route("/crates/:crate/:version/download", get(download::handle)))
+}

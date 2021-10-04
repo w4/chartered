@@ -113,6 +113,32 @@ impl User {
         .await?
     }
 
+    pub async fn find_or_create(conn: ConnectionPool, given_username: String) -> Result<User> {
+        use crate::schema::users::dsl::username;
+
+        tokio::task::spawn_blocking(move || {
+            let conn = conn.get()?;
+
+            let user: Option<User> = crate::schema::users::table
+                .filter(username.eq(&given_username))
+                .get_result(&conn)
+                .optional()?;
+
+            if let Some(user) = user {
+                return Ok(user);
+            }
+
+            diesel::insert_into(users::table)
+                .values(username.eq(&given_username))
+                .execute(&conn)?;
+
+            Ok(crate::schema::users::table
+                .filter(username.eq(given_username))
+                .get_result(&conn)?)
+        })
+        .await?
+    }
+
     /// Parses an ssh key from its `ssh-add -L` format (`ssh-ed25519 AAAAC3N...`) and
     /// inserts it to the database for the user.
     pub async fn insert_ssh_key(

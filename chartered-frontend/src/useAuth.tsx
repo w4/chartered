@@ -2,6 +2,10 @@ import React = require("react");
 import { useState, useEffect, useContext, createContext } from "react";
 import { unauthenticatedEndpoint } from "./util";
 
+export interface OAuthProviders {
+  providers: string[];
+}
+
 export interface AuthContext {
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -33,7 +37,7 @@ function useProvideAuth(): AuthContext {
   }, [auth]);
 
   const login = async (username: string, password: string) => {
-    let res = await fetch(unauthenticatedEndpoint("login"), {
+    let res = await fetch(unauthenticatedEndpoint("login/password"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

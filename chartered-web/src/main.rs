@@ -1,14 +1,16 @@
 #![deny(clippy::pedantic)]
 #![allow(clippy::module_name_repetitions)]
 
+mod config;
 mod endpoints;
 mod middleware;
 
 use axum::{
-    handler::{delete, get, patch, post, put},
-    http::{Method, header},
+    handler::get,
+    http::{header, Method},
     AddExtensionLayer, Router,
 };
+use std::sync::Arc;
 use tower::ServiceBuilder;
 use tower_http::cors::{Any, CorsLayer};
 
@@ -22,111 +24,30 @@ async fn hello_world() -> &'static str {
 // new route, the workaround is to box the router down to a
 // dynamically dispatched version with every new route.
 macro_rules! axum_box_after_every_route {
-    (Router::new()$(.route($path:expr, $svc:expr$(,)?))*) => {
+    (Router::new()
+        $(.nest($nest_path:expr, $nest_svc:expr$(,)?))*
+        $(.route($route_path:expr, $route_svc:expr$(,)?))*
+    ) => {
         Router::new()
             $(
-                .route($path, $svc)
+                .nest($nest_path, $nest_svc)
+                .boxed()
+            )*
+            $(
+                .route($route_path, $route_svc)
                 .boxed()
             )*
     };
 }
 
+pub(crate) use axum_box_after_every_route;
+
 #[tokio::main]
 #[allow(clippy::semicolon_if_nothing_returned)] // lint breaks with tokio::main
-#[allow(clippy::too_many_lines)] // todo: refactor
 async fn main() {
     env_logger::init();
 
     let pool = chartered_db::init().unwrap();
-
-    let api_authenticated = axum_box_after_every_route!(Router::new()
-        .route("/crates/new", put(endpoints::cargo_api::publish))
-        .route("/crates/search", get(hello_world))
-        .route(
-            "/crates/:crate/owners",
-            get(endpoints::cargo_api::get_owners)
-        )
-        .route("/crates/:crate/owners", put(hello_world))
-        .route("/crates/:crate/owners", delete(hello_world))
-        .route(
-            "/crates/:crate/:version/yank",
-            delete(endpoints::cargo_api::yank)
-        )
-        .route(
-            "/crates/:crate/:version/unyank",
-            put(endpoints::cargo_api::unyank)
-        )
-        .route(
-            "/crates/:crate/:version/download",
-            get(endpoints::cargo_api::download)
-        ))
-    .layer(
-        ServiceBuilder::new()
-            .layer_fn(middleware::auth::AuthMiddleware)
-            .into_inner(),
-    );
-
-    let web_unauthenticated =
-        axum_box_after_every_route!(Router::new().route("/login", post(endpoints::web_api::login)));
-
-    let web_authenticated = axum_box_after_every_route!(Router::new()
-        // organisations endpoints
-        .route(
-            "/organisations",
-            get(endpoints::web_api::organisations::list)
-        )
-        .route(
-            "/organisations",
-            put(endpoints::web_api::organisations::create)
-        )
-        .route(
-            "/organisations/:org",
-            get(endpoints::web_api::organisations::info)
-        )
-        .route(
-            "/organisations/:org/members",
-            patch(endpoints::web_api::organisations::update_member)
-        )
-        .route(
-            "/organisations/:org/members",
-            put(endpoints::web_api::organisations::insert_member)
-        )
-        .route(
-            "/organisations/:org/members",
-            delete(endpoints::web_api::organisations::delete_member)
-        )
-        // crate endpoints
-        .route("/crates/:org/:crate", get(endpoints::web_api::crates::info))
-        .route(
-            "/crates/:org/:crate/members",
-            get(endpoints::web_api::crates::get_members)
-        )
-        .route(
-            "/crates/:org/:crate/members",
-            patch(endpoints::web_api::crates::update_member)
-        )
-        .route(
-            "/crates/:org/:crate/members",
-            put(endpoints::web_api::crates::insert_member)
-        )
-        .route(
-            "/crates/:org/:crate/members",
-            delete(endpoints::web_api::crates::delete_member)
-        )
-        .route(
-            "/crates/recently-updated",
-            get(endpoints::web_api::crates::list_recently_updated)
-        )
-        // users endpoints
-        .route("/users/search", get(endpoints::web_api::search_users))
-        .route("/ssh-key", get(endpoints::web_api::get_ssh_keys))
-        .route("/ssh-key", put(endpoints::web_api::add_ssh_key))
-        .route("/ssh-key/:id", delete(endpoints::web_api::delete_ssh_key)))
-    .layer(
-        ServiceBuilder::new()
-            .layer_fn(middleware::auth::AuthMiddleware)
-            .into_inner(),
-    );
 
     let middleware_stack = ServiceBuilder::new()
         .layer_fn(middleware::logging::LoggingMiddleware)
@@ -134,9 +55,23 @@ async fn main() {
 
     let app = Router::new()
         .route("/", get(hello_world))
-        .nest("/a/:key/web/v1", web_authenticated)
-        .nest("/a/-/web/v1", web_unauthenticated)
-        .nest("/a/:key/o/:organisation/api/v1", api_authenticated)
+        .nest(
+            "/a/:key/web/v1",
+            endpoints::web_api::authenticated_routes().layer(
+                ServiceBuilder::new()
+                    .layer_fn(crate::middleware::auth::AuthMiddleware)
+                    .into_inner(),
+            ),
+        )
+        .nest("/a/-/web/v1", endpoints::web_api::unauthenticated_routes())
+        .nest(
+            "/a/:key/o/:organisation/api/v1",
+            endpoints::cargo_api::routes().layer(
+                ServiceBuilder::new()
+                    .layer_fn(crate::middleware::auth::AuthMiddleware)
+                    .into_inner(),
+            ),
+        )
         .layer(middleware_stack)
         // TODO!!!
         .layer(
@@ -153,7 +88,11 @@ async fn main() {
                 .allow_origin(Any)
                 .allow_credentials(false),
         )
-        .layer(AddExtensionLayer::new(pool));
+        .layer(AddExtensionLayer::new(pool))
+        .layer(AddExtensionLayer::new(Arc::new(
+            config.create_oidc_clients().await.unwrap(),
+        )))
+        .layer(AddExtensionLayer::new(Arc::new(config)));
 
     axum::Server::bind(&"0.0.0.0:8888".parse().unwrap())
         .serve(app.into_make_service_with_connect_info::<std::net::SocketAddr, _>())

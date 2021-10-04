@@ -46,6 +46,31 @@ export function useAuthenticatedRequest<S>(
   return { response, error };
 }
 
+export function useUnauthenticatedRequest<S>(
+  { endpoint }: { endpoint: string },
+  reloadOn = []
+): { response: S | null; error: string | null } {
+  const [error, setError] = React.useState(null);
+  const [response, setResponse] = React.useState(null);
+
+  React.useEffect(async () => {
+    try {
+      let res = await fetch(unauthenticatedEndpoint(endpoint));
+      let jsonRes = await res.json();
+
+      if (jsonRes.error) {
+        setError(jsonRes.error);
+      } else {
+        setResponse(jsonRes);
+      }
+    } catch (e) {
+      setError(e.message);
+    }
+  }, reloadOn);
+
+  return { response, error };
+}
+
 export function RoundedPicture({
   src,
   height,

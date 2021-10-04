@@ -1,11 +1,44 @@
-pub mod crates;
-mod login;
-pub mod organisations;
+mod auth;
+mod crates;
+mod organisations;
 mod search_users;
 mod ssh_key;
 
-pub use login::handle as login;
-pub use search_users::handle as search_users;
-pub use ssh_key::{
-    handle_delete as delete_ssh_key, handle_get as get_ssh_keys, handle_put as add_ssh_key,
+use axum::{
+    body::{Body, BoxBody},
+    handler::{delete, get, put},
+    http::{Request, Response},
+    Router,
 };
+use futures::future::Future;
+use std::convert::Infallible;
+
+pub fn authenticated_routes() -> Router<
+    impl tower::Service<
+            Request<Body>,
+            Response = Response<BoxBody>,
+            Error = Infallible,
+            Future = impl Future<Output = Result<Response<BoxBody>, Infallible>> + Send,
+        > + Clone
+        + Send,
+> {
+    crate::axum_box_after_every_route!(Router::new()
+        .nest("/organisations", organisations::routes())
+        .nest("/crates", crates::routes())
+        .route("/users/search", get(search_users::handle))
+        .route("/ssh-key", get(ssh_key::handle_get))
+        .route("/ssh-key", put(ssh_key::handle_put))
+        .route("/ssh-key/:id", delete(ssh_key::handle_delete)))
+}
+
+pub fn unauthenticated_routes() -> Router<
+    impl tower::Service<
+            Request<Body>,
+            Response = Response<BoxBody>,
+            Error = Infallible,
+            Future = impl Future<Output = Result<Response<BoxBody>, Infallible>> + Send,
+        > + Clone
+        + Send,
+> {
+    crate::axum_box_after_every_route!(Router::new().nest("/login", auth::routes()))
+}

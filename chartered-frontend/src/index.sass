@@ -26,3 +26,19 @@ td.fit, th.fit
 
 .text-decoration-underline-dotted
     text-decoration: underline dotted
+
+.side-lines
+    display: grid
+    grid-template-columns: minmax(20px, 1fr) auto minmax(20px, 1fr)
+    align-items: center
+    text-align: center
+    grid-gap: 20px
+    width: 100%
+
+    &::before
+        content: ""
+        border-top: 1px solid
+
+    &::after
+        content: ""
+        border-top: 1px solid

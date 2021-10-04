@@ -1,22 +1,62 @@
 #![deny(clippy::pedantic)]
-#![deny(clippy::pedantic)]
+
+use std::path::PathBuf;
 
 use async_trait::async_trait;
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use tokio::{
     fs::File,
     io::{AsyncReadExt, AsyncWriteExt},
 };
 
+#[derive(Debug)]
+pub enum FS {
+    S3 {
+        host: String,
+        bucket: String,
+        path: String,
+    },
+    Local {
+        path: PathBuf,
+    },
+}
+
+impl std::str::FromStr for FS {
+    type Err = url::ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let uri = url::Url::parse(s)?;
+
+        Ok(match uri.scheme() {
+            "s3" => {
+                let mut path = uri.path_segments().unwrap();
+
+                Self::S3 {
+                    host: uri.host().unwrap().to_string(),
+                    bucket: path.next().unwrap().to_string(),
+                    path: path.intersperse("/").collect(),
+                }
+            }
+            "file" => {
+                panic!("{:#?}", uri);
+            }
+            _ => panic!("na"),
+        })
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub enum FileSystemKind {
     Local,
+    S3,
 }
 
 impl std::fmt::Display for FileSystemKind {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             Self::Local => f.write_str("local"),
+            Self::S3 => f.write_str("s3"),
         }
     }
 }
@@ -105,7 +145,15 @@ impl FileSystem for Local {
 
 #[cfg(test)]
 mod tests {
-    use super::FileSystem;
+    use super::{FileSystem, FS};
+    use std::str::FromStr;
+
+    #[tokio::test]
+    #[allow(clippy::pedantic)]
+    async fn parse_filesystem() {
+        // panic!("{:#?}", FS::from_str("s3://10.0.64.101:9000/my-bucket/my-location"));
+        FS::from_str("file:///tmp/chartered");
+    }
 
     #[tokio::test]
     #[allow(clippy::pedantic)]

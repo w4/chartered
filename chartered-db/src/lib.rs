@@ -38,8 +38,10 @@ pub mod schema;
 pub mod users;
 pub mod uuid;
 
-#[macro_use] extern crate diesel;
-#[macro_use] extern crate diesel_migrations;
+#[macro_use]
+extern crate diesel;
+#[macro_use]
+extern crate diesel_migrations;
 
 use diesel::{
     expression::{grouped::Grouped, AsExpression, Expression},
