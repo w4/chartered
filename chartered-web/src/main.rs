@@ -13,6 +13,18 @@ use axum::{
 use std::sync::Arc;
 use tower::ServiceBuilder;
 use tower_http::cors::{Any, CorsLayer};
+use clap::Clap;
+use std::path::PathBuf;
+
+#[derive(Clap)]
+#[clap(version = clap::crate_version!(), author = clap::crate_authors!())]
+#[clap(setting = clap::AppSettings::ColoredHelp)]
+pub struct Opts {
+    #[clap(short, long, parse(from_occurrences))]
+    verbose: i32,
+    #[clap(short, long)]
+    config: PathBuf,
+}
 
 #[allow(clippy::unused_async)]
 async fn hello_world() -> &'static str {
@@ -45,6 +57,9 @@ pub(crate) use axum_box_after_every_route;
 #[tokio::main]
 #[allow(clippy::semicolon_if_nothing_returned)] // lint breaks with tokio::main
 async fn main() {
+    let opts: Opts = Opts::parse();
+    let config: config::Config = toml::from_slice(&std::fs::read(&opts.config).unwrap()).unwrap();
+
     env_logger::init();
 
     let pool = chartered_db::init().unwrap();

@@ -114,7 +114,7 @@ impl User {
     }
 
     pub async fn find_or_create(conn: ConnectionPool, given_username: String) -> Result<User> {
-        use crate::schema::users::dsl::username;
+        use crate::schema::users::dsl::{username, uuid};
 
         tokio::task::spawn_blocking(move || {
             let conn = conn.get()?;
@@ -129,7 +129,10 @@ impl User {
             }
 
             diesel::insert_into(users::table)
-                .values(username.eq(&given_username))
+                .values((
+                    username.eq(&given_username),
+                    uuid.eq(SqlUuid::random())
+                ))
                 .execute(&conn)?;
 
             Ok(crate::schema::users::table

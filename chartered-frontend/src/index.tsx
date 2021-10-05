@@ -12,7 +12,7 @@ import {
   useLocation,
 } from "react-router-dom";
 
-import { ProvideAuth, useAuth } from "./useAuth";
+import { ProvideAuth, HandleOAuthLogin, useAuth } from "./useAuth";
 
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -33,6 +33,12 @@ function App() {
             unauthedOnly
             path="/login"
             component={() => <Login />}
+          />
+          <PublicRoute
+            exact
+            unauthedOnly
+            path="/login/oauth"
+            component={() => <HandleOAuthLogin />}
           />
 
           <PrivateRoute
