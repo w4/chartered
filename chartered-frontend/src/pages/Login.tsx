@@ -55,10 +55,6 @@ export default function Login() {
       await auth.oauthLogin(provider);
     } catch (e) {
       setError(e.message);
-    } finally {
-      if (isMountedRef.current) {
-        setLoading(null);
-      }
     }
   }
 

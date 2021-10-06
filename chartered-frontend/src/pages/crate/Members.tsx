@@ -121,6 +121,7 @@ function MemberListItem({
   const [selectedPermissions, setSelectedPermissions] = useState(
     member.permissions
   );
+  const auth = useAuth();
   const [deleting, setDeleting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -218,8 +219,10 @@ function MemberListItem({
 
         <td className="align-middle">
           <strong>{member.username}</strong>
-          {/*<br />
-          <em>(that's you!)</em>*/}
+          {auth.getUserUuid() === member.uuid ? <>
+            <br />
+            <em>(that's you!)</em>
+          </> : <></>}
         </td>
 
         {possiblePermissions && member.permissions ? (

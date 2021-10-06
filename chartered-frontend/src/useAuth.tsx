@@ -8,12 +8,20 @@ export interface OAuthProviders {
   providers: string[];
 }
 
+interface LoginResponse {
+  user_uuid: string;
+  key: string;
+  expires: number;
+  error?: string;
+}
+
 export interface AuthContext {
   login: (username: string, password: string) => Promise<void>;
   oauthLogin: (provider: string) => Promise<void>;
   logout: () => Promise<void>;
   getAuthKey: () => Promise<string | null>;
-  setAuth: ([string, string]) => any;
+  getUserUuid: () => Promise<string>;
+  handleLoginResponse: (json: LoginResponse) => any;
 }
 
 const authContext = createContext<AuthContext | null>(null);
@@ -33,11 +41,7 @@ export function HandleOAuthLogin() {
       let result = await fetch(unauthenticatedEndpoint(`login/oauth/complete${location.search}`));
       let json = await result.json();
 
-      if (json.error) {
-        throw new Error(json.error);
-      }
-
-      auth.setAuth([json.key, new Date(json.expires)]);
+      auth.handleLoginResponse(json);
     } catch (err) {
       setResult(
         <Redirect to={{
@@ -58,15 +62,23 @@ export const useAuth = (): AuthContext | null => {
 function useProvideAuth(): AuthContext {
   const [auth, setAuth] = useState(() => {
     let authStorage = getAuthStorage();
-    return [authStorage.authKey, authStorage.expires];
+    return [authStorage.userUuid, authStorage.authKey, authStorage.expires];
   });
 
   useEffect(() => {
     localStorage.setItem(
       "charteredAuthentication",
-      JSON.stringify({ authKey: auth?.[0], expires: auth?.[1] })
+      JSON.stringify({ userUuid: auth?.[0], authKey: auth?.[1], expires: auth?.[2] })
     );
   }, [auth]);
+
+  const handleLoginResponse = (response: LoginResponse) => {
+    if (response.error) {
+      throw new Error(response.error);
+    }
+
+    setAuth([response.user_uuid, response.key, new Date(response.expires)]);
+  }
 
   const login = async (username: string, password: string) => {
     let res = await fetch(unauthenticatedEndpoint("login/password"), {
@@ -79,11 +91,7 @@ function useProvideAuth(): AuthContext {
     });
     let json = await res.json();
 
-    if (json.error) {
-      throw new Error(json.error);
-    }
-
-    setAuth([json.key, new Date(json.expires)]);
+    handleLoginResponse(json);
   };
 
   const oauthLogin = async (provider: string) => {
@@ -109,7 +117,15 @@ function useProvideAuth(): AuthContext {
   };
 
   const getAuthKey = () => {
-    if (auth?.[1] > new Date()) {
+    if (auth?.[2] > new Date()) {
+      return auth[1];
+    } else if (auth) {
+      return null;
+    }
+  };
+
+  const getUserUuid = () => {
+    if (auth?.[2] > new Date()) {
       return auth[0];
     } else if (auth) {
       return null;
@@ -120,8 +136,9 @@ function useProvideAuth(): AuthContext {
     login,
     logout,
     getAuthKey,
+    getUserUuid,
     oauthLogin,
-    setAuth,
+    handleLoginResponse,
   };
 }
 
@@ -129,6 +146,7 @@ function getAuthStorage() {
   const saved = localStorage.getItem("charteredAuthentication");
   const initial = JSON.parse(saved);
   return {
+    userUuid: initial?.userUuid || null,
     authKey: initial?.authKey || null,
     expires: initial?.expires ? new Date(initial.expires) : null,
   };

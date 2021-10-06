@@ -8,6 +8,7 @@ use axum::{
 use chartered_db::{
     users::{User, UserSession},
     ConnectionPool,
+    uuid::Uuid,
 };
 use futures::future::Future;
 use serde::Serialize;
@@ -34,6 +35,7 @@ pub fn routes() -> Router<
 
 #[derive(Serialize)]
 pub struct LoginResponse {
+    user_uuid: Uuid,
     key: String,
     expires: chrono::DateTime<chrono::Utc>,
 }
@@ -62,6 +64,7 @@ pub async fn login(
     .await?;
 
     Ok(LoginResponse {
+        user_uuid: user.uuid.0,
         key: key.session_key,
         expires,
     })
