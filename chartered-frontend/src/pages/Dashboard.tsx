@@ -37,7 +37,7 @@ export default function Dashboard() {
           permissions are granted to others.
         </p>
         <a
-          href="https://github.com/w4/chartered"
+          href="https://book.chart.rs/"
           target="_blank"
           className="btn btn-outline-light shadow-sm"
         >

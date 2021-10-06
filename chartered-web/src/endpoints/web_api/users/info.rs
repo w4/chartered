@@ -39,7 +39,7 @@ pub async fn handle(
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("Failed to query database")]
+    #[error("{0}")]
     Database(#[from] chartered_db::Error),
     #[error("User doesn't exist")]
     NotFound,

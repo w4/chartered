@@ -77,7 +77,7 @@ CREATE TABLE user_ssh_keys (
     uuid BINARY(128) NOT NULL UNIQUE,
     name VARCHAR(255) NOT NULL,
     user_id INTEGER NOT NULL,
-    ssh_key BLOB NOT NULL,
+    ssh_key BLOB NOT NULL UNIQUE,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     last_used_at DATETIME,
     FOREIGN KEY (user_id) REFERENCES users (id)

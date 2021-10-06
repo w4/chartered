@@ -82,7 +82,7 @@ pub async fn handle_delete(
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("Failed to query database")]
+    #[error("{0}")]
     Database(#[from] chartered_db::Error),
     #[error("Failed to parse SSH key: {0}")]
     KeyParse(chartered_db::Error),
