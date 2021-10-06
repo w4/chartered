@@ -102,6 +102,11 @@ pub async fn complete_oidc(
     let user = User::find_or_create(
         db.clone(),
         format!("{}:{}", state.provider, userinfo.sub.unwrap()),
+        userinfo.name,
+        userinfo.nickname,
+        userinfo.email,
+        userinfo.profile,
+        userinfo.picture,
     )
     .await?;
 

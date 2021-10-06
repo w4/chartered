@@ -1,7 +1,12 @@
 CREATE TABLE users (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     uuid BINARY(128) NOT NULL UNIQUE,
-    username VARCHAR(255) NOT NULL UNIQUE
+    username VARCHAR(255) NOT NULL UNIQUE,
+    name VARCHAR(255),
+    nick VARCHAR(255),
+    email VARCHAR(255),
+    external_profile_url VARCHAR(2048),
+    picture_url VARCHAR(2048)
 );
 
 INSERT INTO users (id, uuid, username) VALUES (1, X'936DA01F9ABD4D9D80C702AF85C822A8', "admin");

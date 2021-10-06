@@ -15,6 +15,11 @@ pub struct User {
     pub id: i32,
     pub uuid: SqlUuid,
     pub username: String,
+    pub name: Option<String>,
+    pub nick: Option<String>,
+    pub email: Option<String>,
+    pub external_profile_url: Option<String>,
+    pub picture_url: Option<String>,
 }
 
 impl User {
@@ -113,8 +118,21 @@ impl User {
         .await?
     }
 
-    pub async fn find_or_create(conn: ConnectionPool, given_username: String) -> Result<User> {
-        use crate::schema::users::dsl::{username, uuid};
+    /// Lookup the user in the database by username, or create the user if it doesn't yet
+    /// exist. The user will be created with no password so it cannot be logged into using
+    /// standard `password` auth, and must be logged into using OAuth.
+    pub async fn find_or_create(
+        conn: ConnectionPool,
+        given_username: String,
+        given_name: Option<String>,
+        given_nick: Option<String>,
+        given_email: Option<String>,
+        given_external_profile_url: Option<reqwest::Url>,
+        given_picture_url: Option<reqwest::Url>,
+    ) -> Result<User> {
+        use crate::schema::users::dsl::{
+            email, external_profile_url, name, nick, picture_url, username, uuid,
+        };
 
         tokio::task::spawn_blocking(move || {
             let conn = conn.get()?;
@@ -131,7 +149,12 @@ impl User {
             diesel::insert_into(users::table)
                 .values((
                     username.eq(&given_username),
-                    uuid.eq(SqlUuid::random())
+                    uuid.eq(SqlUuid::random()),
+                    name.eq(&given_name),
+                    nick.eq(&given_nick),
+                    email.eq(&given_email),
+                    external_profile_url.eq(given_external_profile_url.map(|v| v.to_string())),
+                    picture_url.eq(given_picture_url.map(|v| v.to_string())),
                 ))
                 .execute(&conn)?;
 

@@ -20,7 +20,7 @@ export interface AuthContext {
   oauthLogin: (provider: string) => Promise<void>;
   logout: () => Promise<void>;
   getAuthKey: () => Promise<string | null>;
-  getUserUuid: () => Promise<string>;
+  getUserUuid: () => string;
   handleLoginResponse: (json: LoginResponse) => any;
 }
 

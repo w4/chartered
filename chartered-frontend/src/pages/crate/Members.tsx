@@ -1,5 +1,6 @@
 import React = require("react");
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import {
   PersonPlus,
   Trash,
@@ -9,7 +10,6 @@ import {
 } from "react-bootstrap-icons";
 import {
   authenticatedEndpoint,
-  RoundedPicture,
   RoundedPicture,
   useAuthenticatedRequest,
 } from "../../util";
@@ -218,7 +218,7 @@ function MemberListItem({
         </td>
 
         <td className="align-middle">
-          <strong>{member.username}</strong>
+          <strong><Link to={`/users/${member.uuid}`} class="text-decoration-none">{member.username}</Link></strong>
           {auth.getUserUuid() === member.uuid ? <>
             <br />
             <em>(that's you!)</em>

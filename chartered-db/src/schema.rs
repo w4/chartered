@@ -84,6 +84,11 @@ table! {
         id -> Integer,
         uuid -> Binary,
         username -> Text,
+        name -> Nullable<Text>,
+        nick -> Nullable<Text>,
+        email -> Nullable<Text>,
+        external_profile_url -> Nullable<Text>,
+        picture_url -> Nullable<Text>,
     }
 }
 

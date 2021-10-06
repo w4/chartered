@@ -10,11 +10,11 @@ use axum::{
     http::{header, Method},
     AddExtensionLayer, Router,
 };
+use clap::Clap;
+use std::path::PathBuf;
 use std::sync::Arc;
 use tower::ServiceBuilder;
 use tower_http::cors::{Any, CorsLayer};
-use clap::Clap;
-use std::path::PathBuf;
 
 #[derive(Clap)]
 #[clap(version = clap::crate_version!(), author = clap::crate_authors!())]

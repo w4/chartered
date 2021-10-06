@@ -265,6 +265,7 @@ dependencies = [
  "libsqlite3-sys",
  "option_set",
  "rand",
+ "reqwest",
  "serde",
  "serde_json",
  "thiserror",

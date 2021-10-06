@@ -22,6 +22,7 @@ itertools = "0.10"
 libsqlite3-sys = { version = "*", features = ["bundled"] } # https://github.com/rusqlite/rusqlite/issues/914
 option_set = "0.1"
 rand = "0.8"
+reqwest = "0.11"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "1"

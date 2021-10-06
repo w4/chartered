@@ -7,8 +7,8 @@ use axum::{
 };
 use chartered_db::{
     users::{User, UserSession},
-    ConnectionPool,
     uuid::Uuid,
+    ConnectionPool,
 };
 use futures::future::Future;
 use serde::Serialize;
