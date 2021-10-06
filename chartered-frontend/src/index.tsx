@@ -22,6 +22,7 @@ import AddSshKeys from "./pages/ssh-keys/AddSshKeys";
 import ListOrganisations from "./pages/organisations/ListOrganisations";
 import OrganisationView from "./pages/crate/OrganisationView";
 import CreateOrganisation from "./pages/organisations/CreateOrganisation";
+import User from "./pages/User";
 
 function App() {
   return (
@@ -60,6 +61,11 @@ function App() {
             exact
             path="/crates/:organisation/:crate/:subview?"
             component={() => <CrateView />}
+          />
+          <PrivateRoute
+            exact
+            path="/users/:uuid"
+            component={() => <User />}
           />
           <PrivateRoute
             exact

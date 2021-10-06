@@ -1,8 +1,8 @@
 mod auth;
 mod crates;
 mod organisations;
-mod search_users;
 mod ssh_key;
+mod users;
 
 use axum::{
     body::{Body, BoxBody},
@@ -25,7 +25,7 @@ pub fn authenticated_routes() -> Router<
     crate::axum_box_after_every_route!(Router::new()
         .nest("/organisations", organisations::routes())
         .nest("/crates", crates::routes())
-        .route("/users/search", get(search_users::handle))
+        .nest("/users", users::routes())
         .route("/ssh-key", get(ssh_key::handle_get))
         .route("/ssh-key", put(ssh_key::handle_put))
         .route("/ssh-key/:id", delete(ssh_key::handle_delete)))
