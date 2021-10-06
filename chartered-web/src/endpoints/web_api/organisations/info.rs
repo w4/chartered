@@ -52,8 +52,9 @@ pub async fn handle_get(
         members: users
             .into_iter()
             .map(|(user, perms)| ResponseUser {
-                uuid: user.uuid.to_string(),
-                username: user.username,
+                uuid: user.uuid.0,
+                display_name: user.display_name().to_string(),
+                picture_url: user.picture_url,
                 permissions: can_manage_users.then(|| perms),
             })
             .collect(),
@@ -76,7 +77,8 @@ pub struct ResponseCrate {
 
 #[derive(Serialize)]
 pub struct ResponseUser {
-    uuid: String,
-    username: String,
+    uuid: chartered_db::uuid::Uuid,
+    display_name: String,
+    picture_url: Option<String>,
     permissions: Option<UserPermission>,
 }

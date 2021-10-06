@@ -97,82 +97,97 @@ export default function ListSshKeys() {
         </div>
 
         <div className="card border-0 shadow-sm text-black">
-          {!sshKeys ? <LoadingSpinner /> : <>
-            {sshKeys.keys.length == 0 ? (
-              <div className="card-body">You haven't added any SSH keys yet.</div>
-            ) : (
-              <div className="table-responsive">
-                <table className="table table-striped">
-                  <tbody>
-                    {sshKeys.keys.map((key) => (
-                      <tr key={key.uuid}>
-                        <td className="align-middle">
-                          <h6 className="m-0 lh-sm">{key.name}</h6>
-                          <pre className="m-0">{key.fingerprint}</pre>
-                          <div className="lh-sm" style={{ fontSize: ".75rem" }}>
-                            <div className="text-muted d-inline-block me-3">
-                              Added{" "}
-                              <OverlayTrigger
-                                overlay={
-                                  <Tooltip id={`${key.uuid}-created-at`}>
-                                    {new Date(key.created_at).toLocaleString()}
-                                  </Tooltip>
-                                }
-                              >
-                                <span className="text-decoration-underline-dotted">
-                                  <HumanTime
-                                    time={new Date(key.created_at).getTime()}
-                                  />
-                                </span>
-                              </OverlayTrigger>
-                            </div>
-                            <span
-                              className={`text-${
-                                key.last_used_at
-                                  ? new Date(key.last_used_at) > dateMonthAgo
-                                    ? "success"
-                                    : "danger"
-                                  : "muted"
-                              }`}
+          {!sshKeys ? (
+            <LoadingSpinner />
+          ) : (
+            <>
+              {sshKeys.keys.length == 0 ? (
+                <div className="card-body">
+                  You haven't added any SSH keys yet.
+                </div>
+              ) : (
+                <div className="table-responsive">
+                  <table className="table table-striped">
+                    <tbody>
+                      {sshKeys.keys.map((key) => (
+                        <tr key={key.uuid}>
+                          <td className="align-middle">
+                            <h6 className="m-0 lh-sm">{key.name}</h6>
+                            <pre className="m-0">{key.fingerprint}</pre>
+                            <div
+                              className="lh-sm"
+                              style={{ fontSize: ".75rem" }}
                             >
-                              Last used{" "}
-                              {key.last_used_at ? (
+                              <div className="text-muted d-inline-block me-3">
+                                Added{" "}
                                 <OverlayTrigger
                                   overlay={
-                                    <Tooltip id={`${key.uuid}-last-used`}>
-                                      {new Date(key.last_used_at).toLocaleString()}
+                                    <Tooltip id={`${key.uuid}-created-at`}>
+                                      {new Date(
+                                        key.created_at
+                                      ).toLocaleString()}
                                     </Tooltip>
                                   }
                                 >
                                   <span className="text-decoration-underline-dotted">
                                     <HumanTime
-                                      time={new Date(key.last_used_at).getTime()}
+                                      time={new Date(key.created_at).getTime()}
                                     />
                                   </span>
                                 </OverlayTrigger>
-                              ) : (
-                                <>never</>
-                              )}
-                            </span>
-                          </div>
-                        </td>
+                              </div>
+                              <span
+                                className={`text-${
+                                  key.last_used_at
+                                    ? new Date(key.last_used_at) > dateMonthAgo
+                                      ? "success"
+                                      : "danger"
+                                    : "muted"
+                                }`}
+                              >
+                                Last used{" "}
+                                {key.last_used_at ? (
+                                  <OverlayTrigger
+                                    overlay={
+                                      <Tooltip id={`${key.uuid}-last-used`}>
+                                        {new Date(
+                                          key.last_used_at
+                                        ).toLocaleString()}
+                                      </Tooltip>
+                                    }
+                                  >
+                                    <span className="text-decoration-underline-dotted">
+                                      <HumanTime
+                                        time={new Date(
+                                          key.last_used_at
+                                        ).getTime()}
+                                      />
+                                    </span>
+                                  </OverlayTrigger>
+                                ) : (
+                                  <>never</>
+                                )}
+                              </span>
+                            </div>
+                          </td>
 
-                        <td className="align-middle fit">
-                          <button
-                            type="button"
-                            className="btn text-danger"
-                            onClick={() => setDeleting(key)}
-                          >
-                            <Trash />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </>}
+                          <td className="align-middle fit">
+                            <button
+                              type="button"
+                              className="btn text-danger"
+                              onClick={() => setDeleting(key)}
+                            >
+                              <Trash />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
         </div>
 
         <Link

@@ -1,6 +1,6 @@
 use axum::{extract, Json};
 use chartered_db::{users::User, ConnectionPool};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use thiserror::Error;
 
 #[derive(Serialize)]

@@ -71,6 +71,36 @@ export function useUnauthenticatedRequest<S>(
   return { response, error };
 }
 
+export function ProfilePicture({
+  src,
+  height,
+  width,
+  className,
+}: {
+  src: string;
+  height: string;
+  width: string;
+  className?: string;
+}) {
+  if (src !== null) {
+    return (
+      <RoundedPicture
+        src={src}
+        height={height}
+        width={width}
+        className={className}
+      />
+    );
+  } else {
+    return (
+      <div
+        className={`rounded-circle ${className}`}
+        style={{ width, height, background: "rgb(235, 235, 235)" }}
+      />
+    );
+  }
+}
+
 export function RoundedPicture({
   src,
   height,

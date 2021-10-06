@@ -1,5 +1,5 @@
-mod search;
 mod info;
+mod search;
 
 use axum::{
     body::{Body, BoxBody},

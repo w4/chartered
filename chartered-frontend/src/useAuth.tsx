@@ -38,16 +38,20 @@ export function HandleOAuthLogin() {
 
   useEffect(async () => {
     try {
-      let result = await fetch(unauthenticatedEndpoint(`login/oauth/complete${location.search}`));
+      let result = await fetch(
+        unauthenticatedEndpoint(`login/oauth/complete${location.search}`)
+      );
       let json = await result.json();
 
       auth.handleLoginResponse(json);
     } catch (err) {
       setResult(
-        <Redirect to={{
-          pathname: "/login",
-          state: { error: err.message }
-        }} />
+        <Redirect
+          to={{
+            pathname: "/login",
+            state: { error: err.message },
+          }}
+        />
       );
     }
   });
@@ -68,7 +72,11 @@ function useProvideAuth(): AuthContext {
   useEffect(() => {
     localStorage.setItem(
       "charteredAuthentication",
-      JSON.stringify({ userUuid: auth?.[0], authKey: auth?.[1], expires: auth?.[2] })
+      JSON.stringify({
+        userUuid: auth?.[0],
+        authKey: auth?.[1],
+        expires: auth?.[2],
+      })
     );
   }, [auth]);
 
@@ -78,7 +86,7 @@ function useProvideAuth(): AuthContext {
     }
 
     setAuth([response.user_uuid, response.key, new Date(response.expires)]);
-  }
+  };
 
   const login = async (username: string, password: string) => {
     let res = await fetch(unauthenticatedEndpoint("login/password"), {
@@ -95,13 +103,16 @@ function useProvideAuth(): AuthContext {
   };
 
   const oauthLogin = async (provider: string) => {
-    let res = await fetch(unauthenticatedEndpoint(`login/oauth/${provider}/begin`), {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "User-Agent": window.navigator.userAgent,
+    let res = await fetch(
+      unauthenticatedEndpoint(`login/oauth/${provider}/begin`),
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "User-Agent": window.navigator.userAgent,
+        },
       }
-    });
+    );
     let json = await res.json();
 
     if (json.error) {
@@ -109,7 +120,7 @@ function useProvideAuth(): AuthContext {
     }
 
     window.location.href = json.redirect_url;
-  }
+  };
 
   const logout = async () => {
     // todo call the service so we can purge the key from the db

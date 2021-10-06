@@ -19,7 +19,10 @@ export default function Login() {
   const [loading, setLoading] = useState<string | null>(null);
   const isMountedRef = useRef(null);
 
-  const { response: oauthProviders } = useUnauthenticatedRequest<OAuthProviders>({ endpoint: "login/oauth/providers" });
+  const { response: oauthProviders } =
+    useUnauthenticatedRequest<OAuthProviders>({
+      endpoint: "login/oauth/providers",
+    });
 
   useEffect(() => {
     if (location.state?.error) {
@@ -56,7 +59,7 @@ export default function Login() {
     } catch (e) {
       setError(e.message);
     }
-  }
+  };
 
   return (
     <div className="bg-primary p-4 text-white min-vh-100 d-flex justify-content-center align-items-center">
@@ -96,7 +99,9 @@ export default function Login() {
                   onChange={(e) => setUsername(e.target.value)}
                 />
 
-                <label htmlFor="email" className="form-label">Username</label>
+                <label htmlFor="email" className="form-label">
+                  Username
+                </label>
               </div>
 
               <div className="form-floating mt-2">
@@ -110,7 +115,9 @@ export default function Login() {
                   onChange={(e) => setPassword(e.target.value)}
                 />
 
-                <label htmlFor="password" className="form-label">Password</label>
+                <label htmlFor="password" className="form-label">
+                  Password
+                </label>
               </div>
 
               <ButtonOrSpinner
@@ -123,24 +130,28 @@ export default function Login() {
               />
             </form>
 
-            {oauthProviders?.providers.length > 0 ? (<>
-              <div className="side-lines mt-3">or</div>
+            {oauthProviders?.providers.length > 0 ? (
+              <>
+                <div className="side-lines mt-3">or</div>
 
-              {oauthProviders.providers.map((v, i) => (
-                <ButtonOrSpinner
-                  key={i}
-                  type="button"
-                  variant="dark"
-                  disabled={!!loading}
-                  showSpinner={loading === v}
-                  text={`Login with ${v}`}
-                  onClick={(evt) => {
-                    evt.preventDefault();
-                    handleOAuthLogin(v);
-                  }}
-                />
-              ))}
-            </>): <></>}
+                {oauthProviders.providers.map((v, i) => (
+                  <ButtonOrSpinner
+                    key={i}
+                    type="button"
+                    variant="dark"
+                    disabled={!!loading}
+                    showSpinner={loading === v}
+                    text={`Login with ${v}`}
+                    onClick={(evt) => {
+                      evt.preventDefault();
+                      handleOAuthLogin(v);
+                    }}
+                  />
+                ))}
+              </>
+            ) : (
+              <></>
+            )}
           </div>
         </div>
       </div>
@@ -148,17 +159,27 @@ export default function Login() {
   );
 }
 
-function ButtonOrSpinner({ type, variant, disabled, showSpinner, text, onClick }: {
-  type: "button" | "submit",
-  variant: string,
-  disabled: boolean,
-  showSpinner: boolean,
-  text: string,
-  onClick: (evt) => any,
+function ButtonOrSpinner({
+  type,
+  variant,
+  disabled,
+  showSpinner,
+  text,
+  onClick,
+}: {
+  type: "button" | "submit";
+  variant: string;
+  disabled: boolean;
+  showSpinner: boolean;
+  text: string;
+  onClick: (evt) => any;
 }) {
   if (showSpinner) {
     return (
-      <div className="spinner-border text-primary mt-3 m-auto d-block" role="status">
+      <div
+        className="spinner-border text-primary mt-3 m-auto d-block"
+        role="status"
+      >
         <span className="visually-hidden">Logging in...</span>
       </div>
     );
@@ -166,7 +187,12 @@ function ButtonOrSpinner({ type, variant, disabled, showSpinner, text, onClick }
 
   if (type) {
     return (
-      <button type={type} disabled={disabled} onClick={onClick} className={`btn btn-lg mt-2 btn-${variant} w-100`}>
+      <button
+        type={type}
+        disabled={disabled}
+        onClick={onClick}
+        className={`btn btn-lg mt-2 btn-${variant} w-100`}
+      >
         {text}
       </button>
     );

@@ -49,7 +49,11 @@ pub async fn handle(
                 size: v.size,
                 created_at: chrono::Utc.from_local_datetime(&v.created_at).unwrap(),
                 inner: v.into_cargo_format(&crate_with_permissions.crate_),
-                uploader: user.username,
+                uploader: ResponseVersionUploader {
+                    uuid: user.uuid.0,
+                    display_name: user.display_name().to_string(),
+                    picture_url: user.picture_url,
+                },
             })
             .collect(),
     })
@@ -69,7 +73,14 @@ pub struct ResponseVersion<'a> {
     inner: CrateVersion<'a>,
     size: i32,
     created_at: chrono::DateTime<chrono::Utc>,
-    uploader: String,
+    uploader: ResponseVersionUploader,
+}
+
+#[derive(Serialize)]
+pub struct ResponseVersionUploader {
+    uuid: chartered_db::uuid::Uuid,
+    display_name: String,
+    picture_url: Option<String>,
 }
 
 #[derive(Serialize)]

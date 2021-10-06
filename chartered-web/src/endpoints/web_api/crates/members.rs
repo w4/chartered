@@ -17,7 +17,8 @@ pub struct GetResponse {
 #[derive(Deserialize, Serialize)]
 pub struct GetResponseMember {
     uuid: Uuid,
-    username: String,
+    display_name: String,
+    picture_url: Option<String>,
     permissions: UserPermission,
 }
 
@@ -35,7 +36,8 @@ pub async fn handle_get(
         .into_iter()
         .map(|(user, permissions)| GetResponseMember {
             uuid: user.uuid.0,
-            username: user.username,
+            display_name: user.display_name().to_string(),
+            picture_url: user.picture_url,
             permissions,
         })
         .collect();

@@ -37,40 +37,47 @@ export default function ListOrganisations() {
         <h1>Your Organisations</h1>
 
         <div className="card border-0 shadow-sm text-black">
-          {!list ? <LoadingSpinner /> : <>
-            {list.organisations.length === 0 ? (
+          {!list ? (
+            <LoadingSpinner />
+          ) : (
+            <>
+              {list.organisations.length === 0 ? (
                 <div className="card-body">
-                You don't belong to any organisations yet.
+                  You don't belong to any organisations yet.
                 </div>
-            ) : (
+              ) : (
                 <table className="table table-striped">
-                <tbody>
+                  <tbody>
                     {list.organisations.map((v, i) => (
-                    <tr key={i}>
+                      <tr key={i}>
                         <td className="align-middle fit">
-                        <RoundedPicture
+                          <RoundedPicture
                             src="http://placekitten.com/48/48"
                             height="48px"
                             width="48px"
-                        />
+                          />
                         </td>
 
-                        <td className="align-middle" style={{ lineHeight: "1.1" }}>
-                        <div>
+                        <td
+                          className="align-middle"
+                          style={{ lineHeight: "1.1" }}
+                        >
+                          <div>
                             <Link to={`/crates/${v.name}`}>{v.name}</Link>
-                        </div>
-                        <div>
+                          </div>
+                          <div>
                             <small style={{ fontSize: "0.75rem" }}>
-                            {v.description}
+                              {v.description}
                             </small>
-                        </div>
+                          </div>
                         </td>
-                    </tr>
+                      </tr>
                     ))}
-                </tbody>
+                  </tbody>
                 </table>
-            )}
-          </>}
+              )}
+            </>
+          )}
         </div>
 
         <Link

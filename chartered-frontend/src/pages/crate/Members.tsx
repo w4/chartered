@@ -10,6 +10,7 @@ import {
 } from "react-bootstrap-icons";
 import {
   authenticatedEndpoint,
+  ProfilePicture,
   RoundedPicture,
   useAuthenticatedRequest,
 } from "../../util";
@@ -23,7 +24,8 @@ import ReactPlaceholder from "react-placeholder";
 interface Member {
   uuid: string;
   permissions?: string[];
-  username: string;
+  display_name: string;
+  picture_url?: string;
 }
 
 export default function Members({
@@ -203,26 +205,30 @@ function MemberListItem({
         show={deleting === true}
         onCancel={() => setDeleting(false)}
         onConfirm={() => doDelete()}
-        username={member.username}
+        username={member.display_name}
       />
 
       <ErrorModal error={error} onClose={() => setError(null)} />
 
       <tr>
         <td className="align-middle fit">
-          <RoundedPicture
-            src="http://placekitten.com/48/48"
-            height="48px"
-            width="48px"
-          />
+          <ProfilePicture src={member.picture_url} height="48px" width="48px" />
         </td>
 
         <td className="align-middle">
-          <strong><Link to={`/users/${member.uuid}`} class="text-decoration-none">{member.username}</Link></strong>
-          {auth.getUserUuid() === member.uuid ? <>
-            <br />
-            <em>(that's you!)</em>
-          </> : <></>}
+          <strong>
+            <Link to={`/users/${member.uuid}`} className="text-decoration-none">
+              {member.display_name}
+            </Link>
+          </strong>
+          {auth.getUserUuid() === member.uuid ? (
+            <>
+              <br />
+              <em>(that's you!)</em>
+            </>
+          ) : (
+            <></>
+          )}
         </td>
 
         {possiblePermissions && member.permissions ? (
@@ -323,13 +329,13 @@ function MemberListInserter({
           ref={searchRef}
           renderMenuItemChildren={(option, props) => (
             <>
-              <RoundedPicture
-                src="http://placekitten.com/24/24"
+              <ProfilePicture
+                src={option.picture_url}
                 height="24px"
                 width="24px"
                 className="me-2"
               />
-              <span>{option.username}</span>
+              <span>{option.display_name}</span>
             </>
           )}
         />

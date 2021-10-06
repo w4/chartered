@@ -268,6 +268,13 @@ impl User {
             .unwrap_or_default()
             .permissions)
     }
+
+    pub fn display_name(&self) -> &str {
+        self.nick
+            .as_ref()
+            .or(self.name.as_ref())
+            .unwrap_or(&self.username)
+    }
 }
 
 #[derive(Identifiable, Queryable, Associations, PartialEq, Eq, Hash, Debug)]

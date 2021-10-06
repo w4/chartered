@@ -21,6 +21,7 @@ import {
 import { useParams, NavLink, Redirect, Link } from "react-router-dom";
 import {
   authenticatedEndpoint,
+  ProfilePicture,
   RoundedPicture,
   RoundedPicture,
   useAuthenticatedRequest,
@@ -45,12 +46,18 @@ export interface CrateInfo {
   versions: CrateInfoVersion[];
 }
 
+export interface CrateInfoVersionUploader {
+  display_name: string;
+  picture_url?: string;
+  uuid: string;
+}
+
 export interface CrateInfoVersion {
   vers: string;
   deps: CrateInfoVersionDependency[];
   features: any[];
   size: number;
-  uploader: string;
+  uploader: CrateInfoVersionUploader;
   created_at: string;
 }
 
@@ -69,10 +76,13 @@ export default function SingleCrate() {
     return <Redirect to={`/crates/${organisation}/${crate}/readme`} />;
   }
 
-  const { response: crateInfo, error } = useAuthenticatedRequest<CrateInfo>({
-    auth,
-    endpoint: `crates/${organisation}/${crate}`,
-  }, [organisation, crate]);
+  const { response: crateInfo, error } = useAuthenticatedRequest<CrateInfo>(
+    {
+      auth,
+      endpoint: `crates/${organisation}/${crate}`,
+    },
+    [organisation, crate]
+  );
 
   if (error) {
     return <ErrorPage message={error} />;
@@ -224,7 +234,13 @@ export default function SingleCrate() {
                 ) : (
                   <></>
                 )}
-                {crateVersion.deps.map((dep) => <Dependency key={`${dep.name}-${dep.version_req}`} organisation={organisation} dep={dep} /> )}
+                {crateVersion.deps.map((dep) => (
+                  <Dependency
+                    key={`${dep.name}-${dep.version_req}`}
+                    organisation={organisation}
+                    dep={dep}
+                  />
+                ))}
               </ul>
             </div>
           </div>
@@ -241,19 +257,33 @@ interface CratesMembersResponse {
 
 interface Member {
   uuid: string;
-  username: string;
+  display_name: string;
   permissions: string[];
 }
 
-function Dependency({ organisation, dep }: { organisation: string, dep: CrateInfoVersionDependency }) {
+function Dependency({
+  organisation,
+  dep,
+}: {
+  organisation: string;
+  dep: CrateInfoVersionDependency;
+}) {
   let link = <>{dep.name}</>;
 
   if (dep.registry === null) {
-    link = <a target="_blank" href={`/crates/${organisation}/${dep.name}`}>{link}</a>;
+    link = (
+      <a target="_blank" href={`/crates/${organisation}/${dep.name}`}>
+        {link}
+      </a>
+    );
   } else if (dep.registry === "https://github.com/rust-lang/crates.io-index") {
-    link = <a target="_blank" href={`https://crates.io/crates/${dep.name}`}>{link}</a>;
+    link = (
+      <a target="_blank" href={`https://crates.io/crates/${dep.name}`}>
+        {link}
+      </a>
+    );
   } else if (dep.registry.indexOf("ssh://") === 0) {
-    const parts = dep.registry.split('/');
+    const parts = dep.registry.split("/");
     const org = parts[parts.length - 1];
     if (org) {
       link = <Link to={`/crates/${org}/${dep.name}`}>{link}</Link>;
@@ -383,13 +413,18 @@ function Versions(props: { crate: CrateInfo }) {
               <div>
                 <div className="d-inline-block">
                   By
-                  <RoundedPicture
-                    src="http://placekitten.com/22/22"
+                  <ProfilePicture
+                    src={version.uploader.picture_url}
                     height="22px"
                     width="22px"
                     className="ms-1 me-1"
                   />
-                  {version.uploader}
+                  <Link
+                    to={`/users/${version.uploader.uuid}`}
+                    className="link-light"
+                  >
+                    {version.uploader.display_name}
+                  </Link>
                 </div>
 
                 <div className="ms-3 d-inline-block">

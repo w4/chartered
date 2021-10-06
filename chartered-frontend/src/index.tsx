@@ -62,11 +62,7 @@ function App() {
             path="/crates/:organisation/:crate/:subview?"
             component={() => <CrateView />}
           />
-          <PrivateRoute
-            exact
-            path="/users/:uuid"
-            component={() => <User />}
-          />
+          <PrivateRoute exact path="/users/:uuid" component={() => <User />} />
           <PrivateRoute
             exact
             path="/ssh-keys"
@@ -126,11 +122,7 @@ function PublicRoute({
       {...rest}
       render={(props) => {
         // TODO: check if valid key
-        if (
-          !unauthedOnly ||
-          !auth ||
-          !auth?.getAuthKey()
-        ) {
+        if (!unauthedOnly || !auth || !auth?.getAuthKey()) {
           return <Component {...props} />;
         } else {
           return (
