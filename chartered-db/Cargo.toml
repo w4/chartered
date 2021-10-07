@@ -12,14 +12,14 @@ chartered-types = { path = "../chartered-types" }
 base64 = "0.13"
 bitflags = "1"
 chrono = "0.4"
-diesel = { version = "1", features = ["sqlite", "postgres", "r2d2", "chrono"] }
+diesel = { version = "1", features = ["r2d2", "chrono"] }
 diesel_logger = "0.1"
 diesel_migrations = "1.4"
 displaydoc = "0.2"
 hex = "0.4"
 http = "0.2"
 itertools = "0.10"
-libsqlite3-sys = { version = "*", features = ["bundled"] } # https://github.com/rusqlite/rusqlite/issues/914
+libsqlite3-sys = { version = "*", features = ["bundled"], optional = true } # https://github.com/rusqlite/rusqlite/issues/914
 option_set = "0.1"
 rand = "0.8"
 reqwest = "0.11"
@@ -30,3 +30,8 @@ tokio = "1"
 uuid = "0.8"
 dotenv = "0.15"
 thrussh-keys = "0.21"
+
+[features]
+sqlite = ["libsqlite3-sys", "diesel/sqlite"]
+postgres = ["diesel/postgres"]
+

@@ -1,11 +1,18 @@
 #![deny(clippy::pedantic)]
+mod generators;
 #[allow(clippy::missing_errors_doc)]
 pub mod git;
 
-use crate::git::{
-    codec::{Encoder, GitCodec},
-    packfile::{Commit, CommitUserInfo, PackFileEntry, TreeItem, TreeItemKind},
-    PktLine,
+use crate::{
+    generators::CargoConfig,
+    git::{
+        codec::{Encoder, GitCodec},
+        packfile::{
+            high_level::GitRepository,
+            low_level::{Commit, CommitUserInfo, PackFile, PackFileEntry, TreeItem, TreeItemKind},
+        },
+        PktLine,
+    },
 };
 
 use bytes::BytesMut;
@@ -20,6 +27,7 @@ use thrussh::{
 };
 use thrussh_keys::{key, PublicKeyBase64};
 use tokio_util::codec::{Decoder, Encoder as TokioEncoder};
+use url::Url;
 
 #[tokio::main]
 #[allow(clippy::semicolon_if_nothing_returned)] // broken clippy lint
@@ -56,8 +64,7 @@ impl server::Server for Server {
             input_bytes: BytesMut::default(),
             output_bytes: BytesMut::default(),
             db: self.db.clone(),
-            user: None,
-            user_ssh_key: None,
+            authed: None,
             organisation: None,
         }
     }
@@ -69,9 +76,13 @@ struct Handler {
     input_bytes: BytesMut,
     output_bytes: BytesMut,
     db: chartered_db::ConnectionPool,
-    user: Option<chartered_db::users::User>,
-    user_ssh_key: Option<Arc<chartered_db::users::UserSshKey>>,
     organisation: Option<String>,
+    authed: Option<Authed>,
+}
+
+struct Authed {
+    user: chartered_db::users::User,
+    auth_key: String,
 }
 
 impl Handler {
@@ -86,9 +97,9 @@ impl Handler {
         );
     }
 
-    fn user(&self) -> Result<&chartered_db::users::User, anyhow::Error> {
-        match self.user {
-            Some(ref user) => Ok(user),
+    fn authed(&self) -> Result<&Authed, anyhow::Error> {
+        match self.authed {
+            Some(ref authed) => Ok(authed),
             None => anyhow::bail!("user not set after auth"),
         }
     }
@@ -97,13 +108,6 @@ impl Handler {
         match self.organisation {
             Some(ref org) => Ok(org.as_str()),
             None => anyhow::bail!("org not set after auth"),
-        }
-    }
-
-    fn user_ssh_key(&self) -> Result<&Arc<chartered_db::users::UserSshKey>, anyhow::Error> {
-        match self.user_ssh_key {
-            Some(ref ssh_key) => Ok(ssh_key),
-            None => anyhow::bail!("user not set after auth"),
         }
     }
 }
@@ -131,7 +135,7 @@ impl server::Handler for Handler {
 
     fn shell_request(mut self, channel: ChannelId, mut session: Session) -> Self::FutureUnit {
         Box::pin(async move {
-            let username = self.user()?.username.clone(); // todo
+            let username = self.authed()?.user.username.clone(); // todo
             write!(&mut self.output_bytes, "Hi there, {}! You've successfully authenticated, but chartered does not provide shell access.\r\n", username)?;
             self.flush(&mut session, channel);
             session.close(channel);
@@ -201,7 +205,7 @@ impl server::Handler for Handler {
         let public_key = key.public_key_bytes();
 
         Box::pin(async move {
-            let (ssh_key, login_user) =
+            let (ssh_key, user) =
                 match chartered_db::users::User::find_by_ssh_key(self.db.clone(), public_key)
                     .await?
                 {
@@ -214,8 +218,13 @@ impl server::Handler for Handler {
                 warn!("Failed to update last used key: {:?}", e);
             }
 
-            self.user = Some(login_user);
-            self.user_ssh_key = Some(ssh_key);
+            let auth_key = ssh_key
+                .clone()
+                .get_or_insert_session(self.db.clone(), self.ip.map(|v| v.to_string()))
+                .await?
+                .session_key;
+
+            self.authed = Some(Authed { user, auth_key });
 
             self.finished_auth(server::Auth::Accept).await
         })
@@ -269,62 +278,30 @@ impl server::Handler for Handler {
                 }
             }
 
+            let authed = self.authed()?;
+            let org_name = self.org_name()?;
+
             if !ls_refs && !fetch && !done {
                 return Ok((self, session));
             }
 
-            // echo -ne "0012command=fetch\n0001000ethin-pack\n0010include-tag\n000eofs-delta\n0032want d24d8020163b5fee57c9babfd0c595b8c90ba253\n0009done\n"
+            let mut packfile = GitRepository::default();
 
-            let mut pack_file_entries = Vec::new();
-            let mut root_tree = Vec::new();
-
-            // TODO: key should be cached
-            let config = format!(
-                r#"{{"dl":"http://127.0.0.1:8888/a/{key}/o/{organisation}/api/v1/crates","api":"http://127.0.0.1:8888/a/{key}/o/{organisation}"}}"#,
-                key = self
-                    .user_ssh_key()?
-                    .clone()
-                    .get_or_insert_session(self.db.clone(), self.ip.map(|v| v.to_string()))
-                    .await?
-                    .session_key,
-                organisation = self.org_name()?,
+            let config = CargoConfig::new(
+                Url::parse("http://127.0.0.1:8888/")?,
+                &authed.auth_key,
+                org_name,
             );
-            let config_file = PackFileEntry::Blob(config.as_bytes());
-
-            root_tree.push(TreeItem {
-                kind: TreeItemKind::File,
-                name: "config.json",
-                hash: config_file.hash()?,
-            });
-            pack_file_entries.push(config_file);
+            let config = serde_json::to_vec(&config)?;
+            packfile.insert(vec![], "config.json".to_string(), &config);
 
             // todo: the whole tree needs caching and then we can filter in code rather than at
             //  the database
-            let tree = fetch_tree(
-                self.db.clone(),
-                self.user()?.id,
-                self.org_name()?.to_string(),
-            )
-            .await;
-            build_tree(&mut root_tree, &mut pack_file_entries, &tree)?;
+            let tree = fetch_tree(self.db.clone(), authed.user.id, org_name.to_string()).await;
+            build_tree(&mut packfile, &tree)?;
 
-            let root_tree = PackFileEntry::Tree(root_tree);
-            let root_tree_hash = root_tree.hash()?;
-            pack_file_entries.push(root_tree);
-
-            let commit_user = CommitUserInfo {
-                name: "Jordan Doyle",
-                email: "jordan@doyle.la",
-                time: chrono::Utc.ymd(2021, 9, 8).and_hms(17, 46, 1),
-            };
-            let commit = PackFileEntry::Commit(Commit {
-                tree: root_tree_hash,
-                author: commit_user,
-                committer: commit_user,
-                message: "Most recent crates",
-            });
-            let commit_hash = commit.hash()?;
-            pack_file_entries.push(commit);
+            let (commit_hash, packfile_entries) =
+                packfile.commit("computer", "john@computer.no", "Update crates");
 
             eprintln!("commit hash: {}", hex::encode(&commit_hash));
 
@@ -358,7 +335,7 @@ impl server::Handler for Handler {
                 self.write(PktLine::SidebandMsg(b"Hello from chartered!\n"))?;
                 self.flush(&mut session, channel);
 
-                let packfile = git::packfile::PackFile::new(pack_file_entries);
+                let packfile = PackFile::new(packfile_entries);
                 self.write(PktLine::SidebandData(packfile))?;
                 self.write(PktLine::Flush)?;
                 self.flush(&mut session, channel);
@@ -427,51 +404,23 @@ async fn fetch_tree(
 }
 
 fn build_tree<'a>(
-    root_tree: &mut Vec<TreeItem<'a>>,
-    pack_file_entries: &mut Vec<PackFileEntry<'a>>,
+    packfile: &mut GitRepository<'a>,
     tree: &'a TwoCharTree<TwoCharTree<BTreeMap<String, String>>>,
 ) -> Result<(), anyhow::Error> {
-    root_tree.reserve(tree.len());
-    pack_file_entries.reserve(tree.iter().map(|(_, v)| 1 + v.len()).sum::<usize>() + tree.len());
-
     for (first_level_dir, second_level_dirs) in tree.iter() {
-        let mut first_level_tree = Vec::with_capacity(second_level_dirs.len());
+        let first_level_dir = std::str::from_utf8(first_level_dir)?;
 
         for (second_level_dir, crates) in second_level_dirs.iter() {
-            let mut second_level_tree = Vec::with_capacity(crates.len());
+            let second_level_dir = std::str::from_utf8(second_level_dir)?;
 
             for (crate_name, versions_def) in crates.iter() {
-                let file = PackFileEntry::Blob(versions_def.as_ref());
-                let file_hash = file.hash()?;
-                pack_file_entries.push(file);
-
-                second_level_tree.push(TreeItem {
-                    kind: TreeItemKind::File,
-                    name: crate_name,
-                    hash: file_hash,
-                });
+                packfile.insert(
+                    vec![first_level_dir.to_string(), second_level_dir.to_string()],
+                    crate_name.to_string(),
+                    versions_def.as_ref(),
+                );
             }
-
-            let second_level_tree = PackFileEntry::Tree(second_level_tree);
-            let second_level_tree_hash = second_level_tree.hash()?;
-            pack_file_entries.push(second_level_tree);
-
-            first_level_tree.push(TreeItem {
-                kind: TreeItemKind::Directory,
-                name: std::str::from_utf8(second_level_dir)?,
-                hash: second_level_tree_hash,
-            });
         }
-
-        let first_level_tree = PackFileEntry::Tree(first_level_tree);
-        let first_level_tree_hash = first_level_tree.hash()?;
-        pack_file_entries.push(first_level_tree);
-
-        root_tree.push(TreeItem {
-            kind: TreeItemKind::Directory,
-            name: std::str::from_utf8(first_level_dir)?,
-            hash: first_level_tree_hash,
-        });
     }
 
     Ok(())

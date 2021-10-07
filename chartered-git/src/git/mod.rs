@@ -4,7 +4,7 @@ pub mod packfile;
 use bytes::{BufMut, BytesMut};
 use std::fmt::Write;
 
-use self::packfile::PackFile;
+use self::packfile::low_level::PackFile;
 
 pub enum PktLine<'a> {
     Data(&'a [u8]),

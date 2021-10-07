@@ -152,7 +152,7 @@ mod tests {
     #[allow(clippy::pedantic)]
     async fn parse_filesystem() {
         // panic!("{:#?}", FS::from_str("s3://10.0.64.101:9000/my-bucket/my-location"));
-        FS::from_str("file:///tmp/chartered");
+        // FS::from_str("file:///tmp/chartered");
     }
 
     #[tokio::test]

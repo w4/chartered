@@ -107,7 +107,7 @@ mod test {
         assert_eq!(
             res,
             Some(super::GitCommand {
-                command: Bytes::from_static(b"agent=git/2.32.0\n"),
+                command: Bytes::from_static(b"agent=git/2.32.0"),
                 metadata: vec![],
             })
         );

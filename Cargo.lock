@@ -303,6 +303,7 @@ dependencies = [
  "format-bytes",
  "futures",
  "hex",
+ "indexmap",
  "indoc",
  "itoa",
  "log",
@@ -314,6 +315,7 @@ dependencies = [
  "thrussh-keys",
  "tokio",
  "tokio-util",
+ "url",
 ]
 
 [[package]]

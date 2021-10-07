@@ -6,6 +6,8 @@ use sha1::{
 };
 use std::{convert::TryInto, fmt::Write, io::Write as IoWrite};
 
+pub type HashOutput = GenericArray<u8, <Sha1 as FixedOutputDirty>::OutputSize>; // [u8; 20], but sha-1 returns a GenericArray
+
 // The packfile itself is a very simple format. There is a header, a
 // series of packed objects (each with it's own header and body) and
 // then a checksum trailer. The first four bytes is the string 'PACK',
@@ -55,9 +57,9 @@ impl<'a> PackFile<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Commit<'a> {
-    pub tree: GenericArray<u8, <Sha1 as FixedOutputDirty>::OutputSize>, // [u8; 20], but sha-1 returns a GenericArray
+    pub tree: HashOutput,
     // pub parent: [u8; 20],
     pub author: CommitUserInfo<'a>,
     pub committer: CommitUserInfo<'a>,
@@ -123,7 +125,7 @@ impl CommitUserInfo<'_> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum TreeItemKind {
     File,
     Directory,
@@ -139,11 +141,11 @@ impl TreeItemKind {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct TreeItem<'a> {
     pub kind: TreeItemKind,
     pub name: &'a str,
-    pub hash: GenericArray<u8, <Sha1 as FixedOutputDirty>::OutputSize>, // [u8; 20] - but we have to deal with GenericArrays
+    pub hash: HashOutput,
 }
 
 // `[mode] [name]\0[hash]`
@@ -161,7 +163,7 @@ impl TreeItem<'_> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)] // could be copy but Vec<TreeItem<'a>>
 pub enum PackFileEntry<'a> {
     // jordan@Jordans-MacBook-Pro-2 0d % printf "\x1f\x8b\x08\x00\x00\x00\x00\x00" | cat - f5/473259d9674ed66239766a013f96a3550374e3 | gzip -dc
     // commit 1068tree 0d586b48bc42e8591773d3d8a7223551c39d453c
@@ -290,9 +292,7 @@ impl PackFileEntry<'_> {
     }
 
     // wen const generics for RustCrypto? :-(
-    pub fn hash(
-        &self,
-    ) -> Result<GenericArray<u8, <Sha1 as FixedOutputDirty>::OutputSize>, anyhow::Error> {
+    pub fn hash(&self) -> Result<HashOutput, anyhow::Error> {
         let size = self.uncompressed_size();
 
         let file_prefix = match self {

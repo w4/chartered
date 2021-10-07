@@ -53,7 +53,20 @@ use displaydoc::Display;
 use std::sync::Arc;
 use thiserror::Error;
 
-pub type ConnectionPool = Arc<Pool<ConnectionManager<LoggingConnection<diesel::SqliteConnection>>>>;
+#[cfg(feature = "sqlite")]
+pub type Connection = diesel::SqliteConnection;
+
+#[cfg(feature = "postgres")]
+pub type Connection = diesel::PostgresConnection;
+
+#[cfg(not(any(feature = "sqlite", feature = "postgres")))]
+compile_error!(
+    "At least one database backend must be enabled using `--features [sqlite|postgres]`"
+);
+#[cfg(not(any(feature = "sqlite", feature = "postgres")))]
+pub type Connection = unimplemented!();
+
+pub type ConnectionPool = Arc<Pool<ConnectionManager<LoggingConnection<Connection>>>>;
 pub type Result<T> = std::result::Result<T, Error>;
 
 embed_migrations!();
