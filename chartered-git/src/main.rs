@@ -1,14 +1,16 @@
 #![deny(clippy::pedantic)]
+mod command_handlers;
 mod generators;
+mod tree;
+
 #[allow(clippy::missing_errors_doc)]
 pub mod git;
-mod tree;
 
 use crate::{
     generators::CargoConfig,
     git::{
         codec::{Encoder, GitCodec},
-        packfile::{high_level::GitRepository, low_level::PackFile},
+        packfile::high_level::GitRepository,
         PktLine,
     },
     tree::Tree,
@@ -249,10 +251,6 @@ impl server::Handler for Handler {
         self.input_bytes.extend_from_slice(data);
 
         Box::pin(async move {
-            let mut ls_refs = false;
-            let mut fetch = false;
-            let mut done = false;
-
             while let Some(frame) = self.codec.decode(&mut self.input_bytes)? {
                 eprintln!("{:#?}", frame);
 
@@ -265,82 +263,48 @@ impl server::Handler for Handler {
                     return Ok((self, session));
                 }
 
-                if frame.command.as_ref() == "command=ls-refs".as_bytes() {
-                    ls_refs = true;
-                } else if frame.command.as_ref() == "command=fetch".as_bytes() {
-                    if frame.metadata.iter().any(|v| v.as_ref() == b"done") {
-                        done = true;
-                    } else {
-                        fetch = true;
+                let authed = self.authed()?;
+                let org_name = self.org_name()?;
+
+                let mut packfile = GitRepository::default();
+                let config = CargoConfig::new(
+                    Url::parse("http://127.0.0.1:8888/")?,
+                    &authed.auth_key,
+                    org_name,
+                );
+                let config = serde_json::to_vec(&config)?;
+                packfile.insert(ArrayVec::<_, 0>::new(), "config.json", &config);
+                // todo: the whole tree needs caching and then we can filter in code rather than at
+                //  the database
+                let tree = Tree::build(self.db.clone(), authed.user.id, org_name.to_string()).await;
+                tree.write_to_packfile(&mut packfile);
+
+                let (commit_hash, packfile_entries) =
+                    packfile.commit("computer", "john@computer.no", "Update crates");
+
+                match frame.command.as_ref() {
+                    b"command=ls-refs" => {
+                        command_handlers::ls_refs::handle(
+                            &mut self,
+                            &mut session,
+                            channel,
+                            frame.metadata,
+                            &commit_hash,
+                        )
+                        .await?
                     }
+                    b"command=fetch" => {
+                        command_handlers::fetch::handle(
+                            &mut self,
+                            &mut session,
+                            channel,
+                            frame.metadata,
+                            packfile_entries,
+                        )
+                        .await?
+                    }
+                    v => eprintln!("unknown command {:?}", v),
                 }
-            }
-
-            let authed = self.authed()?;
-            let org_name = self.org_name()?;
-
-            if !ls_refs && !fetch && !done {
-                return Ok((self, session));
-            }
-
-            let mut packfile = GitRepository::default();
-
-            let config = CargoConfig::new(
-                Url::parse("http://127.0.0.1:8888/")?,
-                &authed.auth_key,
-                org_name,
-            );
-            let config = serde_json::to_vec(&config)?;
-            packfile.insert(ArrayVec::<_, 0>::new(), "config.json", &config);
-
-            // todo: the whole tree needs caching and then we can filter in code rather than at
-            //  the database
-            let tree = Tree::build(self.db.clone(), authed.user.id, org_name.to_string()).await;
-            tree.write_to_packfile(&mut packfile);
-
-            let (commit_hash, packfile_entries) =
-                packfile.commit("computer", "john@computer.no", "Update crates");
-
-            eprintln!("commit hash: {}", hex::encode(&commit_hash));
-
-            // echo -ne "0014command=ls-refs\n0014agent=git/2.321\n00010009peel\n000csymrefs\n000bunborn\n0014ref-prefix HEAD\n0019ref-prefix refs/HEAD\n001eref-prefix refs/tags/HEAD\n001fref-prefix refs/heads/HEAD\n0021ref-prefix refs/remotes/HEAD\n0026ref-prefix refs/remotes/HEAD/HEAD\n001aref-prefix refs/tags/\n0000"
-            // GIT_PROTOCOL=version=2 ssh -o SendEnv=GIT_PROTOCOL git@github.com git-upload-pack '/w4/chartered.git'
-            // ''.join([('{:04x}'.format(len(v) + 5)), v, "\n"])
-            // echo -ne "0012command=fetch\n0001000ethin-pack\n0010no-progress\n0010include-tag\n000eofs-delta\n0032want f6046cf6372e0d8ab845f6dec1602c303a66ee91\n"
-            // sends a 000dpackfile back
-            // https://shafiul.github.io/gitbook/7_the_packfile.html
-            if ls_refs {
-                let commit_hash = hex::encode(&commit_hash);
-                self.write(PktLine::Data(
-                    format!("{} HEAD symref-target:refs/heads/master\n", commit_hash).as_bytes(),
-                ))?;
-                self.write(PktLine::Flush)?;
-                self.flush(&mut session, channel);
-            }
-
-            if fetch {
-                self.write(PktLine::Data(b"acknowledgments\n"))?;
-                self.write(PktLine::Data(b"ready\n"))?;
-                self.write(PktLine::Delimiter)?;
-                // self.write(PktLine::Data(b"shallow-info\n"))?;
-                // self.write(PktLine::Data(b"unshallow\n"))?;
-                done = true;
-            }
-
-            if done {
-                self.write(PktLine::Data(b"packfile\n"))?;
-
-                self.write(PktLine::SidebandMsg(b"Hello from chartered!\n"))?;
-                self.flush(&mut session, channel);
-
-                let packfile = PackFile::new(packfile_entries);
-                self.write(PktLine::SidebandData(packfile))?;
-                self.write(PktLine::Flush)?;
-                self.flush(&mut session, channel);
-
-                session.exit_status_request(channel, 0);
-                session.eof(channel);
-                session.close(channel);
             }
 
             Ok((self, session))
