@@ -19,7 +19,7 @@ use crate::{
 use arrayvec::ArrayVec;
 use bytes::BytesMut;
 use futures::future::Future;
-use log::warn;
+use slog::{debug, error, info, o, warn, Drain, Logger};
 use std::{fmt::Write, pin::Pin, sync::Arc};
 use thrussh::{
     server::{self, Auth, Session},
@@ -32,7 +32,10 @@ use url::Url;
 #[tokio::main]
 #[allow(clippy::semicolon_if_nothing_returned)] // broken clippy lint
 async fn main() {
-    env_logger::init();
+    let decorator = slog_term::TermDecorator::new().build();
+    let drain = slog_term::FullFormat::new(decorator).build().fuse();
+    let drain = slog_async::Async::new(drain).build().fuse();
+    let log = slog::Logger::root(drain, o!());
 
     let config = Arc::new(thrussh::server::Config {
         methods: thrussh::MethodSet::PUBLICKEY,
@@ -42,6 +45,7 @@ async fn main() {
 
     let server = Server {
         db: chartered_db::init().unwrap(),
+        log,
     };
 
     thrussh::server::run(config, "127.0.0.1:2233", server)
@@ -52,32 +56,40 @@ async fn main() {
 #[derive(Clone)]
 struct Server {
     db: chartered_db::ConnectionPool,
+    log: Logger,
 }
 
 impl server::Server for Server {
     type Handler = Handler;
 
     fn new(&mut self, ip: Option<std::net::SocketAddr>) -> Self::Handler {
+        let log = self.log.new(o!("ip" => ip));
+        info!(log, "Connection received");
+
         Handler {
             ip,
+            log,
             codec: GitCodec::default(),
             input_bytes: BytesMut::default(),
             output_bytes: BytesMut::default(),
             db: self.db.clone(),
             authed: None,
             organisation: None,
+            is_git_protocol_v2: false,
         }
     }
 }
 
 struct Handler {
     ip: Option<std::net::SocketAddr>,
+    log: Logger,
     codec: GitCodec,
     input_bytes: BytesMut,
     output_bytes: BytesMut,
     db: chartered_db::ConnectionPool,
     organisation: Option<String>,
     authed: Option<Authed>,
+    is_git_protocol_v2: bool,
 }
 
 struct Authed {
@@ -133,8 +145,27 @@ impl server::Handler for Handler {
         Box::pin(futures::future::ready(Ok((self, s))))
     }
 
+    fn env_request(
+        mut self,
+        _channel: ChannelId,
+        name: &str,
+        value: &str,
+        session: Session,
+    ) -> Self::FutureUnit {
+        debug!(&self.log, "env set {}={}", name, value);
+
+        match (name, value) {
+            ("GIT_PROTOCOL", "version=2") => self.is_git_protocol_v2 = true,
+            _ => {}
+        }
+
+        Box::pin(futures::future::ready(Ok((self, session))))
+    }
+
     fn shell_request(mut self, channel: ChannelId, mut session: Session) -> Self::FutureUnit {
         Box::pin(async move {
+            error!(&self.log, "Attempted to open a shell, rejecting connection");
+
             let username = self.authed()?.user.username.clone(); // todo
             write!(&mut self.output_bytes, "Hi there, {}! You've successfully authenticated, but chartered does not provide shell access.\r\n", username)?;
             self.flush(&mut session, channel);
@@ -155,7 +186,13 @@ impl server::Handler for Handler {
         };
         let args = shlex::split(data);
 
+        debug!(&self.log, "exec {}", data);
+
         Box::pin(async move {
+            if !self.is_git_protocol_v2 {
+                anyhow::bail!("not git protocol v2");
+            }
+
             let mut args = args.into_iter().flat_map(Vec::into_iter);
 
             if args.next().as_deref() != Some("git-upload-pack") {
@@ -177,9 +214,8 @@ impl server::Handler for Handler {
                 session.close(channel);
             }
 
-            // TODO: check GIT_PROTOCOL=version=2 set
             self.write(PktLine::Data(b"version 2\n"))?;
-            self.write(PktLine::Data(b"agent=chartered/0.1.0\n"))?;
+            self.write(PktLine::Data(b"agent=chartered/0.1.0\n"))?; // TODO: clap::crate_name!()/clap::crate_version!()
             self.write(PktLine::Data(b"ls-refs=unborn\n"))?;
             self.write(PktLine::Data(b"fetch=shallow wait-for-done\n"))?;
             self.write(PktLine::Data(b"server-option\n"))?;
@@ -194,10 +230,9 @@ impl server::Handler for Handler {
     fn subsystem_request(
         self,
         _channel: ChannelId,
-        data: &str,
+        _data: &str,
         session: Session,
     ) -> Self::FutureUnit {
-        eprintln!("subsystem req: {}", data);
         Box::pin(futures::future::ready(Ok((self, session))))
     }
 
@@ -215,7 +250,7 @@ impl server::Handler for Handler {
             let ssh_key = Arc::new(ssh_key);
 
             if let Err(e) = ssh_key.clone().update_last_used(self.db.clone()).await {
-                warn!("Failed to update last used key: {:?}", e);
+                warn!(&self.log, "Failed to update last used key: {:?}", e);
             }
 
             let auth_key = ssh_key
@@ -252,7 +287,10 @@ impl server::Handler for Handler {
 
         Box::pin(async move {
             while let Some(frame) = self.codec.decode(&mut self.input_bytes)? {
-                eprintln!("{:#?}", frame);
+                debug!(
+                    &self.log,
+                    "decoded frame command={:?} metadata={:?}", frame.command, frame.metadata
+                );
 
                 // if the client flushed without giving us a command, we're expected to close
                 // the connection or else the client will just hang
@@ -303,7 +341,9 @@ impl server::Handler for Handler {
                         )
                         .await?
                     }
-                    v => eprintln!("unknown command {:?}", v),
+                    v => {
+                        error!(&self.log, "Client sent unknown command, ignoring"; "command" => std::str::from_utf8(v).unwrap_or("invalid utf8"))
+                    }
                 }
             }
 

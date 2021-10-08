@@ -49,10 +49,8 @@ impl codec::Decoder for GitCodec {
                 return Ok(Some(std::mem::take(&mut self.command)));
             } else if length == 1 || length == 2 {
                 src.advance(4);
-                eprintln!("magic packet = {}", length);
                 continue;
             } else if !(4..=65520).contains(&length) {
-                eprintln!("protocol abuse");
                 return Err(
                     std::io::Error::new(std::io::ErrorKind::InvalidData, "protocol abuse").into(),
                 );
