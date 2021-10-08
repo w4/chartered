@@ -10,6 +10,7 @@ chartered-db = { path = "../chartered-db" }
 chartered-types = { path = "../chartered-types" }
 
 anyhow = "1"
+arrayvec = "0.7"
 async-trait = "0"
 bytes = "1"
 chrono = "0.4"

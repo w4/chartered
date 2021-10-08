@@ -2,7 +2,7 @@ use axum::extract;
 use bytes::Bytes;
 use chartered_db::{crates::Crate, users::User, ConnectionPool};
 use chartered_fs::FileSystem;
-use chartered_types::cargo::{CrateFeatures, CrateVersion, CrateDependency};
+use chartered_types::cargo::{CrateDependency, CrateFeatures, CrateVersion};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{borrow::Cow, convert::TryInto, sync::Arc};
@@ -171,7 +171,10 @@ pub struct MetadataCrateDependency<'a> {
 impl From<MetadataCrateDependency<'_>> for CrateDependency<'static> {
     fn from(us: MetadataCrateDependency<'_>) -> CrateDependency<'static> {
         let (name, package) = if let Some(explicit_name_in_toml) = us.explicit_name_in_toml {
-            (explicit_name_in_toml.into_owned(), Some(us.name.into_owned()))
+            (
+                explicit_name_in_toml.into_owned(),
+                Some(us.name.into_owned()),
+            )
         } else {
             (us.name.into_owned(), None)
         };
@@ -179,7 +182,11 @@ impl From<MetadataCrateDependency<'_>> for CrateDependency<'static> {
         Self {
             name: Cow::Owned(name),
             req: Cow::Owned(us.version_req.into_owned()),
-            features: us.features.into_iter().map(|v| Cow::Owned(v.into_owned())).collect(),
+            features: us
+                .features
+                .into_iter()
+                .map(|v| Cow::Owned(v.into_owned()))
+                .collect(),
             optional: us.optional,
             default_features: us.default_features,
             target: us.target.map(|v| Cow::Owned(v.into_owned())),

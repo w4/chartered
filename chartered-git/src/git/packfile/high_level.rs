@@ -1,3 +1,4 @@
+use arrayvec::ArrayVec;
 use indexmap::IndexMap;
 
 use super::low_level::{
@@ -5,11 +6,11 @@ use super::low_level::{
 };
 
 #[derive(Default, Debug)]
-pub struct Directory(IndexMap<String, Box<TreeItem>>);
+pub struct Directory<'a>(IndexMap<&'a str, Box<TreeItem<'a>>>);
 
-impl Directory {
-    fn into_packfile_entries<'a>(
-        &'a self,
+impl<'a> Directory<'a> {
+    fn into_packfile_entries(
+        &self,
         pack_file: &mut IndexMap<HashOutput, PackFileEntry<'a>>,
     ) -> HashOutput {
         let mut tree = Vec::with_capacity(self.0.len());
@@ -38,19 +39,24 @@ impl Directory {
 }
 
 #[derive(Debug)]
-pub enum TreeItem {
+pub enum TreeItem<'a> {
     Blob(HashOutput),
-    Directory(Directory),
+    Directory(Directory<'a>),
 }
 
 #[derive(Default, Debug)]
 pub struct GitRepository<'a> {
     file_entries: IndexMap<HashOutput, PackFileEntry<'a>>,
-    tree: Directory,
+    tree: Directory<'a>,
 }
 
 impl<'a> GitRepository<'a> {
-    pub fn insert(&mut self, path: Vec<String>, file: String, content: &'a [u8]) {
+    pub fn insert<const N: usize>(
+        &mut self,
+        path: ArrayVec<&'a str, N>,
+        file: &'a str,
+        content: &'a [u8],
+    ) {
         let mut directory = &mut self.tree;
 
         for part in path {
@@ -102,21 +108,5 @@ impl<'a> GitRepository<'a> {
 
         // TODO: make PackFileEntry copy and remove this clone
         (commit_hash, self.file_entries.values().cloned().collect())
-    }
-}
-
-#[cfg(test)]
-mod test {
-    #[test]
-    fn test() {
-        let mut x = super::GitRepository::default();
-        // x.insert(vec![], "a".to_string(), "nerd".as_ref());
-        x.insert(
-            vec!["a".to_string(), "b".to_string()],
-            "c".to_string(),
-            "nerd".as_ref(),
-        );
-        x.insert(vec![], "b".to_string(), "nerd".as_ref());
-        panic!("{:#?}", x);
     }
 }

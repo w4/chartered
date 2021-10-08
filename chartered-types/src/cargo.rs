@@ -45,7 +45,7 @@ pub struct CrateDependency<'a> {
     pub optional: bool,
     pub default_features: bool,
     pub target: Option<Cow<'a, str>>, // a string such as "cfg(windows)"
-    pub kind: Cow<'a, str>, // dev, build or normal
+    pub kind: Cow<'a, str>,           // dev, build or normal
     #[serde(skip_serializing_if = "Option::is_none")]
     pub registry: Option<Cow<'a, str>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -57,7 +57,11 @@ impl CrateDependency<'_> {
         CrateDependency {
             name: Cow::Owned(self.name.into_owned()),
             req: Cow::Owned(self.req.into_owned()),
-            features: self.features.into_iter().map(|v| Cow::Owned(v.into_owned())).collect(),
+            features: self
+                .features
+                .into_iter()
+                .map(|v| Cow::Owned(v.into_owned()))
+                .collect(),
             optional: self.optional,
             default_features: self.default_features,
             target: self.target.map(|v| Cow::Owned(v.into_owned())),

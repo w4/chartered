@@ -2,24 +2,22 @@
 mod generators;
 #[allow(clippy::missing_errors_doc)]
 pub mod git;
+mod tree;
 
 use crate::{
     generators::CargoConfig,
     git::{
         codec::{Encoder, GitCodec},
-        packfile::{
-            high_level::GitRepository,
-            low_level::{Commit, CommitUserInfo, PackFile, PackFileEntry, TreeItem, TreeItemKind},
-        },
+        packfile::{high_level::GitRepository, low_level::PackFile},
         PktLine,
     },
+    tree::Tree,
 };
 
+use arrayvec::ArrayVec;
 use bytes::BytesMut;
-use chrono::TimeZone;
 use futures::future::Future;
 use log::warn;
-use std::collections::BTreeMap;
 use std::{fmt::Write, pin::Pin, sync::Arc};
 use thrussh::{
     server::{self, Auth, Session},
@@ -293,12 +291,12 @@ impl server::Handler for Handler {
                 org_name,
             );
             let config = serde_json::to_vec(&config)?;
-            packfile.insert(vec![], "config.json".to_string(), &config);
+            packfile.insert(ArrayVec::<_, 0>::new(), "config.json", &config);
 
             // todo: the whole tree needs caching and then we can filter in code rather than at
             //  the database
-            let tree = fetch_tree(self.db.clone(), authed.user.id, org_name.to_string()).await;
-            build_tree(&mut packfile, &tree)?;
+            let tree = Tree::build(self.db.clone(), authed.user.id, org_name.to_string()).await;
+            tree.write_to_packfile(&mut packfile);
 
             let (commit_hash, packfile_entries) =
                 packfile.commit("computer", "john@computer.no", "Update crates");
@@ -348,80 +346,4 @@ impl server::Handler for Handler {
             Ok((self, session))
         })
     }
-}
-
-#[derive(serde::Serialize)]
-pub struct CrateFileEntry<'a> {
-    #[serde(flatten)]
-    inner: &'a chartered_types::cargo::CrateVersion<'a>,
-    cksum: &'a str,
-    yanked: bool,
-}
-
-pub type TwoCharTree<T> = BTreeMap<[u8; 2], T>;
-
-async fn fetch_tree(
-    db: chartered_db::ConnectionPool,
-    user_id: i32,
-    org_name: String,
-) -> TwoCharTree<TwoCharTree<BTreeMap<String, String>>> {
-    use chartered_db::crates::Crate;
-
-    let mut tree: TwoCharTree<TwoCharTree<BTreeMap<String, String>>> = BTreeMap::new();
-
-    // todo: handle files with 1/2/3 characters
-    for (crate_def, versions) in Crate::list_with_versions(db, user_id, org_name)
-        .await
-        .unwrap()
-    {
-        let mut name_chars = crate_def.name.as_bytes().iter();
-        let first_dir = [*name_chars.next().unwrap(), *name_chars.next().unwrap()];
-        let second_dir = [*name_chars.next().unwrap(), *name_chars.next().unwrap()];
-
-        let first_dir = tree.entry(first_dir).or_default();
-        let second_dir = first_dir.entry(second_dir).or_default();
-
-        let mut file = String::new();
-        for version in versions {
-            let cksum = version.checksum.clone();
-            let yanked = version.yanked;
-            let version = version.into_cargo_format(&crate_def);
-
-            let entry = CrateFileEntry {
-                inner: &version,
-                cksum: &cksum,
-                yanked,
-            };
-
-            file.push_str(&serde_json::to_string(&entry).unwrap());
-            file.push('\n');
-        }
-
-        second_dir.insert(crate_def.name, file);
-    }
-
-    tree
-}
-
-fn build_tree<'a>(
-    packfile: &mut GitRepository<'a>,
-    tree: &'a TwoCharTree<TwoCharTree<BTreeMap<String, String>>>,
-) -> Result<(), anyhow::Error> {
-    for (first_level_dir, second_level_dirs) in tree.iter() {
-        let first_level_dir = std::str::from_utf8(first_level_dir)?;
-
-        for (second_level_dir, crates) in second_level_dirs.iter() {
-            let second_level_dir = std::str::from_utf8(second_level_dir)?;
-
-            for (crate_name, versions_def) in crates.iter() {
-                packfile.insert(
-                    vec![first_level_dir.to_string(), second_level_dir.to_string()],
-                    crate_name.to_string(),
-                    versions_def.as_ref(),
-                );
-            }
-        }
-    }
-
-    Ok(())
 }

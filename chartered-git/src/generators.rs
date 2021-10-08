@@ -1,5 +1,4 @@
 use serde::Serialize;
-use url::Url;
 
 #[derive(Serialize, Debug, Clone)]
 pub struct CargoConfig {
