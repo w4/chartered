@@ -2,6 +2,7 @@ use axum::extract;
 use bytes::Bytes;
 use chartered_db::{crates::Crate, users::User, ConnectionPool};
 use chartered_fs::FileSystem;
+use chartered_types::cargo::{CrateFeatures, CrateVersion, CrateDependency};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{borrow::Cow, convert::TryInto, sync::Arc};
@@ -84,7 +85,7 @@ pub async fn handle(
             file_ref,
             hex::encode(Sha256::digest(crate_bytes)),
             metadata_bytes.len().try_into().unwrap(),
-            metadata.inner.into_owned(),
+            metadata.inner.into(),
             metadata.meta,
         )
         .await?;
@@ -125,5 +126,66 @@ pub struct Metadata<'a> {
     #[serde(flatten)]
     meta: chartered_types::cargo::CrateVersionMetadata,
     #[serde(flatten)]
-    inner: chartered_types::cargo::CrateVersion<'a>,
+    inner: MetadataCrateVersion<'a>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct MetadataCrateVersion<'a> {
+    #[serde(borrow)]
+    pub name: Cow<'a, str>,
+    #[serde(borrow)]
+    pub vers: Cow<'a, str>,
+    pub deps: Vec<MetadataCrateDependency<'a>>,
+    pub features: CrateFeatures,
+    #[serde(borrow)]
+    pub links: Option<Cow<'a, str>>,
+}
+
+impl From<MetadataCrateVersion<'_>> for CrateVersion<'static> {
+    fn from(us: MetadataCrateVersion<'_>) -> Self {
+        Self {
+            name: Cow::Owned(us.name.into_owned()),
+            vers: Cow::Owned(us.vers.into_owned()),
+            deps: us.deps.into_iter().map(CrateDependency::from).collect(),
+            features: us.features,
+            links: us.links.map(|v| Cow::Owned(v.into_owned())),
+        }
+    }
+}
+
+/// We've redefined MetadataCrateDependency for deserialisation because `cargo publish` passes
+/// a `version_req`, whereas when downloading it expects `req` - and `package` isn't returned.
+#[derive(Deserialize, Debug)]
+pub struct MetadataCrateDependency<'a> {
+    pub name: Cow<'a, str>,
+    pub version_req: Cow<'a, str>, // needs to be: https://github.com/steveklabnik/semver#requirements
+    pub features: Vec<Cow<'a, str>>,
+    pub optional: bool,
+    pub default_features: bool,
+    pub target: Option<Cow<'a, str>>, // a string such as "cfg(windows)"
+    pub kind: Cow<'a, str>,           // dev, build or normal
+    pub registry: Option<Cow<'a, str>>,
+    pub explicit_name_in_toml: Option<Cow<'a, str>>,
+}
+
+impl From<MetadataCrateDependency<'_>> for CrateDependency<'static> {
+    fn from(us: MetadataCrateDependency<'_>) -> CrateDependency<'static> {
+        let (name, package) = if let Some(explicit_name_in_toml) = us.explicit_name_in_toml {
+            (explicit_name_in_toml.into_owned(), Some(us.name.into_owned()))
+        } else {
+            (us.name.into_owned(), None)
+        };
+
+        Self {
+            name: Cow::Owned(name),
+            req: Cow::Owned(us.version_req.into_owned()),
+            features: us.features.into_iter().map(|v| Cow::Owned(v.into_owned())).collect(),
+            optional: us.optional,
+            default_features: us.default_features,
+            target: us.target.map(|v| Cow::Owned(v.into_owned())),
+            kind: Cow::Owned(us.kind.into_owned()),
+            registry: us.registry.map(|v| Cow::Owned(v.into_owned())),
+            package: package.map(Cow::Owned),
+        }
+    }
 }

@@ -63,7 +63,7 @@ export interface CrateInfoVersion {
 
 export interface CrateInfoVersionDependency {
   name: string;
-  version_req: string;
+  req: string;
   registry?: string;
 }
 
@@ -236,7 +236,7 @@ export default function SingleCrate() {
                 )}
                 {crateVersion.deps.map((dep) => (
                   <Dependency
-                    key={`${dep.name}-${dep.version_req}`}
+                    key={`${dep.name}-${dep.req}`}
                     organisation={organisation}
                     dep={dep}
                   />
@@ -292,7 +292,7 @@ function Dependency({
 
   return (
     <li className="list-group-item">
-      {link} = "<strong>{dep.version_req}</strong>"
+      {link} = "<strong>{dep.req}</strong>"
     </li>
   );
 }
