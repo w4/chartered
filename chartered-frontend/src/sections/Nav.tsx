@@ -1,15 +1,31 @@
 import React = require("react");
+import { useHistory, useLocation } from "react-router-dom";
 import { NavLink, Link } from "react-router-dom";
 
-import { BoxArrowRight } from "react-bootstrap-icons";
+import { BoxArrowRight, Search } from "react-bootstrap-icons";
 import { useAuth } from "../useAuth";
 
 export default function Nav() {
   const auth = useAuth();
+  const history = useHistory();
+  const location = useLocation();
 
   const logout = async (e) => {
     e.preventDefault();
     await auth.logout();
+  };
+
+  const [search, setSearch] = React.useState(
+    location.pathname === '/search'
+      ? new URLSearchParams(location.search).get("q") || ""
+      : ""
+  );
+  const submitSearchForm = (e) => {
+    e.preventDefault();
+
+    if (search != "") {
+      history.push(`/search?q=${encodeURIComponent(search)}`)
+    }
   };
 
   return (
@@ -49,13 +65,21 @@ export default function Nav() {
             </li>
           </ul>
 
-          <form className="d-flex">
-            <input
-              className="form-control me-2"
-              type="search"
-              placeholder="Search"
-              aria-label="Search"
-            />
+          <form className="d-flex" onSubmit={submitSearchForm}>
+            <div className="input-group">
+              <span className="input-group-text bg-transparent border-none">
+                <Search />
+              </span>
+
+              <input
+                className="form-control me-2"
+                type="search"
+                placeholder="Search"
+                aria-label="Search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
           </form>
 
           <div>

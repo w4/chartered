@@ -42,3 +42,11 @@ td.fit, th.fit
     &::after
         content: ""
         border-top: 1px solid
+
+.navbar .form-control
+    transition: width 0.5s ease-in-out
+    width: 250px
+
+    &:focus, &:not(:placeholder-shown)
+        width: 350px
+

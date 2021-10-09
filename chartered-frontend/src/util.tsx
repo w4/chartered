@@ -24,6 +24,7 @@ export function useAuthenticatedRequest<S>(
 
   React.useEffect(async () => {
     try {
+      setResponse(null);
       let res = await fetch(authenticatedEndpoint(auth, endpoint));
 
       if (res.status == 401) {
@@ -94,7 +95,7 @@ export function ProfilePicture({
   } else {
     return (
       <div
-        className={`rounded-circle ${className}`}
+        className={`rounded-circle d-inline-block ${className}`}
         style={{ width, height, background: "rgb(235, 235, 235)" }}
       />
     );

@@ -23,6 +23,7 @@ import ListOrganisations from "./pages/organisations/ListOrganisations";
 import OrganisationView from "./pages/crate/OrganisationView";
 import CreateOrganisation from "./pages/organisations/CreateOrganisation";
 import User from "./pages/User";
+import Search from "./pages/Search";
 
 function App() {
   return (
@@ -92,6 +93,11 @@ function App() {
             exact
             path="/organisations/create"
             component={() => <CreateOrganisation />}
+          />
+          <PrivateRoute
+            exact
+            path="/search"
+            component={() => <Search />}
           />
         </Switch>
       </Router>
