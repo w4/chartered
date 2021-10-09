@@ -60,7 +60,7 @@ async fn main() {
     let opts: Opts = Opts::parse();
     let config: config::Config = toml::from_slice(&std::fs::read(&opts.config).unwrap()).unwrap();
 
-    env_logger::init();
+    tracing_subscriber::fmt::init();
 
     let pool = chartered_db::init().unwrap();
 

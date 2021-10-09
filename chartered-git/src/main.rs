@@ -19,7 +19,6 @@ use crate::{
 use arrayvec::ArrayVec;
 use bytes::BytesMut;
 use futures::future::Future;
-use slog::{debug, error, info, o, warn, Drain, Logger};
 use std::{fmt::Write, pin::Pin, sync::Arc};
 use thrussh::{
     server::{self, Auth, Session},
@@ -27,15 +26,13 @@ use thrussh::{
 };
 use thrussh_keys::{key, PublicKeyBase64};
 use tokio_util::codec::{Decoder, Encoder as TokioEncoder};
+use tracing::{debug, error, event, info, warn, Instrument};
 use url::Url;
 
 #[tokio::main]
 #[allow(clippy::semicolon_if_nothing_returned)] // broken clippy lint
 async fn main() {
-    let decorator = slog_term::TermDecorator::new().build();
-    let drain = slog_term::FullFormat::new(decorator).build().fuse();
-    let drain = slog_async::Async::new(drain).build().fuse();
-    let log = slog::Logger::root(drain, o!());
+    tracing_subscriber::fmt::init();
 
     let config = Arc::new(thrussh::server::Config {
         methods: thrussh::MethodSet::PUBLICKEY,
@@ -45,7 +42,6 @@ async fn main() {
 
     let server = Server {
         db: chartered_db::init().unwrap(),
-        log,
     };
 
     thrussh::server::run(config, "127.0.0.1:2233", server)
@@ -56,19 +52,20 @@ async fn main() {
 #[derive(Clone)]
 struct Server {
     db: chartered_db::ConnectionPool,
-    log: Logger,
 }
 
 impl server::Server for Server {
     type Handler = Handler;
 
     fn new(&mut self, ip: Option<std::net::SocketAddr>) -> Self::Handler {
-        let log = self.log.new(o!("ip" => ip));
-        info!(log, "Connection received");
+        let connection_id = chartered_db::uuid::Uuid::new_v4();
+        let span = tracing::info_span!("ssh", "connection_id" = connection_id.to_string().as_str());
+
+        span.in_scope(|| info!("Connection accepted from {:?}", ip));
 
         Handler {
             ip,
-            log,
+            span,
             codec: GitCodec::default(),
             input_bytes: BytesMut::default(),
             output_bytes: BytesMut::default(),
@@ -82,7 +79,7 @@ impl server::Server for Server {
 
 struct Handler {
     ip: Option<std::net::SocketAddr>,
-    log: Logger,
+    span: tracing::Span,
     codec: GitCodec,
     input_bytes: BytesMut,
     output_bytes: BytesMut,
@@ -152,7 +149,7 @@ impl server::Handler for Handler {
         value: &str,
         session: Session,
     ) -> Self::FutureUnit {
-        debug!(&self.log, "env set {}={}", name, value);
+        self.span.in_scope(|| debug!("env set {}={}", name, value));
 
         match (name, value) {
             ("GIT_PROTOCOL", "version=2") => self.is_git_protocol_v2 = true,
@@ -163,15 +160,17 @@ impl server::Handler for Handler {
     }
 
     fn shell_request(mut self, channel: ChannelId, mut session: Session) -> Self::FutureUnit {
+        let span = self.span.clone();
+
         Box::pin(async move {
-            error!(&self.log, "Attempted to open a shell, rejecting connection");
+            error!("Client attempted to open a shell, closing connection");
 
             let username = self.authed()?.user.username.clone(); // todo
             write!(&mut self.output_bytes, "Hi there, {}! You've successfully authenticated, but chartered does not provide shell access.\r\n", username)?;
             self.flush(&mut session, channel);
             session.close(channel);
             Ok((self, session))
-        })
+        }.instrument(tracing::info_span!(parent: span, "shell request")))
     }
 
     fn exec_request(
@@ -180,15 +179,17 @@ impl server::Handler for Handler {
         data: &[u8],
         mut session: Session,
     ) -> Self::FutureUnit {
+        let span = self.span.clone();
+
         let data = match std::str::from_utf8(data) {
             Ok(data) => data,
             Err(e) => return Box::pin(futures::future::err(e.into())),
         };
         let args = shlex::split(data);
 
-        debug!(&self.log, "exec {}", data);
-
         Box::pin(async move {
+            debug!("exec {:?}", args);
+
             if !self.is_git_protocol_v2 {
                 anyhow::bail!("not git protocol v2");
             }
@@ -224,7 +225,7 @@ impl server::Handler for Handler {
             self.flush(&mut session, channel);
 
             Ok((self, session))
-        })
+        }.instrument(tracing::info_span!(parent: span, "exec")))
     }
 
     fn subsystem_request(
@@ -237,32 +238,36 @@ impl server::Handler for Handler {
     }
 
     fn auth_publickey(mut self, _username: &str, key: &key::PublicKey) -> Self::FutureAuth {
+        let span = self.span.clone();
         let public_key = key.public_key_bytes();
 
-        Box::pin(async move {
-            let (ssh_key, user) =
-                match chartered_db::users::User::find_by_ssh_key(self.db.clone(), public_key)
+        Box::pin(
+            async move {
+                let (ssh_key, user) =
+                    match chartered_db::users::User::find_by_ssh_key(self.db.clone(), public_key)
+                        .await?
+                    {
+                        Some(user) => user,
+                        None => return self.finished_auth(server::Auth::Reject).await,
+                    };
+                let ssh_key = Arc::new(ssh_key);
+
+                if let Err(e) = ssh_key.clone().update_last_used(self.db.clone()).await {
+                    warn!("Failed to update last used key: {:?}", e);
+                }
+
+                let auth_key = ssh_key
+                    .clone()
+                    .get_or_insert_session(self.db.clone(), self.ip.map(|v| v.to_string()))
                     .await?
-                {
-                    Some(user) => user,
-                    None => return self.finished_auth(server::Auth::Reject).await,
-                };
-            let ssh_key = Arc::new(ssh_key);
+                    .session_key;
 
-            if let Err(e) = ssh_key.clone().update_last_used(self.db.clone()).await {
-                warn!(&self.log, "Failed to update last used key: {:?}", e);
+                self.authed = Some(Authed { user, auth_key });
+
+                self.finished_auth(server::Auth::Accept).await
             }
-
-            let auth_key = ssh_key
-                .clone()
-                .get_or_insert_session(self.db.clone(), self.ip.map(|v| v.to_string()))
-                .await?
-                .session_key;
-
-            self.authed = Some(Authed { user, auth_key });
-
-            self.finished_auth(server::Auth::Accept).await
-        })
+            .instrument(tracing::info_span!(parent: span, "auth pubkey")),
+        )
     }
 
     fn auth_keyboard_interactive(
@@ -283,71 +288,79 @@ impl server::Handler for Handler {
     }
 
     fn data(mut self, channel: ChannelId, data: &[u8], mut session: Session) -> Self::FutureUnit {
+        let span = self.span.clone();
         self.input_bytes.extend_from_slice(data);
 
-        Box::pin(async move {
-            while let Some(frame) = self.codec.decode(&mut self.input_bytes)? {
-                debug!(
-                    &self.log,
-                    "decoded frame command={:?} metadata={:?}", frame.command, frame.metadata
-                );
+        Box::pin(
+            async move {
+                while let Some(frame) = self.codec.decode(&mut self.input_bytes)? {
+                    debug!(
+                        "decoded frame command={:?} metadata={:?}",
+                        frame.command, frame.metadata
+                    );
 
-                // if the client flushed without giving us a command, we're expected to close
-                // the connection or else the client will just hang
-                if frame.command.is_empty() {
-                    session.exit_status_request(channel, 0);
-                    session.eof(channel);
-                    session.close(channel);
-                    return Ok((self, session));
+                    // if the client flushed without giving us a command, we're expected to close
+                    // the connection or else the client will just hang
+                    if frame.command.is_empty() {
+                        session.exit_status_request(channel, 0);
+                        session.eof(channel);
+                        session.close(channel);
+                        return Ok((self, session));
+                    }
+
+                    let authed = self.authed()?;
+                    let org_name = self.org_name()?;
+
+                    let mut packfile = GitRepository::default();
+                    let config = CargoConfig::new(
+                        Url::parse("http://127.0.0.1:8888/")?,
+                        &authed.auth_key,
+                        org_name,
+                    );
+                    let config = serde_json::to_vec(&config)?;
+                    packfile.insert(ArrayVec::<_, 0>::new(), "config.json", &config);
+                    // todo: the whole tree needs caching and then we can filter in code rather than at
+                    //  the database
+                    let tree =
+                        Tree::build(self.db.clone(), authed.user.id, org_name.to_string()).await;
+                    tree.write_to_packfile(&mut packfile);
+
+                    let (commit_hash, packfile_entries) =
+                        packfile.commit("computer", "john@computer.no", "Update crates");
+
+                    match frame.command.as_ref() {
+                        b"command=ls-refs" => {
+                            command_handlers::ls_refs::handle(
+                                &mut self,
+                                &mut session,
+                                channel,
+                                frame.metadata,
+                                &commit_hash,
+                            )
+                            .await?
+                        }
+                        b"command=fetch" => {
+                            command_handlers::fetch::handle(
+                                &mut self,
+                                &mut session,
+                                channel,
+                                frame.metadata,
+                                packfile_entries,
+                            )
+                            .await?
+                        }
+                        v => {
+                            error!(
+                                "Client sent unknown command, ignoring command {}",
+                                std::str::from_utf8(v).unwrap_or("invalid utf8")
+                            );
+                        }
+                    }
                 }
 
-                let authed = self.authed()?;
-                let org_name = self.org_name()?;
-
-                let mut packfile = GitRepository::default();
-                let config = CargoConfig::new(
-                    Url::parse("http://127.0.0.1:8888/")?,
-                    &authed.auth_key,
-                    org_name,
-                );
-                let config = serde_json::to_vec(&config)?;
-                packfile.insert(ArrayVec::<_, 0>::new(), "config.json", &config);
-                // todo: the whole tree needs caching and then we can filter in code rather than at
-                //  the database
-                let tree = Tree::build(self.db.clone(), authed.user.id, org_name.to_string()).await;
-                tree.write_to_packfile(&mut packfile);
-
-                let (commit_hash, packfile_entries) =
-                    packfile.commit("computer", "john@computer.no", "Update crates");
-
-                match frame.command.as_ref() {
-                    b"command=ls-refs" => {
-                        command_handlers::ls_refs::handle(
-                            &mut self,
-                            &mut session,
-                            channel,
-                            frame.metadata,
-                            &commit_hash,
-                        )
-                        .await?
-                    }
-                    b"command=fetch" => {
-                        command_handlers::fetch::handle(
-                            &mut self,
-                            &mut session,
-                            channel,
-                            frame.metadata,
-                            packfile_entries,
-                        )
-                        .await?
-                    }
-                    v => {
-                        error!(&self.log, "Client sent unknown command, ignoring"; "command" => std::str::from_utf8(v).unwrap_or("invalid utf8"))
-                    }
-                }
+                Ok((self, session))
             }
-
-            Ok((self, session))
-        })
+            .instrument(tracing::info_span!(parent: span, "data")),
+        )
     }
 }

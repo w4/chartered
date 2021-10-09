@@ -2,7 +2,7 @@
 //! on the server, we're generating our commits on the fly though so we'll just tell
 //! them we have a master branch with whatever the generated commit hash is.
 //!
-//! [ls-ref]: https://git-scm.com/docs/protocol-v2/2.19.0#_ls_refs
+//! [lsr]: https://git-scm.com/docs/protocol-v2/2.19.0#_ls_refs
 
 use bytes::Bytes;
 use thrussh::{server::Session, ChannelId};

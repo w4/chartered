@@ -3,7 +3,6 @@ use axum::{
     http::{Request, Response},
 };
 use futures::future::BoxFuture;
-use log::log;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use std::{
@@ -11,6 +10,7 @@ use std::{
     task::{Context, Poll},
 };
 use tower::Service;
+use tracing::{error, info, Instrument};
 
 pub trait GenericError: std::error::Error + Debug + Send + Sync {}
 
@@ -42,6 +42,9 @@ where
         let clone = self.0.clone();
         let mut inner = std::mem::replace(&mut self.0, clone);
 
+        let request_id = chartered_db::uuid::Uuid::new_v4();
+        let span = tracing::info_span!("web", "request_id" = request_id.to_string().as_str());
+
         Box::pin(async move {
             let start = std::time::Instant::now();
             let user_agent = req.headers_mut().remove(axum::http::header::USER_AGENT);
@@ -56,30 +59,44 @@ where
             // this is infallible because of the type of S::Error
             let response = inner.call(req.try_into_request().unwrap()).await?;
 
-            log!(
-                if response.status().is_server_error() {
-                    log::Level::Error
-                } else {
-                    log::Level::Info
-                },
-                "{ip} - \"{method} {uri}\" {status} {duration:?} \"{user_agent}\" \"{error:?}\"",
-                ip = socket_addr,
-                method = method,
-                uri = uri,
-                status = response.status().as_u16(),
-                duration = start.elapsed(),
-                user_agent = user_agent
-                    .as_ref()
-                    .and_then(|v| v.to_str().ok())
-                    .unwrap_or("unknown"),
-                error = match response.extensions().get::<Box<dyn GenericError>>() {
-                    Some(e) => Err(e),
-                    None => Ok(()),
-                }
-            );
+            if response.status().is_server_error() {
+                error!(
+                    "{ip} - \"{method} {uri}\" {status} {duration:?} \"{user_agent}\" \"{error:?}\"",
+                    ip = socket_addr,
+                    method = method,
+                    uri = uri,
+                    status = response.status().as_u16(),
+                    duration = start.elapsed(),
+                    user_agent = user_agent
+                        .as_ref()
+                        .and_then(|v| v.to_str().ok())
+                        .unwrap_or("unknown"),
+                    error = match response.extensions().get::<Box<dyn GenericError>>() {
+                        Some(e) => Err(e),
+                        None => Ok(()),
+                    }
+                );
+            } else {
+                info!(
+                    "{ip} - \"{method} {uri}\" {status} {duration:?} \"{user_agent}\" \"{error:?}\"",
+                    ip = socket_addr,
+                    method = method,
+                    uri = uri,
+                    status = response.status().as_u16(),
+                    duration = start.elapsed(),
+                    user_agent = user_agent
+                        .as_ref()
+                        .and_then(|v| v.to_str().ok())
+                        .unwrap_or("unknown"),
+                    error = match response.extensions().get::<Box<dyn GenericError>>() {
+                        Some(e) => Err(e),
+                        None => Ok(()),
+                    }
+                );
+            }
 
             Ok(response)
-        })
+        }.instrument(span))
     }
 }
 

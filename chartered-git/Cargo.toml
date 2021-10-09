@@ -24,9 +24,6 @@ hex = "0.4"
 indexmap = "1"
 indoc = "1.0"
 itoa = "0.4"
-slog = { version = "2.7", features = ["max_level_trace", "release_max_level_info"] }
-slog-async = "2.7"
-slog-term = "2.8"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 shlex = "1"
@@ -35,4 +32,6 @@ thrussh = "0.33"
 thrussh-keys = "0.21"
 tokio = { version = "1", features = ["full"] }
 tokio-util = { version = "0.6", features = ["codec"] }
+tracing = "0.1"
+tracing-subscriber = "0.2"
 url = "2"

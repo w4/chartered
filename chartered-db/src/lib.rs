@@ -48,16 +48,15 @@ use diesel::{
     r2d2::{ConnectionManager, Pool},
     sql_types::{Integer, Nullable},
 };
-use diesel_logger::LoggingConnection;
 use displaydoc::Display;
 use std::sync::Arc;
 use thiserror::Error;
 
 #[cfg(feature = "sqlite")]
-pub type Connection = diesel::SqliteConnection;
+pub type Connection = diesel_tracing::sqlite::InstrumentedSqliteConnection;
 
 #[cfg(feature = "postgres")]
-pub type Connection = diesel::PostgresConnection;
+pub type Connection = diesel_tracing::postgres::InstrumentedPostgresConnection;
 
 #[cfg(not(any(feature = "sqlite", feature = "postgres")))]
 compile_error!(
@@ -66,7 +65,7 @@ compile_error!(
 #[cfg(not(any(feature = "sqlite", feature = "postgres")))]
 pub type Connection = unimplemented!();
 
-pub type ConnectionPool = Arc<Pool<ConnectionManager<LoggingConnection<Connection>>>>;
+pub type ConnectionPool = Arc<Pool<ConnectionManager<Connection>>>;
 pub type Result<T> = std::result::Result<T, Error>;
 
 embed_migrations!();

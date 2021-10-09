@@ -3,10 +3,10 @@ use chartered_db::{users::User, ConnectionPool};
 use axum::{extract, Json};
 use chartered_db::uuid::Uuid;
 use chrono::{DateTime, TimeZone, Utc};
-use log::warn;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use thiserror::Error;
+use tracing::warn;
 
 use crate::endpoints::ErrorResponse;
 

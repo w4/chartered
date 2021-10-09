@@ -13,8 +13,8 @@ base64 = "0.13"
 bitflags = "1"
 chrono = "0.4"
 diesel = { version = "1", features = ["r2d2", "chrono"] }
-diesel_logger = "0.1"
 diesel_migrations = "1.4"
+diesel-tracing = "0.1"
 displaydoc = "0.2"
 hex = "0.4"
 http = "0.2"
@@ -32,6 +32,6 @@ dotenv = "0.15"
 thrussh-keys = "0.21"
 
 [features]
-sqlite = ["libsqlite3-sys", "diesel/sqlite"]
-postgres = ["diesel/postgres"]
+sqlite = ["libsqlite3-sys", "diesel/sqlite", "diesel-tracing/sqlite"]
+postgres = ["diesel/postgres", "diesel-tracing/postgres"]
 
