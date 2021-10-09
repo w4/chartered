@@ -83,12 +83,13 @@ export default function Members({
 
         {possiblePermissions ? (
           <MemberListInserter
-            onInsert={(username, userUuid) =>
+            onInsert={(displayName, pictureUrl, userUuid) =>
               setProspectiveMembers([
                 ...prospectiveMembers,
                 {
                   uuid: userUuid,
-                  username,
+                  display_name: displayName,
+                  picture_url: pictureUrl,
                   permissions: ["VISIBLE"],
                 },
               ])
@@ -257,7 +258,7 @@ function MemberListInserter({
   existingMembers,
 }: {
   existingMembers: Member[];
-  onInsert: (username, user_uuid) => any;
+  onInsert: (username, picture_url, user_uuid) => any;
 }) {
   const auth = useAuth();
   const searchRef = React.useRef(null);
@@ -291,7 +292,7 @@ function MemberListInserter({
   };
 
   const handleChange = (selected) => {
-    onInsert(selected[0].username, selected[0].user_uuid);
+    onInsert(selected[0].display_name, selected[0].picture_url, selected[0].user_uuid);
     searchRef.current.clear();
   };
 
@@ -321,7 +322,7 @@ function MemberListInserter({
               (existing) => option.user_uuid === existing.uuid
             ) === -1
           }
-          labelKey="username"
+          labelKey="display_name"
           options={options}
           isLoading={loading}
           placeholder="Search for User"

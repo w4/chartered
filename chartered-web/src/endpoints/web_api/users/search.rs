@@ -16,7 +16,8 @@ pub struct Response {
 #[derive(Serialize)]
 pub struct ResponseUser {
     user_uuid: chartered_db::uuid::Uuid,
-    username: String,
+    display_name: String,
+    picture_url: Option<String>,
 }
 
 pub async fn handle(
@@ -28,7 +29,8 @@ pub async fn handle(
         .into_iter()
         .map(|user| ResponseUser {
             user_uuid: user.uuid.0,
-            username: user.username,
+            display_name: user.display_name().to_string(),
+            picture_url: user.picture_url,
         })
         .collect();
 

@@ -28,13 +28,20 @@ impl User {
         given_query: String,
         limit: i64,
     ) -> Result<Vec<User>> {
-        use crate::schema::users::dsl::username;
+        use crate::schema::users::dsl::{name, nick, username};
 
         tokio::task::spawn_blocking(move || {
             let conn = conn.get()?;
 
+            let query = format!("%{}%", given_query);
+
             Ok(crate::schema::users::table
-                .filter(username.like(format!("%{}%", given_query)))
+                .filter(
+                    username
+                        .like(&query)
+                        .or(name.like(&query))
+                        .or(nick.like(&query)),
+                )
                 .limit(limit)
                 .load(&conn)?)
         })
