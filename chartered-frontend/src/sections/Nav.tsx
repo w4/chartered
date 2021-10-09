@@ -16,7 +16,7 @@ export default function Nav() {
   };
 
   const [search, setSearch] = React.useState(
-    location.pathname === '/search'
+    location.pathname === "/search"
       ? new URLSearchParams(location.search).get("q") || ""
       : ""
   );
@@ -24,7 +24,7 @@ export default function Nav() {
     e.preventDefault();
 
     if (search != "") {
-      history.push(`/search?q=${encodeURIComponent(search)}`)
+      history.push(`/search?q=${encodeURIComponent(search)}`);
     }
   };
 

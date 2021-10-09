@@ -92,6 +92,50 @@ macro_rules! select_permissions {
 }
 
 impl Crate {
+    pub async fn search(
+        conn: ConnectionPool,
+        requesting_user_id: i32,
+        terms: String,
+        limit: i64,
+    ) -> Result<HashMap<Organisation, Vec<CrateWithPermissions>>> {
+        tokio::task::spawn_blocking(move || {
+            let conn = conn.get()?;
+
+            let crates = crate_with_permissions!(requesting_user_id)
+                .inner_join(organisations::table)
+                .filter(
+                    select_permissions!()
+                        .bitwise_and(UserPermission::VISIBLE.bits())
+                        .eq(UserPermission::VISIBLE.bits()),
+                )
+                .filter(
+                    (organisations::name.concat("/").concat(crates::name))
+                        .like(&format!("%{}%", terms)),
+                )
+                .select((
+                    organisations::all_columns,
+                    crates::all_columns,
+                    select_permissions!(),
+                ))
+                .limit(limit)
+                .load(&conn)?
+                .into_iter()
+                .map(|(organisation, crate_, permissions)| {
+                    (
+                        organisation,
+                        CrateWithPermissions {
+                            crate_,
+                            permissions,
+                        },
+                    )
+                })
+                .into_group_map();
+
+            Ok(crates)
+        })
+        .await?
+    }
+
     pub async fn list_with_versions(
         conn: ConnectionPool,
         requesting_user_id: i32,

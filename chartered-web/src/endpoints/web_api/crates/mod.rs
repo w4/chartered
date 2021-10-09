@@ -1,6 +1,7 @@
 mod info;
 mod members;
 mod recently_updated;
+mod search;
 
 use axum::{
     body::{Body, BoxBody},
@@ -26,5 +27,6 @@ pub fn routes() -> Router<
         .route("/:org/:crate/members", patch(members::handle_patch))
         .route("/:org/:crate/members", put(members::handle_put))
         .route("/:org/:crate/members", delete(members::handle_delete))
-        .route("/recently-updated", get(recently_updated::handle)))
+        .route("/recently-updated", get(recently_updated::handle))
+        .route("/search", get(search::handle)))
 }

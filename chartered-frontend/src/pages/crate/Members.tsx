@@ -292,7 +292,11 @@ function MemberListInserter({
   };
 
   const handleChange = (selected) => {
-    onInsert(selected[0].display_name, selected[0].picture_url, selected[0].user_uuid);
+    onInsert(
+      selected[0].display_name,
+      selected[0].picture_url,
+      selected[0].user_uuid
+    );
     searchRef.current.clear();
   };
 

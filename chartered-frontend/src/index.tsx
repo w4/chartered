@@ -94,11 +94,7 @@ function App() {
             path="/organisations/create"
             component={() => <CreateOrganisation />}
           />
-          <PrivateRoute
-            exact
-            path="/search"
-            component={() => <Search />}
-          />
+          <PrivateRoute exact path="/search" component={() => <Search />} />
         </Switch>
       </Router>
     </ProvideAuth>
