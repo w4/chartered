@@ -16,6 +16,8 @@ pub enum Error {
     JsonParse(#[from] serde_json::Error),
     #[error("Invalid body")]
     MetadataParse,
+    #[error("expected a valid crate name to start with a letter, contain only letters, numbers, hyphens, or underscores and have at most 64 characters ")]
+    InvalidCrateName,
 }
 
 impl Error {
@@ -24,7 +26,9 @@ impl Error {
 
         match self {
             Self::Database(e) => e.status_code(),
-            Self::JsonParse(_) | Self::MetadataParse => StatusCode::BAD_REQUEST,
+            Self::JsonParse(_) | Self::MetadataParse | Self::InvalidCrateName => {
+                StatusCode::BAD_REQUEST
+            }
         }
     }
 }
@@ -43,6 +47,22 @@ pub struct PublishCrateResponseWarnings {
     other: Vec<String>,
 }
 
+fn validate_crate_name(name: &str) -> bool {
+    const MAX_NAME_LENGTH: usize = 64;
+
+    let starts_with_alphabetic = name
+        .chars()
+        .next()
+        .map(|c| c.is_ascii_alphabetic())
+        .unwrap_or_default();
+    let is_alphanumeric = name
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_');
+    let is_under_max_length = name.len() < MAX_NAME_LENGTH;
+
+    starts_with_alphabetic && is_alphanumeric && is_under_max_length
+}
+
 pub async fn handle(
     extract::Path((_session_key, organisation)): extract::Path<(String, String)>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
@@ -52,6 +72,10 @@ pub async fn handle(
     let (_, (metadata_bytes, crate_bytes)) =
         parse(body.as_ref()).map_err(|_| Error::MetadataParse)?;
     let metadata: Metadata = serde_json::from_slice(metadata_bytes)?;
+
+    if !validate_crate_name(&metadata.inner.name) {
+        return Err(Error::InvalidCrateName);
+    }
 
     let crate_with_permissions = Crate::find_by_name(
         db.clone(),

@@ -30,6 +30,11 @@ pub async fn handle(
     user_agent: Option<extract::TypedHeader<headers::UserAgent>>,
     addr: extract::ConnectInfo<std::net::SocketAddr>,
 ) -> Result<Json<super::LoginResponse>, Error> {
+    // we use `:` as a splitter for openid logins so it isn't legal during password login
+    if req.username.contains(':') {
+        return Err(Error::UnknownUser);
+    }
+
     // TODO: passwords
     let user = User::find_by_username(db.clone(), req.username)
         .await?
