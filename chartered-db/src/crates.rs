@@ -282,6 +282,22 @@ pub struct CrateWithPermissions {
 }
 
 impl CrateWithPermissions {
+    pub async fn latest_version(
+        self: Arc<Self>,
+        conn: ConnectionPool,
+    ) -> Result<Option<CrateVersion<'static>>> {
+        tokio::task::spawn_blocking(move || {
+            let conn = conn.get()?;
+
+            Ok(CrateVersion::belonging_to(&self.crate_)
+                .order_by(crate_versions::id.desc())
+                .limit(1)
+                .get_result::<CrateVersion>(&conn)
+                .optional()?)
+        })
+        .await?
+    }
+
     pub async fn version(
         self: Arc<Self>,
         conn: ConnectionPool,

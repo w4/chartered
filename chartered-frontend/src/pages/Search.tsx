@@ -110,6 +110,7 @@ interface CrateSearchResponseCrate {
   description: string;
   homepage?: string;
   repository?: string;
+  version: string;
 }
 
 function CrateResults({
@@ -170,7 +171,7 @@ function CrateResults({
                         /{crate.name}
                       </h4>
                     </Link>
-                    <h6 className="text-secondary m-0 mt-1">0.1.2</h6>
+                    <h6 className="text-secondary m-0 mt-1">{crate.version}</h6>
                   </div>
 
                   <p className="m-0">{crate.description}</p>
