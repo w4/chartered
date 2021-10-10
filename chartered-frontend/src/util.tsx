@@ -95,7 +95,7 @@ export function ProfilePicture({
   } else {
     return (
       <div
-        className={`rounded-circle d-inline-block ${className}`}
+        className={`position-relative rounded-circle d-inline-block ${className}`}
         style={{ width, height, background: "rgb(235, 235, 235)" }}
       />
     );

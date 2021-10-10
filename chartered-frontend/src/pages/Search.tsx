@@ -83,11 +83,10 @@ function UsersResults({ query }: { query: string }) {
 
   return (
     <div className="card border-0 shadow-sm text-black p-2">
-      <div className="card-body">
+      <div className="card-body d-flex">
         {results.users.map((user, i) => (
-          <Link to={`users/${user.user_uuid}`}>
+          <Link to={`users/${user.user_uuid}`} key={i}>
             <ProfilePicture
-              key={i}
               height="5rem"
               width="5rem"
               className="me-2"
@@ -146,7 +145,7 @@ function CrateResults({
   }
 
   return (
-    <div className="card border-0 shadow-sm text-black">
+    <div className={`card border-0 shadow-sm text-black ${className}`}>
       <div className="table-responsive">
         <table className="table table-striped">
           <tbody>
