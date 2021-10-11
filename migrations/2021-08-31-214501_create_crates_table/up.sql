@@ -30,6 +30,7 @@ CREATE TABLE crates (
     repository VARCHAR(255),
     homepage VARCHAR(255),
     documentation VARCHAR(255),
+    downloads INTEGER NOT NULL DEFAULT 0,
     UNIQUE (name, organisation_id),
     FOREIGN KEY (organisation_id) REFERENCES organisations (id)
 );

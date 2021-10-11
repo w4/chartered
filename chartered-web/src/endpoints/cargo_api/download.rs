@@ -41,6 +41,14 @@ pub async fn handle(
     let crate_with_permissions =
         Arc::new(Crate::find_by_name(db.clone(), user.id, organisation, name).await?);
 
+    // we shouldn't really hold back this request from progressing whilst waiting
+    // on the downloads increment to complete so we'll just tokio::spawn it
+    tokio::spawn(
+        crate_with_permissions
+            .clone()
+            .increment_download_count(db.clone()),
+    );
+
     let version = crate_with_permissions
         .version(db, version)
         .await?

@@ -53,6 +53,7 @@ pub struct Crate {
     pub repository: Option<String>,
     pub homepage: Option<String>,
     pub documentation: Option<String>,
+    pub downloads: i32,
 }
 
 macro_rules! crate_with_permissions {
@@ -159,6 +160,31 @@ impl Crate {
                 .load(&conn)?;
 
             Ok(crate_versions.into_iter().into_grouping_map().collect())
+        })
+        .await?
+    }
+
+    pub async fn list_most_downloaded(
+        conn: ConnectionPool,
+        requesting_user_id: i32,
+    ) -> Result<Vec<(Crate, Organisation)>> {
+        tokio::task::spawn_blocking(move || {
+            let conn = conn.get()?;
+
+            let crates = crate_with_permissions!(requesting_user_id)
+                .filter(
+                    select_permissions!()
+                        .bitwise_and(UserPermission::VISIBLE.bits())
+                        .eq(UserPermission::VISIBLE.bits()),
+                )
+                .inner_join(organisations::table)
+                .inner_join(crate_versions::table)
+                .select((crates::all_columns, organisations::all_columns))
+                .limit(10)
+                .order_by(crate::schema::crates::dsl::downloads.desc())
+                .load(&conn)?;
+
+            Ok(crates)
         })
         .await?
     }
@@ -326,6 +352,20 @@ impl CrateWithPermissions {
             Ok(CrateVersion::belonging_to(&self.crate_)
                 .inner_join(users::table)
                 .load::<(CrateVersion, User)>(&conn)?)
+        })
+        .await?
+    }
+
+    pub async fn increment_download_count(self: Arc<Self>, conn: ConnectionPool) -> Result<()> {
+        tokio::task::spawn_blocking(move || {
+            let conn = conn.get()?;
+
+            let _ = diesel::update(crates::table)
+                .set(crates::downloads.eq(crates::downloads + 1))
+                .filter(crates::id.eq(self.crate_.id))
+                .execute(&conn)?;
+
+            Ok(())
         })
         .await?
     }

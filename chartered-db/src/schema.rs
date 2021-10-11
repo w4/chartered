@@ -25,6 +25,7 @@ table! {
         repository -> Nullable<Text>,
         homepage -> Nullable<Text>,
         documentation -> Nullable<Text>,
+        downloads -> Integer,
     }
 }
 

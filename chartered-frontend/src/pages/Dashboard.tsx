@@ -3,7 +3,7 @@ import React = require("react");
 import { Link } from "react-router-dom";
 import { useAuth } from "../useAuth";
 import Nav from "../sections/Nav";
-import { ChevronRight } from "react-bootstrap-icons";
+import {ChevronRight, Download} from "react-bootstrap-icons";
 import { useAuthenticatedRequest } from "../util";
 
 interface RecentlyUpdatedResponse {
@@ -16,14 +16,30 @@ interface RecentlyUpdatedResponseVersion {
   organisation: string;
 }
 
+interface MostDownloadedResponse {
+  crates: MostDownloadedResponseCrate[];
+}
+
+interface MostDownloadedResponseCrate {
+  name: string;
+  downloads: number;
+  organisation: string;
+}
+
 export default function Dashboard() {
   const auth = useAuth();
 
-  const { response: recentlyUpdated, error } =
+  const { response: recentlyUpdated, error: recentlyUpdatedError } =
     useAuthenticatedRequest<RecentlyUpdatedResponse>({
       auth,
       endpoint: "crates/recently-updated",
     });
+
+  const { response: mostDownloaded, error: mostDownloadedError } =
+      useAuthenticatedRequest<MostDownloadedResponse>({
+        auth,
+        endpoint: "crates/most-downloaded",
+      });
 
   return (
     <div className="text-white">
@@ -54,12 +70,17 @@ export default function Dashboard() {
           <div className="col-12 col-md-4">
             <h4>Recently Updated</h4>
             {(recentlyUpdated?.versions || []).map((v) => (
-              <CrateCard key={v.name} crate={v} />
+                <CrateCard key={v.name} organisation={v.organisation} name={v.name}>v{v.version}</CrateCard>
             ))}
           </div>
 
           <div className="col-12 col-md-4">
             <h4>Most Downloaded</h4>
+            {(mostDownloaded?.crates || []).map((v) => (
+                <CrateCard key={v.name} organisation={v.organisation} name={v.name}>
+                  <Download /> {v.downloads.toLocaleString()}
+                </CrateCard>
+            ))}
           </div>
         </div>
       </div>
@@ -67,26 +88,20 @@ export default function Dashboard() {
   );
 }
 
-interface Crate {
-  name: string;
-  version: string;
-  organisation: string;
-}
-
-function CrateCard({ crate }: { crate: Crate }) {
+function CrateCard({ name, organisation, children }: React.PropsWithChildren<{ name: string, organisation: string }>) {
   return (
     <Link
-      to={`/crates/${crate.organisation}/${crate.name}`}
+      to={`/crates/${organisation}/${name}`}
       className="text-decoration-none"
     >
       <div className="card border-0 mb-2 shadow-sm">
         <div className="card-body text-black d-flex flex-row">
           <div className="flex-grow-1 align-self-center">
             <h6 className="text-primary my-0">
-              <span className="text-secondary">{crate.organisation}/</span>
-              {crate.name}
+              <span className="text-secondary">{organisation}/</span>
+              {name}
             </h6>
-            <small className="text-secondary">v{crate.version}</small>
+            <small className="text-secondary">{children}</small>
           </div>
 
           <ChevronRight size={16} className="align-self-center" />
