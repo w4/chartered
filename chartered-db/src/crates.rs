@@ -54,6 +54,7 @@ pub struct Crate {
     pub homepage: Option<String>,
     pub documentation: Option<String>,
     pub downloads: i32,
+    pub created_at: chrono::NaiveDateTime,
 }
 
 macro_rules! crate_with_permissions {
@@ -160,6 +161,31 @@ impl Crate {
                 .load(&conn)?;
 
             Ok(crate_versions.into_iter().into_grouping_map().collect())
+        })
+        .await?
+    }
+
+    pub async fn list_recently_created(
+        conn: ConnectionPool,
+        requesting_user_id: i32,
+    ) -> Result<Vec<(Crate, Organisation)>> {
+        tokio::task::spawn_blocking(move || {
+            let conn = conn.get()?;
+
+            let crates = crate_with_permissions!(requesting_user_id)
+                .filter(
+                    select_permissions!()
+                        .bitwise_and(UserPermission::VISIBLE.bits())
+                        .eq(UserPermission::VISIBLE.bits()),
+                )
+                .inner_join(organisations::table)
+                .inner_join(crate_versions::table)
+                .select((crates::all_columns, organisations::all_columns))
+                .limit(10)
+                .order_by(crate::schema::crates::dsl::created_at.desc())
+                .load(&conn)?;
+
+            Ok(crates)
         })
         .await?
     }

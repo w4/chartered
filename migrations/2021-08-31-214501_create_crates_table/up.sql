@@ -31,6 +31,7 @@ CREATE TABLE crates (
     homepage VARCHAR(255),
     documentation VARCHAR(255),
     downloads INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (name, organisation_id),
     FOREIGN KEY (organisation_id) REFERENCES organisations (id)
 );

@@ -3,6 +3,7 @@ mod members;
 mod most_downloaded;
 mod recently_updated;
 mod search;
+mod recently_created;
 
 use axum::{
     body::{Body, BoxBody},
@@ -29,6 +30,7 @@ pub fn routes() -> Router<
         .route("/:org/:crate/members", put(members::handle_put))
         .route("/:org/:crate/members", delete(members::handle_delete))
         .route("/recently-updated", get(recently_updated::handle))
+        .route("/recently-created", get(recently_created::handle))
         .route("/most-downloaded", get(most_downloaded::handle))
         .route("/search", get(search::handle)))
 }

@@ -26,6 +26,7 @@ table! {
         homepage -> Nullable<Text>,
         documentation -> Nullable<Text>,
         downloads -> Integer,
+        created_at -> Timestamp,
     }
 }
 

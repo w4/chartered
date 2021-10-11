@@ -3,8 +3,20 @@ import React = require("react");
 import { Link } from "react-router-dom";
 import { useAuth } from "../useAuth";
 import Nav from "../sections/Nav";
-import {ChevronRight, Download} from "react-bootstrap-icons";
+import {Calendar3, ChevronRight, Download} from "react-bootstrap-icons";
 import { useAuthenticatedRequest } from "../util";
+import HumanTime from "react-human-time";
+import {OverlayTrigger, Tooltip} from "react-bootstrap";
+
+interface RecentlyCreatedResponse {
+  crates: RecentlyCreatedResponseVersion[];
+}
+
+interface RecentlyCreatedResponseVersion {
+  name: string;
+  created_at: string;
+  organisation: string;
+}
 
 interface RecentlyUpdatedResponse {
   versions: RecentlyUpdatedResponseVersion[];
@@ -28,6 +40,12 @@ interface MostDownloadedResponseCrate {
 
 export default function Dashboard() {
   const auth = useAuth();
+
+  const { response: recentlyCreated, error: recentlyCreatedError } =
+      useAuthenticatedRequest<RecentlyCreatedResponse>({
+        auth,
+        endpoint: "crates/recently-created",
+      });
 
   const { response: recentlyUpdated, error: recentlyUpdatedError } =
     useAuthenticatedRequest<RecentlyUpdatedResponse>({
@@ -64,7 +82,27 @@ export default function Dashboard() {
 
         <div className="row">
           <div className="col-12 col-md-4">
-            <h4>Your Crates</h4>
+            <h4>Newly Created</h4>
+            {(recentlyCreated?.crates || []).map((v) => (
+                <CrateCard key={v.name} organisation={v.organisation} name={v.name}>
+                  <OverlayTrigger
+                      overlay={
+                        <Tooltip
+                            id={`tooltip-${v.name}-date`}
+                        >
+                          {new Date(v.created_at).toLocaleString()}
+                        </Tooltip>
+                      }
+                  >
+                    <span>
+                      <Calendar3 />{" "}
+                      <HumanTime
+                          time={new Date(v.created_at).getTime()}
+                      />
+                    </span>
+                  </OverlayTrigger>
+                </CrateCard>
+            ))}
           </div>
 
           <div className="col-12 col-md-4">

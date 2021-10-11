@@ -2,6 +2,7 @@ use axum::{extract, Json};
 use chartered_db::{crates::Crate, users::User, ConnectionPool};
 use serde::Serialize;
 use std::sync::Arc;
+use chrono::{DateTime, TimeZone, Utc};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -24,14 +25,14 @@ pub async fn handle(
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(user): extract::Extension<Arc<User>>,
 ) -> Result<Json<Response>, Error> {
-    let crates = Crate::list_most_downloaded(db, user.id).await?;
+    let crates = Crate::list_recently_created(db, user.id).await?;
 
     Ok(Json(Response {
         crates: crates
             .into_iter()
             .map(|(crate_, organisation)| ResponseCrate {
                 name: crate_.name,
-                downloads: crate_.downloads,
+                created_at: chrono::Utc.from_local_datetime(&crate_.created_at).unwrap(),
                 organisation: organisation.name,
             })
             .collect(),
@@ -46,6 +47,6 @@ pub struct Response {
 #[derive(Serialize)]
 pub struct ResponseCrate {
     name: String,
-    downloads: i32,
+    created_at: DateTime<Utc>,
     organisation: String,
 }
