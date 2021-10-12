@@ -1,8 +1,8 @@
 use axum::{extract, Json};
 use chartered_db::{crates::Crate, users::User, ConnectionPool};
+use chrono::{DateTime, TimeZone, Utc};
 use serde::Serialize;
 use std::sync::Arc;
-use chrono::{DateTime, TimeZone, Utc};
 use thiserror::Error;
 
 #[derive(Error, Debug)]

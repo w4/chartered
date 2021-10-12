@@ -1,5 +1,6 @@
 use crate::{
-    crates::Crate, permissions::UserPermission, users::User, BitwiseExpressionMethods, Error,
+    coalesce, crates::Crate, permissions::UserPermission, users::User, BitwiseExpressionMethods,
+    Error,
 };
 
 use super::{
@@ -12,23 +13,36 @@ use diesel::{prelude::*, Associations, Identifiable, Queryable};
 
 use std::sync::Arc;
 
+macro_rules! select_permissions {
+    () => {
+        coalesce(
+            crate::schema::user_organisation_permissions::permissions.nullable(),
+            0,
+        )
+        .bitwise_or(diesel::dsl::sql::<diesel::sql_types::Integer>(&format!(
+            "COALESCE(CASE WHEN {} THEN {} OR 0 END, 0)",
+            "public",
+            UserPermission::VISIBLE.bits(),
+        )))
+    };
+}
+
 #[derive(Identifiable, Queryable, Associations, PartialEq, Eq, Hash, Debug)]
 pub struct Organisation {
     pub id: i32,
     pub uuid: SqlUuid,
     pub name: String,
     pub description: String,
+    pub public: bool,
 }
 
 impl Organisation {
     pub async fn list(conn: ConnectionPool, requesting_user_id: i32) -> Result<Vec<Organisation>> {
-        use user_organisation_permissions::dsl::permissions;
-
         tokio::task::spawn_blocking(move || {
             let conn = conn.get()?;
 
             organisations::table
-                .inner_join(
+                .left_join(
                     user_organisation_permissions::table.on(user_organisation_permissions::user_id
                         .eq(requesting_user_id)
                         .and(
@@ -37,7 +51,7 @@ impl Organisation {
                         )),
                 )
                 .filter(
-                    permissions
+                    select_permissions!()
                         .bitwise_and(UserPermission::VISIBLE.bits())
                         .eq(UserPermission::VISIBLE.bits()),
                 )
@@ -68,17 +82,10 @@ impl Organisation {
                         )),
                 )
                 .filter(organisation_name.eq(given_name))
-                .select((
-                    user_organisation_permissions::dsl::permissions.nullable(),
-                    organisations::all_columns,
-                ))
-                .get_result::<(Option<UserPermission>, _)>(&conn)
+                .select((select_permissions!(), organisations::all_columns))
+                .get_result(&conn)
                 .optional()?
                 .ok_or(Error::MissingOrganisation)?;
-
-            let permissions = permissions.ok_or(Error::MissingOrganisationPermission(
-                UserPermission::VISIBLE,
-            ))?;
 
             Ok(OrganisationWithPermissions {
                 organisation,

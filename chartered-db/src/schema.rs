@@ -36,6 +36,7 @@ table! {
         uuid -> Binary,
         name -> Text,
         description -> Text,
+        public -> Bool,
     }
 }
 

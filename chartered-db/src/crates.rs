@@ -90,6 +90,11 @@ macro_rules! select_permissions {
             crate::schema::user_organisation_permissions::permissions.nullable(),
             0,
         ))
+        .bitwise_or(diesel::dsl::sql::<diesel::sql_types::Integer>(&format!(
+            "(CASE WHEN {} THEN {} OR 0 END)",
+            "organisations.public",
+            UserPermission::VISIBLE.bits(),
+        )))
     };
 }
 

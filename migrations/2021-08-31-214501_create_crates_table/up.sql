@@ -16,7 +16,8 @@ CREATE TABLE organisations (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     uuid BINARY(128) NOT NULL UNIQUE,
     name VARCHAR(255) NOT NULL UNIQUE,
-    description TEXT NOT NULL DEFAULT ""
+    description TEXT NOT NULL DEFAULT "",
+    public BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 INSERT INTO organisations (id, uuid, name, description) VALUES (1, X'936DA01F9ABD4D9D80C702AF85C822A8', "core", "My first organisation");

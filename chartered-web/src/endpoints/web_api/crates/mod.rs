@@ -1,9 +1,9 @@
 mod info;
 mod members;
 mod most_downloaded;
+mod recently_created;
 mod recently_updated;
 mod search;
-mod recently_created;
 
 use axum::{
     body::{Body, BoxBody},
