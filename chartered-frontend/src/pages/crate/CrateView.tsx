@@ -120,7 +120,7 @@ export default function SingleCrate() {
                     </Link>
                     {crate}
                   </h1>
-                  <h2 className="text-secondary m-0">{crateVersion.vers}</h2>
+                  <h2 className="text-secondary m-0">{crateVersion?.vers}</h2>
                 </div>
 
                 <p className="m-0">{crateInfo.description}</p>
@@ -227,14 +227,14 @@ export default function SingleCrate() {
               </div>
 
               <ul className="list-group list-group-flush mb-2">
-                {crateVersion.deps.length === 0 ? (
+                {(crateVersion?.deps || []).length === 0 ? (
                   <li className="list-group-item">
                     This crate has no dependencies
                   </li>
                 ) : (
                   <></>
                 )}
-                {crateVersion.deps.map((dep) => (
+                {crateVersion?.deps.map((dep) => (
                   <Dependency
                     key={`${dep.name}-${dep.req}`}
                     organisation={organisation}
@@ -315,7 +315,7 @@ function Members({
   );
 
   if (error) {
-    return <>{error}</>;
+    return <div className="card-body">{error}</div>;
   } else if (!response) {
     return (
       <div className="d-flex justify-content-center align-items-center">
@@ -396,6 +396,10 @@ function Versions(props: { crate: CrateInfo }) {
       ["B", "kB", "MB", "GB", "TB"][i]
     );
   };
+
+  if (props.crate.versions.length === 0) {
+    return <>There hasn't yet been any versions published for this crate</>;
+  }
 
   return (
     <div>
