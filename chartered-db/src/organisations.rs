@@ -99,13 +99,14 @@ impl Organisation {
         conn: ConnectionPool,
         given_name: String,
         given_description: String,
+        given_public: bool,
         requesting_user_id: i32,
     ) -> Result<()> {
         tokio::task::spawn_blocking(move || {
             let conn = conn.get()?;
 
             conn.transaction::<_, crate::Error, _>(|| {
-                use organisations::dsl::{description, id, name, uuid};
+                use organisations::dsl::{description, id, name, uuid, public};
                 use user_organisation_permissions::dsl::{organisation_id, permissions, user_id};
 
                 let generated_uuid = SqlUuid::random();
@@ -115,6 +116,7 @@ impl Organisation {
                         uuid.eq(generated_uuid),
                         name.eq(given_name),
                         description.eq(given_description),
+                        public.eq(given_public),
                     ))
                     .execute(&conn)?;
 

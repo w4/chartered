@@ -17,6 +17,9 @@ export default function CreateOrganisation() {
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [publicOrg, setPublicOrg] = useState(false);
+
+  console.log(publicOrg);
 
   const createOrganisation = async (evt) => {
     evt.preventDefault();
@@ -30,7 +33,7 @@ export default function CreateOrganisation() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ name, description }),
+        body: JSON.stringify({ name, description, 'public': publicOrg }),
       });
       let json = await res.json();
 
@@ -67,7 +70,7 @@ export default function CreateOrganisation() {
             className="btn-close"
             aria-label="Close"
             onClick={() => setError("")}
-          ></button>
+            />
         </div>
 
         <div className="card border-0 shadow-sm text-black">
@@ -106,7 +109,21 @@ export default function CreateOrganisation() {
                 />
               </div>
 
-              <div className="clearfix"></div>
+              <div className="mt-2 form-check">
+                <input
+                    type="checkbox"
+                    checked={publicOrg}
+                    id="org-public"
+                    className="form-check-input"
+                    onChange={(e) => setPublicOrg(e.target.checked)}
+                    disabled={loading}
+                />
+                <label htmlFor="org-public" className="form-check-label">
+                  Give <strong>VISIBLE</strong> permission to all logged in users
+                </label>
+              </div>
+
+              <div className="clearfix" />
 
               <button
                 type="submit"

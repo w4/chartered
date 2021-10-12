@@ -26,6 +26,7 @@ define_error_response!(Error);
 pub struct PutRequest {
     name: String,
     description: String,
+    public: bool,
 }
 
 pub async fn handle_put(
@@ -33,7 +34,7 @@ pub async fn handle_put(
     extract::Extension(user): extract::Extension<Arc<User>>,
     extract::Json(req): extract::Json<PutRequest>,
 ) -> Result<Json<ErrorResponse>, Error> {
-    Organisation::create(db, req.name, req.description, user.id).await?;
+    Organisation::create(db, req.name, req.description, req.public, user.id).await?;
 
     Ok(Json(ErrorResponse { error: None }))
 }
