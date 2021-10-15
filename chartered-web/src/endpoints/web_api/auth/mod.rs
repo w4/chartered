@@ -38,6 +38,7 @@ pub struct LoginResponse {
     user_uuid: Uuid,
     key: String,
     expires: chrono::DateTime<chrono::Utc>,
+    picture_url: Option<String>,
 }
 
 pub async fn login(
@@ -67,5 +68,6 @@ pub async fn login(
         user_uuid: user.uuid.0,
         key: key.session_key,
         expires,
+        picture_url: user.picture_url,
     })
 }

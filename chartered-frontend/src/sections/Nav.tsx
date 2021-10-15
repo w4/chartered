@@ -2,8 +2,10 @@ import React = require("react");
 import { useHistory, useLocation } from "react-router-dom";
 import { NavLink, Link } from "react-router-dom";
 
-import { BoxArrowRight, Search } from "react-bootstrap-icons";
+import { BoxArrowRight, CaretDownFill, Search } from "react-bootstrap-icons";
 import { useAuth } from "../useAuth";
+import { Dropdown, Navbar, NavDropdown, NavItem } from "react-bootstrap";
+import { ProfilePicture } from "../util";
 
 export default function Nav() {
   const auth = useAuth();
@@ -29,25 +31,15 @@ export default function Nav() {
   };
 
   return (
-    <nav className="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+    <Navbar bg="light" expand="md" className="bg-white shadow-sm">
       <div className="container-fluid">
         <Link className="navbar-brand" to="/dashboard">
           ✈️ chartered
         </Link>
-        <button
-          className="navbar-toggler"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarSupportedContent"
-          aria-controls="navbarSupportedContent"
-          aria-expanded="false"
-          aria-label="Toggle navigation"
-        >
-          <span className="navbar-toggler-icon"></span>
-        </button>
+        <Navbar.Toggle aria-controls="navbar-contents" />
 
-        <div className="collapse navbar-collapse" id="navbarSupportedContent">
-          <ul className="navbar-nav me-auto mb-2 mb-lg-0">
+        <Navbar.Collapse id="navbar-contents" role="navigation">
+          <ul className="navbar-nav mb-2 mb-md-0 me-auto">
             <li className="nav-item">
               <NavLink to="/dashboard" className="nav-link">
                 Home
@@ -82,13 +74,47 @@ export default function Nav() {
             </div>
           </form>
 
-          <div>
-            <a href="#" onClick={logout} className="nav-link text-danger">
-              Logout <BoxArrowRight />
-            </a>
-          </div>
-        </div>
+          <ul className="navbar-nav">
+            <li className="nav-item">
+              <Dropdown as="div" className="mt-2 mt-md-0">
+                <Dropdown.Toggle
+                  as="a"
+                  role="button"
+                  aria-label="View profile and more"
+                  style={{ color: "rgba(0, 0, 0, 0.55)" }}
+                  className="d-inline-flex align-items-center"
+                >
+                  <ProfilePicture
+                    src={auth.getPictureUrl()}
+                    height="2rem"
+                    width="2rem"
+                  />
+                </Dropdown.Toggle>
+
+                <Dropdown.Menu
+                  align={{ md: "end" }}
+                  style={{ marginTop: "5px" }}
+                >
+                  <Dropdown.Item as={Link} to={`/users/${auth.getUserUuid()}`}>
+                    Your profile
+                  </Dropdown.Item>
+
+                  <Dropdown.Divider />
+
+                  <Dropdown.Item
+                    as="a"
+                    href="#"
+                    onClick={logout}
+                    className="text-danger"
+                  >
+                    Logout <BoxArrowRight />
+                  </Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown>
+            </li>
+          </ul>
+        </Navbar.Collapse>
       </div>
-    </nav>
+    </Navbar>
   );
 }

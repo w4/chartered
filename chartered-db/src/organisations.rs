@@ -106,7 +106,7 @@ impl Organisation {
             let conn = conn.get()?;
 
             conn.transaction::<_, crate::Error, _>(|| {
-                use organisations::dsl::{description, id, name, uuid, public};
+                use organisations::dsl::{description, id, name, public, uuid};
                 use user_organisation_permissions::dsl::{organisation_id, permissions, user_id};
 
                 let generated_uuid = SqlUuid::random();

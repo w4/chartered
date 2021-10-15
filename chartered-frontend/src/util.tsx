@@ -1,7 +1,7 @@
 import React = require("react");
 import ReactPlaceholder from "react-placeholder";
 import { AuthContext } from "./useAuth";
-import {PersonFill} from "react-bootstrap-icons";
+import { PersonFill } from "react-bootstrap-icons";
 
 export const BASE_URL = process.env.BASE_URL || "http://localhost:8888";
 
@@ -99,11 +99,13 @@ export function ProfilePicture({
         className={`position-relative rounded-circle d-inline-flex justify-content-center align-items-center ${className}`}
         style={{ width, height, background: "rgb(235, 235, 235)" }}
       >
-        <PersonFill style={{
-          width: `calc(${width} / 2)`,
-          height: `calc(${height} / 2)`,
-          color: "rgba(0, 0, 0, .1)"
-        }} />
+        <PersonFill
+          style={{
+            width: `calc(${width} / 2)`,
+            height: `calc(${height} / 2)`,
+            color: "rgba(0, 0, 0, .1)",
+          }}
+        />
       </div>
     );
   }

@@ -3,10 +3,10 @@ import React = require("react");
 import { Link } from "react-router-dom";
 import { useAuth } from "../useAuth";
 import Nav from "../sections/Nav";
-import {Calendar3, ChevronRight, Download} from "react-bootstrap-icons";
+import { Calendar3, ChevronRight, Download } from "react-bootstrap-icons";
 import { useAuthenticatedRequest } from "../util";
 import HumanTime from "react-human-time";
-import {OverlayTrigger, Tooltip} from "react-bootstrap";
+import { OverlayTrigger, Tooltip } from "react-bootstrap";
 
 interface RecentlyCreatedResponse {
   crates: RecentlyCreatedResponseVersion[];
@@ -42,10 +42,10 @@ export default function Dashboard() {
   const auth = useAuth();
 
   const { response: recentlyCreated, error: recentlyCreatedError } =
-      useAuthenticatedRequest<RecentlyCreatedResponse>({
-        auth,
-        endpoint: "crates/recently-created",
-      });
+    useAuthenticatedRequest<RecentlyCreatedResponse>({
+      auth,
+      endpoint: "crates/recently-created",
+    });
 
   const { response: recentlyUpdated, error: recentlyUpdatedError } =
     useAuthenticatedRequest<RecentlyUpdatedResponse>({
@@ -54,10 +54,10 @@ export default function Dashboard() {
     });
 
   const { response: mostDownloaded, error: mostDownloadedError } =
-      useAuthenticatedRequest<MostDownloadedResponse>({
-        auth,
-        endpoint: "crates/most-downloaded",
-      });
+    useAuthenticatedRequest<MostDownloadedResponse>({
+      auth,
+      endpoint: "crates/most-downloaded",
+    });
 
   return (
     <div className="text-white">
@@ -84,40 +84,50 @@ export default function Dashboard() {
           <div className="col-12 col-md-4">
             <h4>Newly Created</h4>
             {(recentlyCreated?.crates || []).map((v) => (
-                <CrateCard key={v.name} organisation={v.organisation} name={v.name}>
-                  <OverlayTrigger
-                      overlay={
-                        <Tooltip
-                            id={`tooltip-${v.name}-date`}
-                        >
-                          {new Date(v.created_at).toLocaleString()}
-                        </Tooltip>
-                      }
-                  >
-                    <span>
-                      <Calendar3 />{" "}
-                      <HumanTime
-                          time={new Date(v.created_at).getTime()}
-                      />
-                    </span>
-                  </OverlayTrigger>
-                </CrateCard>
+              <CrateCard
+                key={v.name}
+                organisation={v.organisation}
+                name={v.name}
+              >
+                <OverlayTrigger
+                  overlay={
+                    <Tooltip id={`tooltip-${v.name}-date`}>
+                      {new Date(v.created_at).toLocaleString()}
+                    </Tooltip>
+                  }
+                >
+                  <span>
+                    <Calendar3 />{" "}
+                    <HumanTime time={new Date(v.created_at).getTime()} />
+                  </span>
+                </OverlayTrigger>
+              </CrateCard>
             ))}
           </div>
 
           <div className="col-12 col-md-4">
             <h4>Recently Updated</h4>
             {(recentlyUpdated?.versions || []).map((v) => (
-                <CrateCard key={v.name} organisation={v.organisation} name={v.name}>v{v.version}</CrateCard>
+              <CrateCard
+                key={v.name}
+                organisation={v.organisation}
+                name={v.name}
+              >
+                v{v.version}
+              </CrateCard>
             ))}
           </div>
 
           <div className="col-12 col-md-4">
             <h4>Most Downloaded</h4>
             {(mostDownloaded?.crates || []).map((v) => (
-                <CrateCard key={v.name} organisation={v.organisation} name={v.name}>
-                  <Download /> {v.downloads.toLocaleString()}
-                </CrateCard>
+              <CrateCard
+                key={v.name}
+                organisation={v.organisation}
+                name={v.name}
+              >
+                <Download /> {v.downloads.toLocaleString()}
+              </CrateCard>
             ))}
           </div>
         </div>
@@ -126,7 +136,11 @@ export default function Dashboard() {
   );
 }
 
-function CrateCard({ name, organisation, children }: React.PropsWithChildren<{ name: string, organisation: string }>) {
+function CrateCard({
+  name,
+  organisation,
+  children,
+}: React.PropsWithChildren<{ name: string; organisation: string }>) {
   return (
     <Link
       to={`/crates/${organisation}/${name}`}

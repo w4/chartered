@@ -13,6 +13,7 @@ interface LoginResponse {
   key: string;
   expires: number;
   error?: string;
+  picture_url?: string;
 }
 
 export interface AuthContext {
@@ -21,6 +22,7 @@ export interface AuthContext {
   logout: () => Promise<void>;
   getAuthKey: () => Promise<string | null>;
   getUserUuid: () => string;
+  getPictureUrl: () => string;
   handleLoginResponse: (json: LoginResponse) => any;
 }
 
@@ -66,7 +68,12 @@ export const useAuth = (): AuthContext | null => {
 function useProvideAuth(): AuthContext {
   const [auth, setAuth] = useState(() => {
     let authStorage = getAuthStorage();
-    return [authStorage.userUuid, authStorage.authKey, authStorage.expires];
+    return [
+      authStorage.userUuid,
+      authStorage.authKey,
+      authStorage.expires,
+      authStorage.pictureUrl,
+    ];
   });
 
   useEffect(() => {
@@ -76,6 +83,7 @@ function useProvideAuth(): AuthContext {
         userUuid: auth?.[0],
         authKey: auth?.[1],
         expires: auth?.[2],
+        pictureUrl: auth?.[3],
       })
     );
   }, [auth]);
@@ -85,7 +93,12 @@ function useProvideAuth(): AuthContext {
       throw new Error(response.error);
     }
 
-    setAuth([response.user_uuid, response.key, new Date(response.expires)]);
+    setAuth([
+      response.user_uuid,
+      response.key,
+      new Date(response.expires),
+      response.picture_url,
+    ]);
   };
 
   const login = async (username: string, password: string) => {
@@ -143,11 +156,20 @@ function useProvideAuth(): AuthContext {
     }
   };
 
+  const getPictureUrl = () => {
+    if (auth?.[2] > new Date()) {
+      return auth[3];
+    } else if (auth) {
+      return null;
+    }
+  };
+
   return {
     login,
     logout,
     getAuthKey,
     getUserUuid,
+    getPictureUrl,
     oauthLogin,
     handleLoginResponse,
   };
@@ -160,5 +182,6 @@ function getAuthStorage() {
     userUuid: initial?.userUuid || null,
     authKey: initial?.authKey || null,
     expires: initial?.expires ? new Date(initial.expires) : null,
+    pictureUrl: initial?.pictureUrl,
   };
 }
