@@ -4,6 +4,15 @@ import { useLocation } from "react-router-dom";
 
 import { useAuth } from "../useAuth";
 import { useUnauthenticatedRequest } from "../util";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { IconName } from "@fortawesome/fontawesome-svg-core";
+import {
+  faGithub,
+  faGitlab,
+  faGoogle,
+  IconDefinition,
+} from "@fortawesome/free-brands-svg-icons";
+import { faSignInAlt } from "@fortawesome/free-solid-svg-icons";
 
 interface OAuthProviders {
   providers: string[];
@@ -84,7 +93,7 @@ export default function Login() {
                 className="btn-close"
                 aria-label="Close"
                 onClick={() => setError("")}
-              ></button>
+              />
             </div>
 
             <form onSubmit={handleSubmit}>
@@ -126,6 +135,7 @@ export default function Login() {
                 disabled={!!loading}
                 showSpinner={loading === "password"}
                 text={`Login`}
+                icon={faSignInAlt}
                 onClick={handleSubmit}
               />
             </form>
@@ -141,7 +151,11 @@ export default function Login() {
                     variant="dark"
                     disabled={!!loading}
                     showSpinner={loading === v}
-                    text={`Login with ${v}`}
+                    text={`Login with ${
+                      v.charAt(0).toUpperCase() + v.slice(1)
+                    }`}
+                    icon={getIconForProvider(v)[0]}
+                    background={getIconForProvider(v)[1]}
                     onClick={(evt) => {
                       evt.preventDefault();
                       handleOAuthLogin(v);
@@ -159,12 +173,25 @@ export default function Login() {
   );
 }
 
+const BRANDS = {
+  default: [faSignInAlt, ""],
+  github: [faGithub, "#4078c0"],
+  gitlab: [faGitlab, "#6E49cb"],
+  google: [faGoogle, "#4285f4"],
+};
+
+function getIconForProvider(provider: string): [IconDefinition, string] {
+  return BRANDS[provider] || BRANDS["default"];
+}
+
 function ButtonOrSpinner({
   type,
   variant,
   disabled,
   showSpinner,
   text,
+  icon,
+  background,
   onClick,
 }: {
   type: "button" | "submit";
@@ -172,6 +199,8 @@ function ButtonOrSpinner({
   disabled: boolean;
   showSpinner: boolean;
   text: string;
+  icon?: IconDefinition;
+  background?: string;
   onClick: (evt) => any;
 }) {
   if (showSpinner) {
@@ -192,7 +221,9 @@ function ButtonOrSpinner({
         disabled={disabled}
         onClick={onClick}
         className={`btn btn-lg mt-2 btn-${variant} w-100`}
+        style={{ background, borderColor: background }}
       >
+        {icon ? <FontAwesomeIcon icon={icon} className="me-2" /> : <></>}
         {text}
       </button>
     );
