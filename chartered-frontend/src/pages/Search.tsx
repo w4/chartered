@@ -181,6 +181,7 @@ function CrateResults({
                         <a
                           href={crate.homepage}
                           className="text-decoration-none me-2"
+                          target="_blank"
                         >
                           Homepage
                         </a>
@@ -191,6 +192,7 @@ function CrateResults({
                         <a
                           href={crate.repository}
                           className="text-decoration-none me-2"
+                          target="_blank"
                         >
                           Repository
                         </a>
