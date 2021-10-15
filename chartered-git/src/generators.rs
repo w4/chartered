@@ -24,7 +24,7 @@ mod test {
     #[test]
     fn test_cargo_config() {
         let conf = CargoConfig::new(
-            url::Url::parse("https://127.0.0.1:1234").unwrap(),
+            &url::Url::parse("https://127.0.0.1:1234").unwrap(),
             "my-api-key",
             "my-organisation",
         );

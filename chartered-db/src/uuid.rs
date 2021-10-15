@@ -35,7 +35,7 @@ where
         let value = <Vec<u8>>::from_sql(bytes)?;
         uuid::Uuid::from_slice(&value)
             .map(SqlUuid)
-            .map_err(|e| e.into())
+            .map_err(Into::into)
     }
 }
 

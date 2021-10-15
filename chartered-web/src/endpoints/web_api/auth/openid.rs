@@ -91,8 +91,8 @@ pub async fn complete_oidc(
 
     let mut token: Token = client.request_token(&params.code).await?.into();
 
-    if let Some(mut id_token) = token.id_token.as_mut() {
-        client.decode_token(&mut id_token)?;
+    if let Some(id_token) = token.id_token.as_mut() {
+        client.decode_token(id_token)?;
 
         let nonce = base64::encode_config(state.nonce, base64::URL_SAFE_NO_PAD);
         client.validate_token(id_token, Some(nonce.as_str()), None)?;

@@ -133,6 +133,7 @@ fn parse(body: &[u8]) -> nom::IResult<&[u8], (&[u8], &[u8])> {
     Ok((rest, (metadata_bytes, crate_bytes)))
 }
 
+#[allow(dead_code)] // a lot of these need checking/validating
 #[derive(Deserialize, Debug)]
 pub struct Metadata<'a> {
     #[serde(borrow)]

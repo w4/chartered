@@ -43,6 +43,7 @@ pub async fn handle(
     Ok(Json(super::login(db, user, user_agent, addr).await?))
 }
 
+#[allow(dead_code)] // TODO: password not yet read
 #[derive(Deserialize)]
 pub struct Request {
     username: String,
