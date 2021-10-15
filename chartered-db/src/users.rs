@@ -276,10 +276,11 @@ impl User {
             .permissions)
     }
 
+    #[must_use]
     pub fn display_name(&self) -> &str {
         self.nick
             .as_ref()
-            .or(self.name.as_ref())
+            .or_else(|| self.name.as_ref())
             .unwrap_or(&self.username)
     }
 }

@@ -7,7 +7,7 @@ pub struct CargoConfig {
 }
 
 impl CargoConfig {
-    pub fn new(base: url::Url, api_key: &str, organisation: &str) -> Self {
+    pub fn new(base: &url::Url, api_key: &str, organisation: &str) -> Self {
         let base = format!("{}a/{}/o/{}", base, api_key, organisation);
 
         Self {
@@ -29,11 +29,11 @@ mod test {
             "my-organisation",
         );
         assert_eq!(
-            conf.dl.to_string(),
+            conf.dl,
             "https://127.0.0.1:1234/a/my-api-key/o/my-organisation/api/v1/crates"
         );
         assert_eq!(
-            conf.api.to_string(),
+            conf.api,
             "https://127.0.0.1:1234/a/my-api-key/o/my-organisation"
         );
     }

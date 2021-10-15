@@ -1,3 +1,5 @@
+#![deny(clippy::pedantic)]
+
 //! 'Raw' types that are passed by `cargo publish` and also consumed via
 //! cargo when pulling. These are just inserted into the database as-is.
 
@@ -17,11 +19,16 @@ pub struct CrateVersion<'a> {
 }
 
 impl CrateVersion<'_> {
+    #[must_use]
     pub fn into_owned(self) -> CrateVersion<'static> {
         CrateVersion {
             name: Cow::Owned(self.name.into_owned()),
             vers: Cow::Owned(self.vers.into_owned()),
-            deps: self.deps.into_iter().map(|v| v.into_owned()).collect(),
+            deps: self
+                .deps
+                .into_iter()
+                .map(CrateDependency::into_owned)
+                .collect(),
             features: self.features,
             links: self.links.map(|v| Cow::Owned(v.into_owned())),
         }
@@ -53,6 +60,7 @@ pub struct CrateDependency<'a> {
 }
 
 impl CrateDependency<'_> {
+    #[must_use]
     pub fn into_owned(self) -> CrateDependency<'static> {
         CrateDependency {
             name: Cow::Owned(self.name.into_owned()),

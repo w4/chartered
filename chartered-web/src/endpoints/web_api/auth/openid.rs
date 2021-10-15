@@ -17,6 +17,7 @@ pub struct ListProvidersResponse {
     providers: Vec<String>,
 }
 
+#[allow(clippy::unused_async)]
 pub async fn list_providers(
     extract::Extension(oidc_clients): extract::Extension<Arc<OidcClients>>,
 ) -> Json<ListProvidersResponse> {
@@ -24,7 +25,7 @@ pub async fn list_providers(
         providers: oidc_clients
             .keys()
             .into_iter()
-            .map(|v| v.to_string())
+            .map(std::string::ToString::to_string)
             .collect(),
     })
 }
@@ -40,6 +41,7 @@ pub struct BeginResponse {
     redirect_url: String,
 }
 
+#[allow(clippy::unused_async)]
 pub async fn begin_oidc(
     extract::Path(provider): extract::Path<String>,
     extract::Extension(config): extract::Extension<Arc<Config>>,
@@ -56,7 +58,7 @@ pub async fn begin_oidc(
         scope: Some("openid email profile".into()),
         nonce: Some(base64::encode_config(&nonce, base64::URL_SAFE_NO_PAD)),
         state: Some(encrypt_url_safe(&state, &config)?),
-        ..Default::default()
+        ..Options::default()
     });
 
     Ok(Json(BeginResponse {
@@ -64,6 +66,7 @@ pub async fn begin_oidc(
     }))
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize)]
 pub struct CompleteOidcParams {
     state: String,
@@ -92,7 +95,7 @@ pub async fn complete_oidc(
         client.decode_token(&mut id_token)?;
 
         let nonce = base64::encode_config(state.nonce, base64::URL_SAFE_NO_PAD);
-        client.validate_token(&id_token, Some(nonce.as_str()), None)?;
+        client.validate_token(id_token, Some(nonce.as_str()), None)?;
     } else {
         return Err(Error::MissingToken);
     }
@@ -122,7 +125,7 @@ fn encrypt_url_safe(input: &[u8], config: &Config) -> Result<String, Error> {
     let nonce = ChaCha20Poly1305Nonce::from_slice(&nonce);
 
     let mut ciphertext = cipher.encrypt(nonce, input)?;
-    ciphertext.extend_from_slice(&nonce);
+    ciphertext.extend_from_slice(nonce);
 
     Ok(base64::encode_config(&ciphertext, base64::URL_SAFE_NO_PAD))
 }

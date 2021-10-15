@@ -9,32 +9,32 @@ use super::low_level::{
 pub struct Directory<'a>(IndexMap<&'a str, Box<TreeItem<'a>>>);
 
 impl<'a> Directory<'a> {
-    fn into_packfile_entries(
+    fn to_packfile_entries(
         &self,
         pack_file: &mut IndexMap<HashOutput, PackFileEntry<'a>>,
-    ) -> HashOutput {
+    ) -> Result<HashOutput, anyhow::Error> {
         let mut tree = Vec::with_capacity(self.0.len());
 
         for (name, item) in &self.0 {
             tree.push(match item.as_ref() {
                 TreeItem::Blob(hash) => LowLevelTreeItem {
                     kind: TreeItemKind::File,
-                    name: &name,
+                    name,
                     hash: *hash,
                 },
                 TreeItem::Directory(dir) => LowLevelTreeItem {
                     kind: TreeItemKind::Directory,
-                    name: &name,
-                    hash: dir.into_packfile_entries(pack_file),
+                    name,
+                    hash: dir.to_packfile_entries(pack_file)?,
                 },
-            })
+            });
         }
 
         let tree = PackFileEntry::Tree(tree);
-        let hash = tree.hash().unwrap();
+        let hash = tree.hash()?;
         pack_file.insert(hash, tree);
 
-        hash
+        Ok(hash)
     }
 }
 
@@ -56,7 +56,7 @@ impl<'a> GitRepository<'a> {
         path: ArrayVec<&'a str, N>,
         file: &'a str,
         content: &'a [u8],
-    ) {
+    ) -> Result<(), anyhow::Error> {
         let mut directory = &mut self.tree;
 
         for part in path {
@@ -68,18 +68,20 @@ impl<'a> GitRepository<'a> {
             if let TreeItem::Directory(d) = tree_item.as_mut() {
                 directory = d;
             } else {
-                panic!("one of the path items was a blob");
+                anyhow::bail!("one of the path items was a blob");
             }
         }
 
         let entry = PackFileEntry::Blob(content);
 
         // todo: handle overwriting error
-        let file_hash = entry.hash().unwrap();
+        let file_hash = entry.hash()?;
         directory
             .0
             .insert(file, Box::new(TreeItem::Blob(file_hash)));
         self.file_entries.insert(file_hash, entry);
+
+        Ok(())
     }
 
     pub fn commit(
@@ -87,8 +89,8 @@ impl<'a> GitRepository<'a> {
         name: &'static str,
         email: &'static str,
         message: &'static str,
-    ) -> (HashOutput, Vec<PackFileEntry<'a>>) {
-        let tree_hash = self.tree.into_packfile_entries(&mut self.file_entries);
+    ) -> Result<(HashOutput, Vec<PackFileEntry<'a>>), anyhow::Error> {
+        let tree_hash = self.tree.to_packfile_entries(&mut self.file_entries)?;
 
         let commit_user = CommitUserInfo {
             name,
@@ -103,10 +105,10 @@ impl<'a> GitRepository<'a> {
             message,
         });
 
-        let commit_hash = commit.hash().unwrap();
+        let commit_hash = commit.hash()?;
         self.file_entries.insert(commit_hash, commit);
 
         // TODO: make PackFileEntry copy and remove this clone
-        (commit_hash, self.file_entries.values().cloned().collect())
+        Ok((commit_hash, self.file_entries.values().cloned().collect()))
     }
 }

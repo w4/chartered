@@ -9,7 +9,7 @@ use crate::{
     Handler,
 };
 
-pub(crate) async fn handle(
+pub(crate) fn handle(
     handle: &mut Handler,
     session: &mut Session,
     channel: ChannelId,

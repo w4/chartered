@@ -1,4 +1,5 @@
 #![deny(clippy::pedantic)]
+#![deny(rust_2018_idioms)]
 mod command_handlers;
 mod generators;
 mod tree;
@@ -26,7 +27,7 @@ use thrussh::{
 };
 use thrussh_keys::{key, PublicKeyBase64};
 use tokio_util::codec::{Decoder, Encoder as TokioEncoder};
-use tracing::{debug, error, event, info, warn, Instrument};
+use tracing::{debug, error, info, warn, Instrument};
 use url::Url;
 
 #[tokio::main]
@@ -151,6 +152,7 @@ impl server::Handler for Handler {
     ) -> Self::FutureUnit {
         self.span.in_scope(|| debug!("env set {}={}", name, value));
 
+        #[allow(clippy::single_match)]
         match (name, value) {
             ("GIT_PROTOCOL", "version=2") => self.is_git_protocol_v2 = true,
             _ => {}
@@ -274,7 +276,7 @@ impl server::Handler for Handler {
         self,
         _user: &str,
         _submethods: &str,
-        _response: Option<server::Response>,
+        _response: Option<server::Response<'_>>,
     ) -> Self::FutureAuth {
         self.finished_auth(server::Auth::UnsupportedMethod)
     }
@@ -313,20 +315,20 @@ impl server::Handler for Handler {
 
                     let mut packfile = GitRepository::default();
                     let config = CargoConfig::new(
-                        Url::parse("http://127.0.0.1:8888/")?,
+                        &Url::parse("http://127.0.0.1:8888/")?,
                         &authed.auth_key,
                         org_name,
                     );
                     let config = serde_json::to_vec(&config)?;
-                    packfile.insert(ArrayVec::<_, 0>::new(), "config.json", &config);
+                    packfile.insert(ArrayVec::<_, 0>::new(), "config.json", &config)?;
                     // todo: the whole tree needs caching and then we can filter in code rather than at
                     //  the database
                     let tree =
                         Tree::build(self.db.clone(), authed.user.id, org_name.to_string()).await;
-                    tree.write_to_packfile(&mut packfile);
+                    tree.write_to_packfile(&mut packfile)?;
 
                     let (commit_hash, packfile_entries) =
-                        packfile.commit("computer", "john@computer.no", "Update crates");
+                        packfile.commit("computer", "john@computer.no", "Update crates")?;
 
                     match frame.command.as_ref() {
                         b"command=ls-refs" => {
@@ -336,8 +338,7 @@ impl server::Handler for Handler {
                                 channel,
                                 frame.metadata,
                                 &commit_hash,
-                            )
-                            .await?
+                            )?;
                         }
                         b"command=fetch" => {
                             command_handlers::fetch::handle(
@@ -346,8 +347,7 @@ impl server::Handler for Handler {
                                 channel,
                                 frame.metadata,
                                 packfile_entries,
-                            )
-                            .await?
+                            )?;
                         }
                         v => {
                             error!(

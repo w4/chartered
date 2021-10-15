@@ -71,7 +71,7 @@ pub async fn handle(
 ) -> Result<axum::response::Json<PublishCrateResponse>, Error> {
     let (_, (metadata_bytes, crate_bytes)) =
         parse(body.as_ref()).map_err(|_| Error::MetadataParse)?;
-    let metadata: Metadata = serde_json::from_slice(metadata_bytes)?;
+    let metadata: Metadata<'_> = serde_json::from_slice(metadata_bytes)?;
 
     if !validate_crate_name(&metadata.inner.name) {
         return Err(Error::InvalidCrateName);
@@ -177,7 +177,7 @@ impl From<MetadataCrateVersion<'_>> for CrateVersion<'static> {
     }
 }
 
-/// We've redefined MetadataCrateDependency for deserialisation because `cargo publish` passes
+/// We've redefined `MetadataCrateDependency` for deserialisation because `cargo publish` passes
 /// a `version_req`, whereas when downloading it expects `req` - and `package` isn't returned.
 #[derive(Deserialize, Debug)]
 pub struct MetadataCrateDependency<'a> {
@@ -194,6 +194,7 @@ pub struct MetadataCrateDependency<'a> {
 
 impl From<MetadataCrateDependency<'_>> for CrateDependency<'static> {
     fn from(us: MetadataCrateDependency<'_>) -> CrateDependency<'static> {
+        #[allow(clippy::option_if_let_else)] // us.name can't be moved into both closures
         let (name, package) = if let Some(explicit_name_in_toml) = us.explicit_name_in_toml {
             (
                 explicit_name_in_toml.into_owned(),

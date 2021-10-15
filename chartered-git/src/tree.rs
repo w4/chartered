@@ -49,11 +49,13 @@ impl Tree {
         Self { crates }
     }
 
-    pub fn write_to_packfile<'a>(&'a self, repo: &mut GitRepository<'a>) {
+    pub fn write_to_packfile<'a>(&'a self, repo: &mut GitRepository<'a>) -> Result<(), anyhow::Error> {
         for (name, content) in &self.crates {
-            let crate_folder = get_crate_folder(&name);
-            repo.insert(crate_folder, &name, content.as_bytes());
+            let crate_folder = get_crate_folder(name);
+            repo.insert(crate_folder, name, content.as_bytes())?;
         }
+
+        Ok(())
     }
 }
 

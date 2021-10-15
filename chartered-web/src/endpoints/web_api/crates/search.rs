@@ -34,7 +34,7 @@ pub async fn handle(
         Crate::search(db.clone(), user.id, req.q, 5)
             .await?
             .into_iter()
-            .map(move |(org, crates_with_permissions)| {
+            .flat_map(move |(org, crates_with_permissions)| {
                 let db = db.clone();
 
                 crates_with_permissions
@@ -54,12 +54,11 @@ pub async fn handle(
                                 version: version.map(|v| v.version).unwrap_or_default(),
                                 homepage: v.crate_.homepage.clone(),
                                 repository: v.crate_.repository.clone(),
-                                permissions: v.permissions.clone(),
+                                permissions: v.permissions,
                             })
                         }
                     })
-            })
-            .flatten(),
+            }),
     )
     .await?;
 

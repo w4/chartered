@@ -1,4 +1,5 @@
 #![deny(clippy::pedantic)]
+#![deny(rust_2018_idioms)]
 
 use std::path::PathBuf;
 
@@ -35,7 +36,7 @@ impl std::str::FromStr for FS {
                 Self::S3 {
                     host: uri.host().unwrap().to_string(),
                     bucket: path.next().unwrap().to_string(),
-                    path: path.intersperse("/").collect(),
+                    path: Itertools::intersperse(path, "/").collect(),
                 }
             }
             "file" => {
@@ -53,7 +54,7 @@ pub enum FileSystemKind {
 }
 
 impl std::fmt::Display for FileSystemKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Local => f.write_str("local"),
             Self::S3 => f.write_str("s3"),
@@ -82,7 +83,7 @@ pub struct FileReference {
 }
 
 impl std::fmt::Display for FileReference {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}:{}", self.file_system, self.reference)
     }
 }
@@ -145,8 +146,7 @@ impl FileSystem for Local {
 
 #[cfg(test)]
 mod tests {
-    use super::{FileSystem, FS};
-    use std::str::FromStr;
+    use super::FileSystem;
 
     #[tokio::test]
     #[allow(clippy::pedantic)]

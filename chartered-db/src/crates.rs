@@ -349,7 +349,7 @@ impl CrateWithPermissions {
             Ok(CrateVersion::belonging_to(&self.crate_)
                 .order_by(crate_versions::id.desc())
                 .limit(1)
-                .get_result::<CrateVersion>(&conn)
+                .get_result::<CrateVersion<'_>>(&conn)
                 .optional()?)
         })
         .await?
@@ -367,7 +367,7 @@ impl CrateWithPermissions {
 
             Ok(CrateVersion::belonging_to(&self.crate_)
                 .filter(version.eq(crate_version))
-                .get_result::<CrateVersion>(&conn)
+                .get_result::<CrateVersion<'_>>(&conn)
                 .optional()?)
         })
         .await?
@@ -382,7 +382,7 @@ impl CrateWithPermissions {
 
             Ok(CrateVersion::belonging_to(&self.crate_)
                 .inner_join(users::table)
-                .load::<(CrateVersion, User)>(&conn)?)
+                .load::<(CrateVersion<'_>, User)>(&conn)?)
         })
         .await?
     }

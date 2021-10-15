@@ -45,7 +45,7 @@ where
 {
     fn to_sql<W: Write>(
         &self,
-        out: &mut diesel::serialize::Output<W, B>,
+        out: &mut diesel::serialize::Output<'_, W, B>,
     ) -> diesel::serialize::Result {
         out.write_all(self.0.as_bytes())
             .map(|_| diesel::serialize::IsNull::No)

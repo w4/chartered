@@ -1,4 +1,5 @@
 #![deny(clippy::pedantic)]
+#![deny(rust_2018_idioms)]
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::module_name_repetitions)]
 #![allow(clippy::doc_markdown)] // `sql_function` fails this check
@@ -21,7 +22,7 @@ macro_rules! derive_diesel_json {
         {
             fn to_sql<W: std::io::Write>(
                 &self,
-                out: &mut diesel::serialize::Output<W, B>,
+                out: &mut diesel::serialize::Output<'_, W, B>,
             ) -> diesel::serialize::Result {
                 serde_json::to_writer(out, self)
                     .map(|_| diesel::serialize::IsNull::No)
