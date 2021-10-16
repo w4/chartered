@@ -1,3 +1,4 @@
+import "./dark.sass"; // TODO: lazyload
 import "./index.sass";
 
 import "./overscrollColourFixer.ts";
@@ -24,6 +25,14 @@ import OrganisationView from "./pages/crate/OrganisationView";
 import CreateOrganisation from "./pages/organisations/CreateOrganisation";
 import User from "./pages/User";
 import Search from "./pages/Search";
+
+if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+  document.querySelector("body")?.classList.add("dark");
+}
+
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+  document.querySelector("body")?.classList.toggle("dark", e.matches);
+});
 
 function App() {
   return (

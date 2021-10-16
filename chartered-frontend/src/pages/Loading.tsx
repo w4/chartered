@@ -10,7 +10,7 @@ export function LoadingSpinner() {
 
 export default function LoadingPage() {
   return (
-    <div className="min-vh-100 bg-primary d-flex justify-content-center align-items-center">
+    <div className="min-vh-100 d-flex justify-content-center align-items-center">
       <div className="spinner-border text-light" role="status">
         <span className="visually-hidden">Loading...</span>
       </div>

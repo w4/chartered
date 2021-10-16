@@ -67,7 +67,7 @@ export default function ShowOrganisation() {
   const ready = !!organisationDetails;
 
   return (
-    <div className="text-white">
+    <div>
       <Nav />
 
       <div className="container mt-4 pb-4">
@@ -201,7 +201,7 @@ function ListCrates({
               <td className="align-middle">
                 <div>
                   <Link to={`/crates/${organisation}/${v.name}`}>
-                    <span className="text-secondary">{organisation}/</span>
+                    <span className="text-muted">{organisation}/</span>
                     {v.name}
                   </Link>
                 </div>

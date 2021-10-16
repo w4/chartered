@@ -43,7 +43,7 @@ export default function User() {
   const ready = !!user;
 
   return (
-    <div className="text-white">
+    <div>
       <Nav />
 
       <div className="container mt-4 pb-4">

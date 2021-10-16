@@ -33,7 +33,7 @@ export default function ListOrganisations() {
   }
 
   return (
-    <div className="text-white">
+    <div>
       <Nav />
 
       <div className="container mt-4 pb-4">

@@ -1,0 +1,96 @@
+@import "../node_modules/bootstrap/scss/functions"
+@import "../node_modules/bootstrap/scss/variables"
+@import "../node_modules/bootstrap/scss/mixins"
+@import "../node_modules/bootstrap/scss/_navbar"
+
+html, body
+  @media(prefers-color-scheme: dark)
+    background: hsl(213, 44%, 7%) !important
+
+.dark
+  $primary: hsl(212, 70%, 30%)
+  $secondary: hsl(213, 44%, 7%)
+  $dark: hsl(0, 0%, 0%)
+  $card-border-color: hsl(212, 25%, 12%)
+  $light: rgba(255, 255, 255, 0.55)
+  $link-color: $primary
+
+  $body-color: $light
+  $body-bg: $secondary
+
+  $theme-colors: ("primary": $primary, "secondary": $secondary, "danger": $danger, "info": $indigo, "dark": $dark, "light": $light)
+
+  @each $color, $value in $theme-colors
+    --#{$variable-prefix}#{$color}: #{$value}
+
+  $theme-colors-rgb: map-loop($theme-colors, to-rgb, "$value")
+  @each $color, $value in $theme-colors-rgb
+    --#{$variable-prefix}#{$color}-rgb: #{$value}
+
+  a
+    color: $link-color
+
+  table td
+    color: $body-color !important
+
+  a.btn
+    color: white
+
+  table
+    border-color: $card-border-color !important
+
+  .nav-pills .nav-item .nav-link.active
+    background: $card-border-color !important
+
+  .list-group-item
+    background: transparent !important
+    color: rgba(255, 255, 255, 0.55) !important
+
+  .card
+    background: $body-bg !important
+    border: 1px solid $card-border-color !important
+    color: rgba(255, 255, 255, 0.55) !important
+
+    .card-header
+      border-bottom: 1px solid $card-border-color !important
+
+    .list-group
+      border-top: none
+
+    .card
+      background: $card-border-color !important
+
+  pre > pre
+    text-shadow: rgba(0, 0, 0, .2) 0 1px !important
+    background: $card-border-color !important
+
+    code
+      text-shadow: rgba(0, 0, 0, .2) 0 1px !important
+
+  code
+    background: $card-border-color !important
+
+  .form-control
+    background: transparent !important
+    border-color: $card-border-color !important
+
+  .input-group
+    border-color: $card-border-color
+
+    .input-group-text
+      background: $body-bg !important
+      color: white
+      border-color: $card-border-color
+
+    .form-control
+      background: $secondary !important
+
+  .navbar
+    background: $card-border-color !important
+    @extend .navbar-dark
+
+    .navbar-brand
+      color: $body-color !important
+
+  --#{$variable-prefix}body-color: #{$body-color}
+  --#{$variable-prefix}body-bg: #{$body-bg}

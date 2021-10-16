@@ -19,7 +19,7 @@ export default function Search() {
       : "";
 
   return (
-    <div className="text-white">
+    <div>
       <Nav />
 
       <div className="container mt-4 pb-4">
@@ -175,13 +175,13 @@ function CrateResults({
                       className="text-decoration-none"
                     >
                       <h4 className="text-primary d-inline px-2 m-0">
-                        <span className="text-secondary">
+                        <span className="text-muted">
                           {crate.organisation}
                         </span>
                         /{crate.name}
                       </h4>
                     </Link>
-                    <h6 className="text-secondary m-0 mt-1">{crate.version}</h6>
+                    <h6 className="text-muted m-0 mt-1">{crate.version}</h6>
                   </div>
 
                   <p className="m-0">{crate.description}</p>

@@ -69,7 +69,7 @@ export default function Login() {
   };
 
   return (
-    <div className="bg-primary p-4 text-white min-vh-100 d-flex justify-content-center align-items-center">
+    <div className="p-4 min-vh-100 d-flex justify-content-center align-items-center">
       <div>
         <h1>chartered ✈️</h1>
         <h6>a private, authenticated cargo registry</h6>

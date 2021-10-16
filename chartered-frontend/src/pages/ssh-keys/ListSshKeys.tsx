@@ -82,7 +82,7 @@ export default function ListSshKeys() {
   dateMonthAgo.setMonth(dateMonthAgo.getMonth() - 1);
 
   return (
-    <div className="text-white">
+    <div>
       <Nav />
 
       <div className="container mt-4 pb-4">

@@ -64,7 +64,7 @@ export default function Dashboard() {
     });
 
   return (
-    <div className="text-white">
+    <div>
       <Nav />
 
       <div className="container mt-4 pb-4">
@@ -163,10 +163,10 @@ function CrateCard({
         <div className="card-body text-black d-flex flex-row">
           <div className="flex-grow-1 align-self-center">
             <h6 className="text-primary my-0">
-              <span className="text-secondary">{organisation}/</span>
+              <span className="text-muted">{organisation}/</span>
               {name}
             </h6>
-            <small className="text-secondary">{children}</small>
+            <small className="text-muted">{children}</small>
           </div>
 
           <ChevronRight size={16} className="align-self-center" />
