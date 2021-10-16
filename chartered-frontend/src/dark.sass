@@ -7,7 +7,7 @@ $dark-bg-color: hsl(213, 44%, 10%)
 
 html, body
   @media(prefers-color-scheme: dark)
-    background: $dark-bg-color !important
+    background: $dark-bg-color
 
 .dark
   $primary: hsl(212, 70%, 49%)
@@ -29,6 +29,17 @@ html, body
   @each $color, $value in $theme-colors-rgb
     --#{$variable-prefix}#{$color}-rgb: #{$value}
 
+  .dropdown-menu
+    background: $card-border-color
+    border-color: darken($card-border-color, 10%)
+
+    .dropdown-item:hover
+      color: $link-color
+      background: darken($card-border-color, 3%)
+
+  .bg-default-profile-picture
+    background: $card-border-color
+
   a
     color: $link-color
 
@@ -38,12 +49,22 @@ html, body
   a.btn
     color: $link-color
 
+    &.btn-danger
+      color: white
+
   .btn-outline-light
     border-color: $link-color
 
     &:hover
       color: $body-color
       background-color: $link-color
+
+  .modal-content
+    background: $dark-bg-color
+    color: $body-color
+
+    .modal-header, .modal-footer
+      border-color: $card-border-color
 
   table
     border-color: $card-border-color !important
@@ -81,6 +102,7 @@ html, body
 
   .form-control
     background: transparent !important
+    color: white
     border-color: $card-border-color !important
 
   .input-group

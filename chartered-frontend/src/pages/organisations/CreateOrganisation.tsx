@@ -127,25 +127,18 @@ export default function CreateOrganisation() {
 
               <button
                 type="submit"
-                className="btn btn-success mt-2 float-end"
+                className="btn btn-success mt-2"
                 style={{ display: !loading ? "block" : "none" }}
               >
                 Create
               </button>
               <div
-                className="spinner-border text-primary mt-4 float-end"
+                className="spinner-border text-primary mt-4"
                 role="status"
                 style={{ display: loading ? "block" : "none" }}
               >
                 <span className="visually-hidden">Submitting...</span>
               </div>
-
-              <Link
-                to="/ssh-keys/list"
-                className="btn btn-danger mt-2 float-end me-1"
-              >
-                Cancel
-              </Link>
             </form>
           </div>
         </div>

@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import {
-  PersonPlus,
   Trash,
   CheckLg,
-  PlusLg,
+  PlusLg, PersonPlusFill,
 } from "react-bootstrap-icons";
 import {
   authenticatedEndpoint,
@@ -312,15 +311,14 @@ function MemberListInserter({
     <tr>
       <td className="align-middle fit">
         <div
-          className="d-flex align-items-center justify-content-center rounded-circle"
+          className="d-flex align-items-center justify-content-center rounded-circle bg-default-profile-picture"
           style={{
             width: "48px",
             height: "48px",
-            background: "#DEDEDE",
             fontSize: "1rem",
           }}
         >
-          <PersonPlus />
+          <PersonPlusFill width="24px" height="24px" />
         </div>
       </td>
 

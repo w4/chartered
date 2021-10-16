@@ -96,14 +96,13 @@ export function ProfilePicture({
   } else {
     return (
       <div
-        className={`position-relative rounded-circle d-inline-flex justify-content-center align-items-center ${className}`}
-        style={{ width, height, background: "rgb(235, 235, 235)" }}
+        className={`position-relative rounded-circle d-inline-flex justify-content-center align-items-center bg-default-profile-picture ${className}`}
+        style={{ width, height }}
       >
         <PersonFill
           style={{
             width: `calc(${width} / 2)`,
             height: `calc(${height} / 2)`,
-            color: "rgba(0, 0, 0, .1)",
           }}
         />
       </div>
