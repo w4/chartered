@@ -1,10 +1,8 @@
-import React = require("react");
-
-import { useState, useEffect } from "react";
+import { useState, Suspense, lazy } from "react";
 
 import { useAuth } from "../../useAuth";
 import Nav from "../../sections/Nav";
-import Loading from "../Loading";
+import Loading, { LoadingSpinner } from "../Loading";
 import ErrorPage from "../ErrorPage";
 import {
   BoxSeam,
@@ -15,19 +13,15 @@ import {
   Check2Square,
   Hdd,
   CheckSquare,
-  Check,
   Square,
 } from "react-bootstrap-icons";
 import { useParams, NavLink, Redirect, Link } from "react-router-dom";
 import {
   authenticatedEndpoint,
   ProfilePicture,
-  RoundedPicture,
-  RoundedPicture,
   useAuthenticatedRequest,
 } from "../../util";
 
-import Prism from "react-syntax-highlighter/dist/cjs/prism";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import CommonMembers from "./Members";
@@ -35,6 +29,10 @@ import { OverlayTrigger, Tooltip } from "react-bootstrap";
 import HumanTime from "react-human-time";
 
 type Tab = "readme" | "versions" | "members";
+
+const Prism = lazy(() =>
+  import("react-syntax-highlighter").then((v) => ({ default: v.Prism }))
+);
 
 export interface CrateInfo {
   name: string;
@@ -205,7 +203,13 @@ export default function SingleCrate() {
               </div>
 
               <div className={currentTab != "members" ? "card-body" : ""}>
-                {currentTab == "readme" ? <ReadMe crate={crateInfo} /> : <></>}
+                {currentTab == "readme" ? (
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <ReadMe crate={crateInfo} />
+                  </Suspense>
+                ) : (
+                  <></>
+                )}
                 {currentTab == "versions" ? (
                   <Versions crate={crateInfo} />
                 ) : (

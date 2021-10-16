@@ -1,5 +1,3 @@
-import React = require("react");
-
 export function LoadingSpinner() {
   return (
     <div className="p-4 d-flex justify-content-center align-items-center">

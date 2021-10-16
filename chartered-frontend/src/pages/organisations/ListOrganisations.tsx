@@ -1,4 +1,3 @@
-import React = require("react");
 import { Plus } from "react-bootstrap-icons";
 import { Link } from "react-router-dom";
 

@@ -1,4 +1,4 @@
-import React = require("react");
+import { PropsWithChildren } from "react";
 
 import { Link } from "react-router-dom";
 import { useAuth } from "../useAuth";
@@ -140,7 +140,7 @@ function CrateCard({
   name,
   organisation,
   children,
-}: React.PropsWithChildren<{ name: string; organisation: string }>) {
+}: PropsWithChildren<{ name: string; organisation: string }>) {
   return (
     <Link
       to={`/crates/${organisation}/${name}`}

@@ -2,8 +2,8 @@ import "./index.sass";
 
 import "./overscrollColourFixer.ts";
 
-import React = require("react");
-import ReactDOM = require("react-dom");
+import { useEffect } from "react";
+import ReactDOM from "react-dom";
 import {
   BrowserRouter as Router,
   Switch,
@@ -156,7 +156,7 @@ function PrivateRoute({
   const auth = useAuth();
 
   const isAuthenticated = auth?.getAuthKey();
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isAuthenticated) {
       auth.logout();
     }

@@ -1,4 +1,4 @@
-import React = require("react");
+import { useState } from "react";
 import { useHistory, useLocation } from "react-router-dom";
 import { NavLink, Link } from "react-router-dom";
 
@@ -17,7 +17,7 @@ export default function Nav() {
     await auth.logout();
   };
 
-  const [search, setSearch] = React.useState(
+  const [search, setSearch] = useState(
     location.pathname === "/search"
       ? new URLSearchParams(location.search).get("q") || ""
       : ""

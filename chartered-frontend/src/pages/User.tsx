@@ -1,4 +1,3 @@
-import React = require("react");
 import { useParams } from "react-router-dom";
 import { useAuth } from "../useAuth";
 import {

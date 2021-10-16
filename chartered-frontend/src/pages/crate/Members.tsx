@@ -1,5 +1,4 @@
-import React = require("react");
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import {
   PersonPlus,
@@ -17,8 +16,6 @@ import {
 import { useAuth } from "../../useAuth";
 import { Button, Modal } from "react-bootstrap";
 import { AsyncTypeahead } from "react-bootstrap-typeahead";
-import { debounce } from "lodash";
-import _ = require("lodash");
 import ReactPlaceholder from "react-placeholder";
 
 interface Member {
@@ -45,13 +42,16 @@ export default function Members({
 }) {
   const [prospectiveMembers, setProspectiveMembers] = useState([]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setProspectiveMembers(
       prospectiveMembers.filter((prospectiveMember) => {
-        _.findIndex(
-          members,
-          (member) => member.uuid === prospectiveMember.uuid
-        ) === -1;
+        for (const member of members) {
+          if (member.uuid === prospectiveMember.uuid) {
+            return false;
+          }
+        }
+
+        return true;
       })
     );
   }, [members]);
@@ -261,7 +261,7 @@ function MemberListInserter({
   onInsert: (username, picture_url, user_uuid) => any;
 }) {
   const auth = useAuth();
-  const searchRef = React.useRef(null);
+  const searchRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [options, setOptions] = useState([]);
   const [error, setError] = useState("");
@@ -320,12 +320,15 @@ function MemberListInserter({
         <AsyncTypeahead
           id="search-new-user"
           onSearch={handleSearch}
-          filterBy={(option) =>
-            _.findIndex(
-              existingMembers,
-              (existing) => option.user_uuid === existing.uuid
-            ) === -1
-          }
+          filterBy={(option) => {
+            for (const existing of existingMembers) {
+              if (option.user_uuid === existing.uuid) {
+                return false;
+              }
+            }
+
+            return true;
+          }}
           labelKey="display_name"
           options={options}
           isLoading={loading}

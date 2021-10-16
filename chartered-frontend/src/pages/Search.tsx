@@ -1,4 +1,3 @@
-import React = require("react");
 import { useState, useEffect } from "react";
 import { Link, useHistory, useLocation } from "react-router-dom";
 
@@ -12,7 +11,6 @@ import {
 
 import { BoxSeam, Plus } from "react-bootstrap-icons";
 import { LoadingSpinner } from "./Loading";
-import { result } from "lodash";
 
 export default function Search() {
   const auth = useAuth();

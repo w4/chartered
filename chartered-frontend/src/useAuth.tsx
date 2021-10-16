@@ -1,4 +1,3 @@
-import React = require("react");
 import { useState, useEffect, useContext, createContext } from "react";
 import { useLocation, Redirect } from "react-router-dom";
 import { unauthenticatedEndpoint } from "./util";

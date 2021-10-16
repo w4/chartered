@@ -1,4 +1,4 @@
-import React = require("react");
+import { useState, useEffect } from "react";
 import ReactPlaceholder from "react-placeholder";
 import { AuthContext } from "./useAuth";
 import { PersonFill } from "react-bootstrap-icons";
@@ -20,10 +20,10 @@ export function useAuthenticatedRequest<S>(
   { auth, endpoint }: { auth: AuthContext; endpoint: string },
   reloadOn = []
 ): { response: S | null; error: string | null } {
-  const [error, setError] = React.useState(null);
-  const [response, setResponse] = React.useState(null);
+  const [error, setError] = useState(null);
+  const [response, setResponse] = useState(null);
 
-  React.useEffect(async () => {
+  useEffect(async () => {
     try {
       setResponse(null);
       let res = await fetch(authenticatedEndpoint(auth, endpoint));
@@ -52,10 +52,10 @@ export function useUnauthenticatedRequest<S>(
   { endpoint }: { endpoint: string },
   reloadOn = []
 ): { response: S | null; error: string | null } {
-  const [error, setError] = React.useState(null);
-  const [response, setResponse] = React.useState(null);
+  const [error, setError] = useState(null);
+  const [response, setResponse] = useState(null);
 
-  React.useEffect(async () => {
+  useEffect(async () => {
     try {
       let res = await fetch(unauthenticatedEndpoint(endpoint));
       let jsonRes = await res.json();
@@ -122,7 +122,7 @@ export function RoundedPicture({
   width: string;
   className?: string;
 }) {
-  const [imageLoaded, setImageLoaded] = React.useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   return (
     <div
