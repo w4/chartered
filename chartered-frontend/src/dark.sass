@@ -3,15 +3,17 @@
 @import "../node_modules/bootstrap/scss/mixins"
 @import "../node_modules/bootstrap/scss/_navbar"
 
+$dark-bg-color: hsl(213, 44%, 10%)
+
 html, body
   @media(prefers-color-scheme: dark)
-    background: hsl(213, 44%, 7%) !important
+    background: $dark-bg-color !important
 
 .dark
-  $primary: hsl(212, 70%, 30%)
-  $secondary: hsl(213, 44%, 7%)
+  $primary: hsl(212, 70%, 49%)
+  $secondary: $dark-bg-color
   $dark: hsl(0, 0%, 0%)
-  $card-border-color: hsl(212, 25%, 12%)
+  $card-border-color: hsl(212, 25%, 22%)
   $light: rgba(255, 255, 255, 0.55)
   $link-color: $primary
 
@@ -34,7 +36,14 @@ html, body
     color: $body-color !important
 
   a.btn
-    color: white
+    color: $link-color
+
+  .btn-outline-light
+    border-color: $link-color
+
+    &:hover
+      color: $body-color
+      background-color: $link-color
 
   table
     border-color: $card-border-color !important

@@ -160,7 +160,7 @@ function CrateCard({
       className="text-decoration-none"
     >
       <div className="card border-0 mb-2 shadow-sm">
-        <div className="card-body text-black d-flex flex-row">
+        <div className="card-body d-flex flex-row">
           <div className="flex-grow-1 align-self-center">
             <h6 className="text-primary my-0">
               <span className="text-muted">{organisation}/</span>
