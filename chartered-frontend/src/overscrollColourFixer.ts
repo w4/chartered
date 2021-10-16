@@ -4,7 +4,7 @@
 // white so we want to use that at the top of the page.
 
 window.addEventListener("load", () => {
-  let ticking;
+  let ticking = false;
 
   const backgroundFix = () => {
     if (!ticking) {

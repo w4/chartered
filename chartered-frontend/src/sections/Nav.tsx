@@ -1,10 +1,10 @@
-import { useState } from "react";
+import {SyntheticEvent, useState} from "react";
 import { useHistory, useLocation } from "react-router-dom";
 import { NavLink, Link } from "react-router-dom";
 
-import { BoxArrowRight, CaretDownFill, Search } from "react-bootstrap-icons";
+import { BoxArrowRight, Search } from "react-bootstrap-icons";
 import { useAuth } from "../useAuth";
-import { Dropdown, Navbar, NavDropdown, NavItem } from "react-bootstrap";
+import { Dropdown, Navbar } from "react-bootstrap";
 import { ProfilePicture } from "../util";
 
 export default function Nav() {
@@ -12,9 +12,9 @@ export default function Nav() {
   const history = useHistory();
   const location = useLocation();
 
-  const logout = async (e) => {
+  const logout = async (e: SyntheticEvent) => {
     e.preventDefault();
-    await auth.logout();
+    await auth?.logout();
   };
 
   const [search, setSearch] = useState(
@@ -22,7 +22,7 @@ export default function Nav() {
       ? new URLSearchParams(location.search).get("q") || ""
       : ""
   );
-  const submitSearchForm = (e) => {
+  const submitSearchForm = (e: SyntheticEvent) => {
     e.preventDefault();
 
     if (search != "") {
@@ -85,7 +85,7 @@ export default function Nav() {
                   className="d-inline-flex align-items-center"
                 >
                   <ProfilePicture
-                    src={auth.getPictureUrl()}
+                    src={auth?.getPictureUrl()}
                     height="2rem"
                     width="2rem"
                   />
@@ -95,7 +95,7 @@ export default function Nav() {
                   align={{ md: "end" }}
                   style={{ marginTop: "5px" }}
                 >
-                  <Dropdown.Item as={Link} to={`/users/${auth.getUserUuid()}`}>
+                  <Dropdown.Item as={Link} to={`/users/${auth?.getUserUuid()}`}>
                     Your profile
                   </Dropdown.Item>
 

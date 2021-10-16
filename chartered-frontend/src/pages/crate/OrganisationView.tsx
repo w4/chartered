@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useState } from "react";
+import {Link, Redirect, useParams} from "react-router-dom";
 
 import Nav from "../../sections/Nav";
 import { useAuth } from "../../useAuth";
@@ -9,18 +9,8 @@ import {
   RoundedPicture,
 } from "../../util";
 
-import { BoxSeam, Plus, Trash } from "react-bootstrap-icons";
-import {
-  Button,
-  Dropdown,
-  Modal,
-  NavLink,
-  OverlayTrigger,
-  Tooltip,
-} from "react-bootstrap";
-import HumanTime from "react-human-time";
+import { BoxSeam } from "react-bootstrap-icons";
 import ErrorPage from "../ErrorPage";
-import Loading from "../Loading";
 import Members from "./Members";
 import ReactPlaceholder from "react-placeholder";
 
@@ -38,8 +28,12 @@ interface Crate {
 
 interface Member {
   uuid: string;
-  username: string;
-  permissions?: string[];
+  display_name: string;
+  permissions: string[];
+}
+
+interface UrlParams {
+  organisation: string;
 }
 
 export default function ShowOrganisation() {
@@ -48,9 +42,13 @@ export default function ShowOrganisation() {
     members: "Members",
   };
 
-  const { organisation } = useParams();
+  const { organisation } = useParams<UrlParams>();
   const auth = useAuth();
   const [activeTab, setActiveTab] = useState(Object.keys(tabs)[0]);
+
+  if (!auth) {
+    return <Redirect to="/login" />;
+  }
 
   const [reload, setReload] = useState(0);
   const { response: organisationDetails, error } =
@@ -67,7 +65,6 @@ export default function ShowOrganisation() {
   }
 
   const ready = !!organisationDetails;
-  const [imageLoaded, setImageLoaded] = useState(false);
 
   return (
     <div className="text-white">
@@ -218,18 +215,24 @@ function ListCrates({
   );
 }
 
+interface ListMemberParams {
+  organisation: string;
+  members: Member[];
+  possiblePermissions?: string[];
+  reload: () => any;
+}
+
 function ListMembers({
   organisation,
   members,
   possiblePermissions,
   reload,
-}: {
-  organisation: string;
-  members: Member[];
-  possiblePermissions?: string[];
-  reload: () => any;
-}) {
+}: ListMemberParams) {
   const auth = useAuth();
+
+  if (!auth) {
+    return <></>;
+  }
 
   const saveMemberPermissions = async (
     prospectiveMember: boolean,

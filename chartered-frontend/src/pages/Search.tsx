@@ -1,19 +1,16 @@
-import { useState, useEffect } from "react";
-import { Link, useHistory, useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 import Nav from "../sections/Nav";
 import { useAuth } from "../useAuth";
 import {
-  authenticatedEndpoint,
   ProfilePicture,
   useAuthenticatedRequest,
 } from "../util";
 
-import { BoxSeam, Plus } from "react-bootstrap-icons";
+import { BoxSeam } from "react-bootstrap-icons";
 import { LoadingSpinner } from "./Loading";
 
 export default function Search() {
-  const auth = useAuth();
   const location = useLocation();
 
   const query =
@@ -48,6 +45,10 @@ interface UserSearchResponseUser {
 function UsersResults({ query }: { query: string }) {
   const auth = useAuth();
 
+  if (!auth) {
+      return <></>;
+  }
+
   const { response: results, error } =
     useAuthenticatedRequest<UsersSearchResponse>(
       {
@@ -56,6 +57,10 @@ function UsersResults({ query }: { query: string }) {
       },
       [query]
     );
+
+  if (error) {
+      return <div className="alert alert-danger">{error}</div>;
+  }
 
   if (!results) {
     return (
@@ -119,6 +124,10 @@ function CrateResults({
 }) {
   const auth = useAuth();
 
+  if (!auth) {
+      return <></>;
+  }
+
   const { response: results, error } =
     useAuthenticatedRequest<CrateSearchResponse>(
       {
@@ -127,6 +136,10 @@ function CrateResults({
       },
       [query]
     );
+
+  if (error) {
+      return <div className="alert alert-danger">{error}</div>
+  }
 
   if (!results) {
     return (

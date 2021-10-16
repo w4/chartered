@@ -18,7 +18,7 @@ export function authenticatedEndpoint(
 
 export function useAuthenticatedRequest<S>(
   { auth, endpoint }: { auth: AuthContext; endpoint: string },
-  reloadOn = []
+  reloadOn: any[] = []
 ): { response: S | null; error: string | null } {
   const [error, setError] = useState(null);
   const [response, setResponse] = useState(null);
@@ -40,7 +40,7 @@ export function useAuthenticatedRequest<S>(
       } else {
         setResponse(jsonRes);
       }
-    } catch (e) {
+    } catch (e: any) {
       setError(e.message);
     }
   }, reloadOn);
@@ -65,7 +65,7 @@ export function useUnauthenticatedRequest<S>(
       } else {
         setResponse(jsonRes);
       }
-    } catch (e) {
+    } catch (e: any) {
       setError(e.message);
     }
   }, reloadOn);
@@ -79,7 +79,7 @@ export function ProfilePicture({
   width,
   className,
 }: {
-  src: string;
+  src?: string | null;
   height: string;
   width: string;
   className?: string;
@@ -113,11 +113,13 @@ export function ProfilePicture({
 
 export function RoundedPicture({
   src,
+  alt,
   height,
   width,
   className,
 }: {
   src: string;
+  alt?: string;
   height: string;
   width: string;
   className?: string;
@@ -143,6 +145,7 @@ export function RoundedPicture({
           height,
           width,
         }}
+        alt={alt}
         src={src}
         onLoad={() => setImageLoaded(true)}
         className="rounded-circle"

@@ -44,8 +44,8 @@ export function HandleOAuthLogin() {
       );
       let json = await result.json();
 
-      auth.handleLoginResponse(json);
-    } catch (err) {
+      auth?.handleLoginResponse(json);
+    } catch (err: any) {
       setResult(
         <Redirect
           to={{
@@ -65,7 +65,7 @@ export const useAuth = (): AuthContext | null => {
 };
 
 function useProvideAuth(): AuthContext {
-  const [auth, setAuth] = useState(() => {
+  const [auth, setAuth] = useState<any[] | null>(() => {
     let authStorage = getAuthStorage();
     return [
       authStorage.userUuid,
@@ -141,7 +141,7 @@ function useProvideAuth(): AuthContext {
 
   const getAuthKey = () => {
     if (auth?.[2] > new Date()) {
-      return auth[1];
+      return auth?.[1];
     } else if (auth) {
       return null;
     }
@@ -149,7 +149,7 @@ function useProvideAuth(): AuthContext {
 
   const getUserUuid = () => {
     if (auth?.[2] > new Date()) {
-      return auth[0];
+      return auth?.[0];
     } else if (auth) {
       return null;
     }
@@ -157,7 +157,7 @@ function useProvideAuth(): AuthContext {
 
   const getPictureUrl = () => {
     if (auth?.[2] > new Date()) {
-      return auth[3];
+      return auth?.[3];
     } else if (auth) {
       return null;
     }
@@ -176,7 +176,7 @@ function useProvideAuth(): AuthContext {
 
 function getAuthStorage() {
   const saved = localStorage.getItem("charteredAuthentication");
-  const initial = JSON.parse(saved);
+  const initial = saved ? JSON.parse(saved) : {};
   return {
     userUuid: initial?.userUuid || null,
     authKey: initial?.authKey || null,

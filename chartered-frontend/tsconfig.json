@@ -1,7 +1,8 @@
 {
   "compilerOptions": {
-    "jsx": "react",
-    "allowSyntheticDefaultImports": true
+    "jsx": "react-jsx",
+    "allowSyntheticDefaultImports": true,
+    "strict": true
   },
-  "lib": ["ES2015"]
+  "lib": ["ES2021"]
 }

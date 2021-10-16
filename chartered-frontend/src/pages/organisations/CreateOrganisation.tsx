@@ -1,15 +1,17 @@
-import { useState, useEffect } from "react";
+import {SyntheticEvent, useState} from "react";
 import { Link, useHistory } from "react-router-dom";
 
 import Nav from "../../sections/Nav";
 import { useAuth } from "../../useAuth";
 import { authenticatedEndpoint } from "../../util";
 
-import { Plus } from "react-bootstrap-icons";
-
 export default function CreateOrganisation() {
   const auth = useAuth();
   const router = useHistory();
+
+  if (!auth) {
+    return <></>;
+  }
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -18,9 +20,7 @@ export default function CreateOrganisation() {
   const [description, setDescription] = useState("");
   const [publicOrg, setPublicOrg] = useState(false);
 
-  console.log(publicOrg);
-
-  const createOrganisation = async (evt) => {
+  const createOrganisation = async (evt: SyntheticEvent) => {
     evt.preventDefault();
 
     setError("");
@@ -43,7 +43,7 @@ export default function CreateOrganisation() {
       setName("");
       setDescription("");
       router.push(`/crates/${name}`);
-    } catch (e) {
+    } catch (e: any) {
       setError(e.message);
     } finally {
       setLoading(false);

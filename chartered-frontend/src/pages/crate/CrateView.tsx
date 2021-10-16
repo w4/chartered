@@ -53,7 +53,7 @@ export interface CrateInfoVersionUploader {
 export interface CrateInfoVersion {
   vers: string;
   deps: CrateInfoVersionDependency[];
-  features: any[];
+  features: { [key: string]: any };
   size: number;
   uploader: CrateInfoVersionUploader;
   created_at: string;
@@ -65,10 +65,19 @@ export interface CrateInfoVersionDependency {
   registry?: string;
 }
 
+interface UrlParameters {
+  organisation: string;
+  crate: string;
+  subview: Tab | undefined;
+}
+
 export default function SingleCrate() {
   const auth = useAuth();
-  const { organisation, crate, subview } = useParams();
-  const currentTab: Tab | undefined = subview;
+  const { organisation, crate, subview: currentTab } = useParams<UrlParameters>();
+
+  if (!auth) {
+    return <Redirect to="/login" />;
+  }
 
   if (!currentTab) {
     return <Redirect to={`/crates/${organisation}/${crate}/readme`} />;
@@ -274,7 +283,7 @@ function Dependency({
 }) {
   let link = <>{dep.name}</>;
 
-  if (dep.registry === null) {
+  if (dep.registry === null || dep.registry === undefined) {
     link = (
       <a target="_blank" href={`/crates/${organisation}/${dep.name}`}>
         {link}
@@ -301,14 +310,19 @@ function Dependency({
   );
 }
 
+interface MembersProps {
+  organisation: string;
+  crate: string;
+}
+
 function Members({
   organisation,
   crate,
-}: {
-  organisation: string;
-  crate: string;
-}) {
+}: MembersProps) {
   const auth = useAuth();
+
+  if (!auth) { return <></>; }
+
   const [reload, setReload] = useState(0);
   const { response, error } = useAuthenticatedRequest<CratesMembersResponse>(
     {
@@ -331,9 +345,9 @@ function Members({
   }
 
   const saveMemberPermissions = async (
-    prospectiveMember,
-    uuid,
-    selectedPermissions
+    prospectiveMember: boolean,
+    uuid: string,
+    selectedPermissions: string[],
   ) => {
     let res = await fetch(
       authenticatedEndpoint(auth, `crates/${organisation}/${crate}/members`),
@@ -358,7 +372,7 @@ function Members({
     setReload(reload + 1);
   };
 
-  const deleteMember = async (uuid) => {
+  const deleteMember = async (uuid: string) => {
     let res = await fetch(
       authenticatedEndpoint(auth, `crates/${organisation}/${crate}/members`),
       {
@@ -392,8 +406,8 @@ function Members({
 }
 
 function Versions(props: { crate: CrateInfo }) {
-  const humanFileSize = (size) => {
-    var i = Math.floor(Math.log(size) / Math.log(1024));
+  const humanFileSize = (size: number) => {
+    const i = Math.floor(Math.log(size) / Math.log(1024));
     return (
       Number((size / Math.pow(1024, i)).toFixed(2)) +
       " " +

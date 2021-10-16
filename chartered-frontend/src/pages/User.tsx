@@ -1,8 +1,7 @@
-import { useParams } from "react-router-dom";
+import {Redirect, useParams} from "react-router-dom";
 import { useAuth } from "../useAuth";
 import {
   ProfilePicture,
-  RoundedPicture,
   useAuthenticatedRequest,
 } from "../util";
 import Nav from "../sections/Nav";
@@ -20,9 +19,17 @@ interface Response {
   picture_url?: string;
 }
 
+interface UrlParams {
+  uuid: string;
+}
+
 export default function User() {
   const auth = useAuth();
-  const { uuid } = useParams();
+  const { uuid } = useParams<UrlParams>();
+
+  if (!auth) {
+    return <Redirect to="/login" />;
+  }
 
   const { response: user, error } = useAuthenticatedRequest<Response>({
     auth,

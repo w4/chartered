@@ -122,7 +122,7 @@ function PublicRoute({
   return (
     <Route
       {...rest}
-      render={(props) => {
+      render={(props: any) => {
         // TODO: check if valid key
         if (!unauthedOnly || !auth || !auth?.getAuthKey()) {
           return <Component {...props} />;
@@ -137,7 +137,7 @@ function PublicRoute({
           );
         }
       }}
-    ></Route>
+    />
   );
 }
 
@@ -158,7 +158,7 @@ function PrivateRoute({
   const isAuthenticated = auth?.getAuthKey();
   useEffect(() => {
     if (!isAuthenticated) {
-      auth.logout();
+      auth?.logout();
     }
   }, [isAuthenticated]);
 
@@ -177,6 +177,6 @@ function PrivateRoute({
           );
         }
       }}
-    ></Route>
+    />
   );
 }

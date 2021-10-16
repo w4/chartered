@@ -1,21 +1,23 @@
-import { useState, useEffect } from "react";
+import {SyntheticEvent, useState} from "react";
 import { Link, useHistory } from "react-router-dom";
 
 import Nav from "../../sections/Nav";
 import { useAuth } from "../../useAuth";
 import { authenticatedEndpoint } from "../../util";
 
-import { Plus } from "react-bootstrap-icons";
-
 export default function ListSshKeys() {
   const auth = useAuth();
   const router = useHistory();
+
+  if (!auth) {
+    return <></>;
+  }
 
   const [sshKey, setSshKey] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const submitSshKey = async (evt) => {
+  const submitSshKey = async (evt: SyntheticEvent) => {
     evt.preventDefault();
 
     setError("");
@@ -37,7 +39,7 @@ export default function ListSshKeys() {
 
       setSshKey("");
       router.push("/ssh-keys/list");
-    } catch (e) {
+    } catch (e: any) {
       setError(e.message);
     } finally {
       setLoading(false);
@@ -63,7 +65,7 @@ export default function ListSshKeys() {
             className="btn-close"
             aria-label="Close"
             onClick={() => setError("")}
-          ></button>
+          />
         </div>
 
         <div className="card border-0 shadow-sm text-black">
@@ -77,7 +79,7 @@ export default function ListSshKeys() {
                 value={sshKey}
               />
 
-              <div className="clearfix"></div>
+              <div className="clearfix" />
 
               <button
                 type="submit"

@@ -1,10 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import {useState, useEffect, useRef, SyntheticEvent, MouseEventHandler} from "react";
 import { useLocation } from "react-router-dom";
 
 import { useAuth } from "../useAuth";
 import { useUnauthenticatedRequest } from "../util";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { IconName } from "@fortawesome/fontawesome-svg-core";
 import {
   faGithub,
   faGitlab,
@@ -38,18 +37,18 @@ export default function Login() {
     }
 
     isMountedRef.current = true;
-    return () => (isMountedRef.current = false);
+    return () => { isMountedRef.current = false };
   });
 
-  const handleSubmit = async (evt) => {
+  const handleSubmit = async (evt: SyntheticEvent) => {
     evt.preventDefault();
 
     setError("");
     setLoading("password");
 
     try {
-      await auth.login(username, password);
-    } catch (e) {
+      await auth?.login(username, password);
+    } catch (e: any) {
       setError(e.message);
     } finally {
       if (isMountedRef.current) {
@@ -58,13 +57,13 @@ export default function Login() {
     }
   };
 
-  const handleOAuthLogin = async (provider) => {
+  const handleOAuthLogin = async (provider: string) => {
     setError("");
     setLoading(provider);
 
     try {
-      await auth.oauthLogin(provider);
-    } catch (e) {
+      await auth?.oauthLogin(provider);
+    } catch (e: any) {
       setError(e.message);
     }
   };
@@ -180,7 +179,7 @@ const BRANDS = {
 };
 
 function getIconForProvider(provider: string): [IconDefinition, string] {
-  return BRANDS[provider] || BRANDS["default"];
+  return BRANDS[provider] || BRANDS.default;
 }
 
 function ButtonOrSpinner({
@@ -200,7 +199,7 @@ function ButtonOrSpinner({
   text: string;
   icon?: IconDefinition;
   background?: string;
-  onClick: (evt) => any;
+  onClick: MouseEventHandler<HTMLButtonElement>;
 }) {
   if (showSpinner) {
     return (
@@ -227,4 +226,6 @@ function ButtonOrSpinner({
       </button>
     );
   }
+
+  return <></>;
 }

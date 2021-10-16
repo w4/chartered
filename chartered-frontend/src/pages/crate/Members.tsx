@@ -4,23 +4,19 @@ import {
   PersonPlus,
   Trash,
   CheckLg,
-  Save,
   PlusLg,
 } from "react-bootstrap-icons";
 import {
   authenticatedEndpoint,
   ProfilePicture,
-  RoundedPicture,
-  useAuthenticatedRequest,
 } from "../../util";
 import { useAuth } from "../../useAuth";
 import { Button, Modal } from "react-bootstrap";
 import { AsyncTypeahead } from "react-bootstrap-typeahead";
-import ReactPlaceholder from "react-placeholder";
 
 interface Member {
   uuid: string;
-  permissions?: string[];
+  permissions: string[];
   display_name: string;
   picture_url?: string;
 }
@@ -40,7 +36,7 @@ export default function Members({
   ) => Promise<any>;
   deleteMember: (uuid: string) => Promise<any>;
 }) {
-  const [prospectiveMembers, setProspectiveMembers] = useState([]);
+  const [prospectiveMembers, setProspectiveMembers] = useState<Member[]>([]);
 
   useEffect(() => {
     setProspectiveMembers(
@@ -122,12 +118,12 @@ function MemberListItem({
   deleteMember: (uuid: string) => Promise<any>;
 }) {
   const [selectedPermissions, setSelectedPermissions] = useState(
-    member.permissions
+    member.permissions || []
   );
   const auth = useAuth();
   const [deleting, setDeleting] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState(undefined);
 
   let itemAction = <></>;
 
@@ -151,7 +147,7 @@ function MemberListItem({
     setSaving(true);
 
     try {
-      deleteMember(member.uuid);
+      await deleteMember(member.uuid);
     } catch (e) {
       setError(error);
     } finally {
@@ -203,13 +199,13 @@ function MemberListItem({
   return (
     <>
       <DeleteModal
-        show={deleting === true}
+        show={deleting}
         onCancel={() => setDeleting(false)}
         onConfirm={() => doDelete()}
         username={member.display_name}
       />
 
-      <ErrorModal error={error} onClose={() => setError(null)} />
+      <ErrorModal error={error} onClose={() => setError(undefined)} />
 
       <tr>
         <td className="align-middle fit">
@@ -222,7 +218,7 @@ function MemberListItem({
               {member.display_name}
             </Link>
           </strong>
-          {auth.getUserUuid() === member.uuid ? (
+          {auth?.getUserUuid() === member.uuid ? (
             <>
               <br />
               <em>(that's you!)</em>
@@ -253,20 +249,32 @@ function MemberListItem({
   );
 }
 
+interface MemberListInserterProps {
+  existingMembers: Member[];
+  onInsert: (username: string, user_uuid: string, picture_url: string | null) => any;
+}
+
+interface SearchOption {
+  user_uuid: string;
+  display_name: string;
+  picture_url: string | null;
+}
+
 function MemberListInserter({
   onInsert,
   existingMembers,
-}: {
-  existingMembers: Member[];
-  onInsert: (username, picture_url, user_uuid) => any;
-}) {
+}: MemberListInserterProps) {
   const auth = useAuth();
   const searchRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [options, setOptions] = useState([]);
   const [error, setError] = useState("");
 
-  const handleSearch = async (query) => {
+  if (!auth) {
+    return <></>;
+  }
+
+  const handleSearch = async (query: string) => {
     setLoading(true);
     setError("");
 
@@ -284,20 +292,20 @@ function MemberListInserter({
       }
 
       setOptions(json.users || []);
-    } catch (e) {
+    } catch (e: any) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChange = (selected) => {
+  const handleChange = (selected: SearchOption[]) => {
     onInsert(
       selected[0].display_name,
       selected[0].picture_url,
       selected[0].user_uuid
     );
-    searchRef.current.clear();
+    searchRef.current?.clear();
   };
 
   return (
@@ -320,7 +328,7 @@ function MemberListInserter({
         <AsyncTypeahead
           id="search-new-user"
           onSearch={handleSearch}
-          filterBy={(option) => {
+          filterBy={(option: SearchOption) => {
             for (const existing of existingMembers) {
               if (option.user_uuid === existing.uuid) {
                 return false;
@@ -335,7 +343,7 @@ function MemberListInserter({
           placeholder="Search for User"
           onChange={handleChange}
           ref={searchRef}
-          renderMenuItemChildren={(option, props) => (
+          renderMenuItemChildren={(option: SearchOption) => (
             <>
               <ProfilePicture
                 src={option.picture_url}
@@ -351,7 +359,7 @@ function MemberListInserter({
         <div className="text-danger">{error}</div>
       </td>
 
-      <td className="align-middle"></td>
+      <td className="align-middle" />
 
       <td className="align-middle">
         <button type="button" className="btn text-dark pe-none">
@@ -371,7 +379,7 @@ function RenderPermissions({
   possiblePermissions: string[];
   selectedPermissions: string[];
   userUuid: string;
-  onChange: (permissions) => any;
+  onChange: (permissions: string[]) => any;
 }) {
   return (
     <div className="grid" style={{ "--bs-gap": 0 }}>

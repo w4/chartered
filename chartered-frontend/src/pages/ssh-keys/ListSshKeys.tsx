@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import {Link, Redirect} from "react-router-dom";
 
 import Nav from "../../sections/Nav";
 import { useAuth } from "../../useAuth";
@@ -9,7 +9,7 @@ import { Plus, Trash } from "react-bootstrap-icons";
 import { Button, Modal, OverlayTrigger, Tooltip } from "react-bootstrap";
 import HumanTime from "react-human-time";
 import ErrorPage from "../ErrorPage";
-import Loading, { LoadingSpinner } from "../Loading";
+import { LoadingSpinner } from "../Loading";
 
 interface SshKeysResponse {
   keys: SshKeysResponseKey[];
@@ -26,8 +26,12 @@ interface SshKeysResponseKey {
 export default function ListSshKeys() {
   const auth = useAuth();
 
+  if (!auth) {
+    return <Redirect to="/login" />;
+  }
+
   const [error, setError] = useState("");
-  const [deleting, setDeleting] = useState(null);
+  const [deleting, setDeleting] = useState<SshKeysResponseKey | null>(null);
   const [reloadSshKeys, setReloadSshKeys] = useState(0);
 
   const { response: sshKeys, error: loadError } =
@@ -46,6 +50,10 @@ export default function ListSshKeys() {
   const deleteKey = async () => {
     setError("");
 
+    if (!deleting) {
+      return;
+    }
+
     try {
       let res = await fetch(
         authenticatedEndpoint(auth, `ssh-key/${deleting.uuid}`),
@@ -63,7 +71,7 @@ export default function ListSshKeys() {
       }
 
       setReloadSshKeys(reloadSshKeys + 1);
-    } catch (e) {
+    } catch (e: any) {
       setError(e.message);
     } finally {
       setDeleting(null);
@@ -92,7 +100,7 @@ export default function ListSshKeys() {
             className="btn-close"
             aria-label="Close"
             onClick={() => setError("")}
-          ></button>
+          />
         </div>
 
         <div className="card border-0 shadow-sm text-black">
@@ -211,7 +219,7 @@ function DeleteModal(props: {
   show: boolean;
   onCancel: () => void;
   onConfirm: () => void;
-  fingerprint: string;
+  fingerprint?: string;
 }) {
   return (
     <Modal

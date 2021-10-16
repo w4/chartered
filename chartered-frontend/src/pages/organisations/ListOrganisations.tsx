@@ -1,5 +1,5 @@
 import { Plus } from "react-bootstrap-icons";
-import { Link } from "react-router-dom";
+import {Link, Redirect} from "react-router-dom";
 
 import Nav from "../../sections/Nav";
 import { useAuth } from "../../useAuth";
@@ -18,6 +18,10 @@ interface ResponseOrganisations {
 
 export default function ListOrganisations() {
   const auth = useAuth();
+
+  if (!auth) {
+    return <Redirect to="/login" />;
+  }
 
   const { response: list, error } = useAuthenticatedRequest<Response>({
     auth,
