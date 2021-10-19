@@ -11,15 +11,14 @@ use axum::{
     http::{header, Method},
     AddExtensionLayer, Router,
 };
-use clap::Clap;
+use clap::Parser;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tower::ServiceBuilder;
 use tower_http::cors::{Any, CorsLayer};
 
-#[derive(Clap)]
+#[derive(Parser)]
 #[clap(version = clap::crate_version!(), author = clap::crate_authors!())]
-#[clap(setting = clap::AppSettings::ColoredHelp)]
 pub struct Opts {
     #[clap(short, long, parse(from_occurrences))]
     verbose: i32,
@@ -107,6 +106,9 @@ async fn main() {
         .layer(AddExtensionLayer::new(pool))
         .layer(AddExtensionLayer::new(Arc::new(
             config.create_oidc_clients().await.unwrap(),
+        )))
+        .layer(AddExtensionLayer::new(Arc::new(
+            config.get_file_system().await.unwrap(),
         )))
         .layer(AddExtensionLayer::new(Arc::new(config)));
 

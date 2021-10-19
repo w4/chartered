@@ -1,4 +1,5 @@
 use chacha20poly1305::Key as ChaCha20Poly1305Key;
+use chartered_fs::FileSystem;
 use openid::DiscoveredClient;
 use serde::{de::Error as SerdeDeError, Deserialize};
 use std::collections::HashMap;
@@ -8,19 +9,28 @@ use thiserror::Error;
 pub enum Error {
     #[error("Error discovering OpenID provider: {0}")]
     OpenId(#[from] openid::error::Error),
+    #[error("Failed to create file system handle: {0}")]
+    Fs(#[from] Box<chartered_fs::Error>),
 }
 
 pub type OidcClients = HashMap<String, DiscoveredClient>;
 
-#[derive(Deserialize, Default, Debug)]
+#[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
+    pub storage_uri: String,
     pub auth: AuthConfig,
     #[serde(deserialize_with = "deserialize_encryption_key")]
     pub encryption_key: ChaCha20Poly1305Key,
 }
 
 impl Config {
+    pub async fn get_file_system(&self) -> Result<FileSystem, Error> {
+        Ok(FileSystem::from_str(&self.storage_uri)
+            .await
+            .map_err(Box::new)?)
+    }
+
     pub async fn create_oidc_clients(&self) -> Result<OidcClients, Error> {
         Ok(futures::future::try_join_all(
             self.auth

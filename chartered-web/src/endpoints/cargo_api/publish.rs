@@ -3,6 +3,7 @@ use bytes::Bytes;
 use chartered_db::{crates::Crate, users::User, ConnectionPool};
 use chartered_fs::FileSystem;
 use chartered_types::cargo::{CrateDependency, CrateFeatures, CrateVersion};
+use nom_bytes::BytesWrapper;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{borrow::Cow, convert::TryInto, sync::Arc};
@@ -18,6 +19,8 @@ pub enum Error {
     MetadataParse,
     #[error("expected a valid crate name to start with a letter, contain only letters, numbers, hyphens, or underscores and have at most 64 characters ")]
     InvalidCrateName,
+    #[error("Failed to push crate file to storage: {0}")]
+    File(#[from] Box<chartered_fs::Error>),
 }
 
 impl Error {
@@ -29,6 +32,7 @@ impl Error {
             Self::JsonParse(_) | Self::MetadataParse | Self::InvalidCrateName => {
                 StatusCode::BAD_REQUEST
             }
+            Self::File(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }
@@ -67,11 +71,11 @@ pub async fn handle(
     extract::Path((_session_key, organisation)): extract::Path<(String, String)>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(user): extract::Extension<Arc<User>>,
+    extract::Extension(fs): extract::Extension<Arc<FileSystem>>,
     body: Bytes,
 ) -> Result<axum::response::Json<PublishCrateResponse>, Error> {
-    let (_, (metadata_bytes, crate_bytes)) =
-        parse(body.as_ref()).map_err(|_| Error::MetadataParse)?;
-    let metadata: Metadata<'_> = serde_json::from_slice(metadata_bytes)?;
+    let (_, (metadata_bytes, crate_bytes)) = parse(body).map_err(|_| Error::MetadataParse)?;
+    let metadata: Metadata<'_> = serde_json::from_slice(&metadata_bytes)?;
 
     if !validate_crate_name(&metadata.inner.name) {
         return Err(Error::InvalidCrateName);
@@ -100,14 +104,16 @@ pub async fn handle(
         Err(e) => return Err(e.into()),
     };
 
-    let file_ref = chartered_fs::Local.write(crate_bytes).await.unwrap();
+    let checksum = hex::encode(Sha256::digest(&crate_bytes));
+
+    let file_ref = fs.write(crate_bytes).await.map_err(Box::new)?;
 
     crate_with_permissions
         .publish_version(
             db,
             user,
             file_ref,
-            hex::encode(Sha256::digest(crate_bytes)),
+            checksum,
             metadata_bytes.len().try_into().unwrap(),
             metadata.inner.into(),
             metadata.meta,
@@ -117,12 +123,14 @@ pub async fn handle(
     Ok(axum::response::Json(PublishCrateResponse::default()))
 }
 
-fn parse(body: &[u8]) -> nom::IResult<&[u8], (&[u8], &[u8])> {
+fn parse(body: impl Into<BytesWrapper>) -> nom::IResult<BytesWrapper, (Bytes, Bytes)> {
     use nom::{bytes::complete::take, combinator::map_res};
     use std::array::TryFromSliceError;
 
+    let body = body.into();
+
     let u32_from_le_bytes =
-        |b: &[u8]| Ok::<_, TryFromSliceError>(u32::from_le_bytes(b.try_into()?));
+        |b: BytesWrapper| Ok::<_, TryFromSliceError>(u32::from_le_bytes((&b[..]).try_into()?));
     let mut read_u32 = map_res(take(4_usize), u32_from_le_bytes);
 
     let (rest, metadata_length) = read_u32(body)?;
@@ -130,7 +138,7 @@ fn parse(body: &[u8]) -> nom::IResult<&[u8], (&[u8], &[u8])> {
     let (rest, crate_length) = read_u32(rest)?;
     let (rest, crate_bytes) = take(crate_length)(rest)?;
 
-    Ok((rest, (metadata_bytes, crate_bytes)))
+    Ok((rest, (metadata_bytes.into(), crate_bytes.into())))
 }
 
 #[allow(dead_code)] // a lot of these need checking/validating

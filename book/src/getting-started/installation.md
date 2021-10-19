@@ -28,22 +28,22 @@ and store crate files in `/tmp/chartered`, configuration away from these default
 Using the recommended setup, S3 & PostgreSQL:
 
 ```toml
-bind-address = "127.0.0.1:8080" # hint: use a different port for each service
-database-uri = "postgres://user:password@localhost/chartered"
+bind_address = "127.0.0.1:8080" # hint: use a different port for each service
+database_uri = "postgres://user:password@localhost/chartered"
 
 # the below configuration options should only be set for chartered-web
-crate-store  = "s3://s3-eu-west-1.amazonaws.com/my-cool-crate-store/"
-frontend-url = "https://my.instance.chart.rs" # this is used for CORS
+storage_uri  = "s3://s3-eu-west-1.amazonaws.com/my-cool-crate-store/"
+frontend_url = "https://my.instance.chart.rs" # this is used for CORS
                                               # if unset defaults to *
 ```
 
 Or, using the defaults of `chartered-web` as an example:
 
 ```toml
-bind-address = "127.0.0.1:8899"
-database-uri = "sqlite://chartered.db"
+bind_address = "127.0.0.1:8899"
+database_uri = "sqlite://chartered.db"
 
-crate-store  = "file:///tmp/chartered"
+storage_uri  = "file:///tmp/chartered"
 ```
 
 These configuration files can be passed into each binary using the `-c` CLI argument.

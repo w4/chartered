@@ -1,6 +1,12 @@
-use axum::extract;
+use axum::{
+    body::{Full, HttpBody},
+    extract,
+    http::Response,
+    response::{IntoResponse, Redirect},
+};
+use bytes::Bytes;
 use chartered_db::{crates::Crate, users::User, ConnectionPool};
-use chartered_fs::FileSystem;
+use chartered_fs::{FilePointer, FileSystem};
 use std::{str::FromStr, sync::Arc};
 use thiserror::Error;
 
@@ -8,8 +14,8 @@ use thiserror::Error;
 pub enum Error {
     #[error("{0}")]
     Database(#[from] chartered_db::Error),
-    #[error("Failed to fetch crate file")]
-    File(#[from] std::io::Error),
+    #[error("Failed to fetch crate file: {0}")]
+    File(#[from] Box<chartered_fs::Error>),
     #[error("The requested version does not exist for the crate")]
     NoVersion,
 }
@@ -28,6 +34,23 @@ impl Error {
 
 define_error_response!(Error);
 
+pub enum ResponseOrRedirect {
+    Response(Vec<u8>),
+    Redirect(Redirect),
+}
+
+impl IntoResponse for ResponseOrRedirect {
+    type Body = Full<Bytes>;
+    type BodyError = <Self::Body as HttpBody>::Error;
+
+    fn into_response(self) -> Response<Self::Body> {
+        match self {
+            Self::Response(v) => v.into_response(),
+            Self::Redirect(v) => v.into_response().map(|_| Full::from(Bytes::new())),
+        }
+    }
+}
+
 pub async fn handle(
     extract::Path((_session_key, organisation, name, version)): extract::Path<(
         String,
@@ -37,7 +60,8 @@ pub async fn handle(
     )>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(user): extract::Extension<Arc<User>>,
-) -> Result<Vec<u8>, Error> {
+    extract::Extension(fs): extract::Extension<Arc<FileSystem>>,
+) -> Result<ResponseOrRedirect, Error> {
     let crate_with_permissions =
         Arc::new(Crate::find_by_name(db.clone(), user.id, organisation, name).await?);
 
@@ -56,5 +80,10 @@ pub async fn handle(
 
     let file_ref = chartered_fs::FileReference::from_str(&version.filesystem_object).unwrap();
 
-    Ok(chartered_fs::Local.read(file_ref).await?)
+    let res = fs.read(file_ref).await.map_err(Box::new)?;
+
+    match res {
+        FilePointer::Redirect(uri) => Ok(ResponseOrRedirect::Redirect(Redirect::to(uri))),
+        FilePointer::Content(content) => Ok(ResponseOrRedirect::Response(content)),
+    }
 }
