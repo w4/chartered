@@ -35,6 +35,13 @@ database_uri = "postgres://user:password@localhost/chartered"
 storage_uri  = "s3://s3-eu-west-1.amazonaws.com/my-cool-crate-store/"
 frontend_url = "https://my.instance.chart.rs" # this is used for CORS
                                               # if unset defaults to *
+
+# openid connect provider
+[auth.gitlab]
+enabled = true
+discovery_uri = "https://gitlab.com/"
+client_id = "[client-id]"
+client_secret = "[client-secret]"
 ```
 
 Or, using the defaults of `chartered-web` as an example:

@@ -3,6 +3,7 @@ use chartered_fs::FileSystem;
 use openid::DiscoveredClient;
 use serde::{de::Error as SerdeDeError, Deserialize};
 use std::collections::HashMap;
+use std::net::SocketAddr;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -18,6 +19,7 @@ pub type OidcClients = HashMap<String, DiscoveredClient>;
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
+    pub bind_address: SocketAddr,
     pub storage_uri: String,
     pub auth: AuthConfig,
     #[serde(deserialize_with = "deserialize_encryption_key")]

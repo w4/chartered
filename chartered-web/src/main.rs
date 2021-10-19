@@ -60,6 +60,8 @@ async fn main() {
     let opts: Opts = Opts::parse();
     let config: config::Config = toml::from_slice(&std::fs::read(&opts.config).unwrap()).unwrap();
 
+    let bind_address = config.bind_address;
+
     tracing_subscriber::fmt::init();
 
     let pool = chartered_db::init().unwrap();
@@ -112,7 +114,7 @@ async fn main() {
         )))
         .layer(AddExtensionLayer::new(Arc::new(config)));
 
-    axum::Server::bind(&"0.0.0.0:8888".parse().unwrap())
+    axum::Server::bind(&bind_address)
         .serve(app.into_make_service_with_connect_info::<std::net::SocketAddr, _>())
         .await
         .unwrap();
