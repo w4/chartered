@@ -12,10 +12,11 @@ use axum::{
     AddExtensionLayer, Router,
 };
 use clap::Parser;
-use std::path::PathBuf;
-use std::sync::Arc;
+use std::{fmt::Formatter, path::PathBuf, sync::Arc};
+use thiserror::Error;
 use tower::ServiceBuilder;
 use tower_http::cors::{Any, CorsLayer};
+use tracing::info;
 
 #[derive(Parser)]
 #[clap(version = clap::crate_version!(), author = clap::crate_authors!())]
@@ -56,15 +57,24 @@ pub(crate) use axum_box_after_every_route;
 
 #[tokio::main]
 #[allow(clippy::semicolon_if_nothing_returned)] // lint breaks with tokio::main
-async fn main() {
+async fn main() -> Result<(), InitError> {
     let opts: Opts = Opts::parse();
-    let config: config::Config = toml::from_slice(&std::fs::read(&opts.config).unwrap()).unwrap();
 
-    let bind_address = config.bind_address;
+    std::env::set_var(
+        "RUST_LOG",
+        match opts.verbose {
+            1 => "debug",
+            2 => "trace",
+            _ => "info",
+        },
+    );
+
+    let config: config::Config = toml::from_slice(&std::fs::read(&opts.config)?)?;
 
     tracing_subscriber::fmt::init();
 
-    let pool = chartered_db::init().unwrap();
+    let bind_address = config.bind_address;
+    let pool = chartered_db::init(&config.database_uri)?;
 
     let middleware_stack = ServiceBuilder::new()
         .layer_fn(middleware::logging::LoggingMiddleware)
@@ -107,15 +117,39 @@ async fn main() {
         )
         .layer(AddExtensionLayer::new(pool))
         .layer(AddExtensionLayer::new(Arc::new(
-            config.create_oidc_clients().await.unwrap(),
+            config.create_oidc_clients().await?,
         )))
         .layer(AddExtensionLayer::new(Arc::new(
-            config.get_file_system().await.unwrap(),
+            config.get_file_system().await?,
         )))
         .layer(AddExtensionLayer::new(Arc::new(config)));
+
+    info!("HTTP server listening on {}", bind_address);
 
     axum::Server::bind(&bind_address)
         .serve(app.into_make_service_with_connect_info::<std::net::SocketAddr, _>())
         .await
-        .unwrap();
+        .map_err(|e| InitError::ServerSpawn(Box::new(e)))?;
+
+    Ok(())
+}
+
+#[derive(Error)]
+pub enum InitError {
+    #[error("Failed to read configuration: {0}")]
+    ConfigRead(#[from] std::io::Error),
+    #[error("Failed to parse configuration: {0}")]
+    ConfigParse(#[from] toml::de::Error),
+    #[error("Configuration error: {0}")]
+    Config(#[from] config::Error),
+    #[error("Database error: {0}")]
+    Database(#[from] chartered_db::Error),
+    #[error("Failed to spawn HTTP server: {0}")]
+    ServerSpawn(Box<dyn std::error::Error>),
+}
+
+impl std::fmt::Debug for InitError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self)
+    }
 }

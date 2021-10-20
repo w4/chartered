@@ -57,7 +57,10 @@ use thiserror::Error;
 pub type Connection = diesel_tracing::sqlite::InstrumentedSqliteConnection;
 
 #[cfg(feature = "postgres")]
-pub type Connection = diesel_tracing::postgres::InstrumentedPostgresConnection;
+pub type Connection = diesel_tracing::pg::InstrumentedPgConnection;
+
+#[cfg(all(feature = "sqlite", feature = "postgres"))]
+compile_error!("Only one database backend must be enabled using --features [sqlite|postgres]");
 
 #[cfg(not(any(feature = "sqlite", feature = "postgres")))]
 compile_error!(
@@ -71,16 +74,42 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 embed_migrations!();
 
-pub fn init() -> Result<ConnectionPool> {
-    let pool = Pool::new(ConnectionManager::new("chartered.db"))?;
+pub fn init(connection_uri: &str) -> Result<ConnectionPool> {
+    let connection_uri = parse_connection_uri(connection_uri)?;
+    let pool = Pool::new(ConnectionManager::new(connection_uri))?;
 
     embedded_migrations::run_with_output(&pool.get()?, &mut std::io::stdout())?;
 
     Ok(Arc::new(pool))
 }
 
+#[cfg(feature = "sqlite")]
+pub fn parse_connection_uri(connection_uri: &str) -> Result<&str> {
+    if connection_uri.starts_with("sqlite://") {
+        Ok(connection_uri.trim_start_matches("sqlite://"))
+    } else {
+        Err(Error::SqliteConnectionUri)
+    }
+}
+
+#[cfg(feature = "postgres")]
+pub fn parse_connection_uri(connection_uri: &str) -> Result<&str> {
+    if connection_uri.starts_with("postgres://") {
+        Ok(connection_uri)
+    } else {
+        Err(Error::PostgresConnectionUri)
+    }
+}
+
 #[derive(Error, Display, Debug)]
 pub enum Error {
+    /// connection_uri must be in the format `sqlite:///path/to/file.db` or `sqlite://:memory:`
+    SqliteConnectionUri,
+    /**
+     * connection_uri must be a postgres connection uri as described in:
+     * https://www.postgresql.org/docs/9.4/libpq-connect.html#LIBPQ-CONNSTRING
+     */
+    PostgresConnectionUri,
     /// Failed to initialise to database connection pool
     Connection(#[from] diesel::r2d2::PoolError),
     /// Failed to run migrations to bring database schema up-to-date: {0}

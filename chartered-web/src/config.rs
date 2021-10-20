@@ -20,6 +20,7 @@ pub type OidcClients = HashMap<String, DiscoveredClient>;
 #[serde(deny_unknown_fields)]
 pub struct Config {
     pub bind_address: SocketAddr,
+    pub database_uri: String,
     pub storage_uri: String,
     pub auth: AuthConfig,
     #[serde(deserialize_with = "deserialize_encryption_key")]

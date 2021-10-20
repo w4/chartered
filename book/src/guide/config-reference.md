@@ -2,12 +2,39 @@
 
 An exhaustive list of all configuration values in chartered.
 
-## chartered-web
+Configuration files are written in the TOML format, with simple key-value pairs inside of sections (tables). The following
+is a quick overview of all settings, with detailed descriptions found below
+
+## chartered-git
 
 ### Configuration format
 
-Configuration files are written in the TOML format, with simple key-value pairs inside of sections (tables). The following
-is a quick overview of all settings, with detailed descriptions found below
+```toml
+bind_address = "127.0.0.1:2233"
+database_uri = "postgres://user:password@localhost/chartered" # can also be `sqlite://`
+```
+
+### Configuration keys
+
+#### `bind_address`
+- Type: string
+
+The IP address and port the web server should be bound to.
+
+#### `database_uri`
+- Type: string
+
+A connection string for the backing database, either `postgres` or `sqlite`, either in the
+format of `postgres://user:password@localhost/chartered` (a [postgres connection URI][pg-uri]),
+`sqlite:///path/to/chartered.db` or `sqlite://:memory:`.
+
+[pg-uri]: https://www.postgresql.org/docs/9.4/libpq-connect.html#LIBPQ-CONNSTRING
+
+---
+
+## chartered-web
+
+### Configuration format
 
 ```toml
 bind_address = "127.0.0.1:8080"
@@ -33,8 +60,13 @@ client_secret = "[client-secret]"
 The IP address and port the web server should be bound to.
 
 #### `database_uri`
+- Type: string
 
-A JDBC-like connection string for the backing database, either `postgres` or `sqlite`.
+A connection string for the backing database, either `postgres` or `sqlite`, either in the
+format of `postgres://user:password@localhost/chartered` (a [postgres connection URI][pg-uri]),
+`sqlite:///path/to/chartered.db` or `sqlite://:memory:`.
+
+[pg-uri]: https://www.postgresql.org/docs/9.4/libpq-connect.html#LIBPQ-CONNSTRING
 
 #### `storage_uri`
 - Type: string

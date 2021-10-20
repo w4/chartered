@@ -1,6 +1,7 @@
 #![deny(clippy::pedantic)]
 #![deny(rust_2018_idioms)]
 mod command_handlers;
+mod config;
 mod generators;
 mod tree;
 
@@ -19,8 +20,9 @@ use crate::{
 
 use arrayvec::ArrayVec;
 use bytes::BytesMut;
+use clap::Parser;
 use futures::future::Future;
-use std::{fmt::Write, pin::Pin, sync::Arc};
+use std::{fmt::Write, path::PathBuf, pin::Pin, sync::Arc};
 use thrussh::{
     server::{self, Auth, Session},
     ChannelId, CryptoVec,
@@ -30,24 +32,48 @@ use tokio_util::codec::{Decoder, Encoder as TokioEncoder};
 use tracing::{debug, error, info, warn, Instrument};
 use url::Url;
 
+#[derive(Parser)]
+#[clap(version = clap::crate_version!(), author = clap::crate_authors!())]
+pub struct Opts {
+    #[clap(short, long, parse(from_occurrences))]
+    verbose: i32,
+    #[clap(short, long)]
+    config: PathBuf,
+}
+
 #[tokio::main]
 #[allow(clippy::semicolon_if_nothing_returned)] // broken clippy lint
-async fn main() {
+async fn main() -> anyhow::Result<()> {
+    let opts: Opts = Opts::parse();
+
+    std::env::set_var(
+        "RUST_LOG",
+        match opts.verbose {
+            1 => "debug",
+            2 => "trace",
+            _ => "info",
+        },
+    );
+
+    let config: config::Config = toml::from_slice(&std::fs::read(&opts.config)?)?;
+
     tracing_subscriber::fmt::init();
 
-    let config = Arc::new(thrussh::server::Config {
+    let trussh_config = Arc::new(thrussh::server::Config {
         methods: thrussh::MethodSet::PUBLICKEY,
         keys: vec![key::KeyPair::generate_ed25519().unwrap()],
         ..thrussh::server::Config::default()
     });
 
     let server = Server {
-        db: chartered_db::init().unwrap(),
+        db: chartered_db::init(&config.database_uri)?,
     };
 
-    thrussh::server::run(config, "127.0.0.1:2233", server)
-        .await
-        .unwrap();
+    info!("SSH server listening on {}", config.bind_address);
+
+    thrussh::server::run(trussh_config, &config.bind_address.to_string(), server).await?;
+
+    Ok(())
 }
 
 #[derive(Clone)]

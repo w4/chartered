@@ -515,6 +515,7 @@ dependencies = [
  "thrussh-keys",
  "tokio",
  "tokio-util",
+ "toml",
  "tracing",
  "tracing-subscriber",
  "url",

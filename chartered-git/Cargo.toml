@@ -32,6 +32,7 @@ thrussh = "0.33"
 thrussh-keys = "0.21"
 tokio = { version = "1", features = ["full"] }
 tokio-util = { version = "0.6", features = ["codec"] }
+toml = "0.5"
 tracing = "0.1"
 tracing-subscriber = "0.2"
 url = "2"
