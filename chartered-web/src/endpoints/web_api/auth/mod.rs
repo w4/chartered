@@ -16,8 +16,22 @@ use std::convert::Infallible;
 
 pub mod openid;
 pub mod password;
+pub mod logout;
 
-pub fn routes() -> Router<
+pub fn authenticated_routes() -> Router<
+    impl tower::Service<
+        Request<Body>,
+        Response = Response<BoxBody>,
+        Error = Infallible,
+        Future = impl Future<Output = Result<Response<BoxBody>, Infallible>> + Send,
+    > + Clone
+    + Send,
+> {
+    crate::axum_box_after_every_route!(Router::new()
+        .route("/logout", get(logout::handle)))
+}
+
+pub fn unauthenticated_routes() -> Router<
     impl tower::Service<
             Request<Body>,
             Response = Response<BoxBody>,
@@ -27,10 +41,10 @@ pub fn routes() -> Router<
         + Send,
 > {
     crate::axum_box_after_every_route!(Router::new()
-        .route("/password", post(password::handle))
-        .route("/oauth/:provider/begin", get(openid::begin_oidc))
-        .route("/oauth/complete", get(openid::complete_oidc))
-        .route("/oauth/providers", get(openid::list_providers)))
+        .route("/login/password", post(password::handle))
+        .route("/login/oauth/:provider/begin", get(openid::begin_oidc))
+        .route("/login/oauth/complete", get(openid::complete_oidc))
+        .route("/login/oauth/providers", get(openid::list_providers)))
 }
 
 #[derive(Serialize)]

@@ -26,6 +26,7 @@ pub fn authenticated_routes() -> Router<
         .nest("/organisations", organisations::routes())
         .nest("/crates", crates::routes())
         .nest("/users", users::routes())
+        .nest("/auth", auth::authenticated_routes())
         .route("/ssh-key", get(ssh_key::handle_get))
         .route("/ssh-key", put(ssh_key::handle_put))
         .route("/ssh-key/:id", delete(ssh_key::handle_delete)))
@@ -40,5 +41,5 @@ pub fn unauthenticated_routes() -> Router<
         > + Clone
         + Send,
 > {
-    crate::axum_box_after_every_route!(Router::new().nest("/login", auth::routes()))
+    crate::axum_box_after_every_route!(Router::new().nest("/auth", auth::unauthenticated_routes()))
 }

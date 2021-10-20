@@ -28,7 +28,7 @@ export default function Login() {
 
   const { response: oauthProviders } =
     useUnauthenticatedRequest<OAuthProviders>({
-      endpoint: "login/oauth/providers",
+      endpoint: "auth/login/oauth/providers",
     });
 
   useEffect(() => {

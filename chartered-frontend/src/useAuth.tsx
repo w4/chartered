@@ -1,6 +1,6 @@
 import { useState, useEffect, useContext, createContext } from "react";
 import { useLocation, Redirect } from "react-router-dom";
-import { unauthenticatedEndpoint } from "./util";
+import {authenticatedEndpoint, BASE_URL, unauthenticatedEndpoint} from "./util";
 import LoadingPage from "./pages/Loading";
 
 export interface OAuthProviders {
@@ -40,7 +40,7 @@ export function HandleOAuthLogin() {
   useEffect(async () => {
     try {
       let result = await fetch(
-        unauthenticatedEndpoint(`login/oauth/complete${location.search}`)
+        unauthenticatedEndpoint(`auth/login/oauth/complete${location.search}`)
       );
       let json = await result.json();
 
@@ -101,7 +101,7 @@ function useProvideAuth(): AuthContext {
   };
 
   const login = async (username: string, password: string) => {
-    let res = await fetch(unauthenticatedEndpoint("login/password"), {
+    let res = await fetch(unauthenticatedEndpoint("auth/login/password"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -116,7 +116,7 @@ function useProvideAuth(): AuthContext {
 
   const oauthLogin = async (provider: string) => {
     let res = await fetch(
-      unauthenticatedEndpoint(`login/oauth/${provider}/begin`),
+      unauthenticatedEndpoint(`auth/login/oauth/${provider}/begin`),
       {
         method: "GET",
         headers: {
@@ -134,16 +134,34 @@ function useProvideAuth(): AuthContext {
     window.location.href = json.redirect_url;
   };
 
-  const logout = async () => {
-    // todo call the service so we can purge the key from the db
-    setAuth(null);
-  };
-
   const getAuthKey = () => {
     if (auth?.[2] > new Date()) {
       return auth?.[1];
     } else if (auth) {
       return null;
+    }
+  };
+
+  const logout = async () => {
+    if (auth === null) {
+      return;
+    }
+
+    try {
+      await fetch(
+          `${BASE_URL}/a/${getAuthKey()}/web/v1/auth/logout`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              "User-Agent": window.navigator.userAgent,
+            },
+          }
+      );
+    } catch (e) {
+      console.error("Failed to fully log user out of session", e)
+    } finally {
+      setAuth(null);
     }
   };
 

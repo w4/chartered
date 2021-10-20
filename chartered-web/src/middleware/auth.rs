@@ -9,7 +9,9 @@ use std::{
     collections::HashMap,
     task::{Context, Poll},
 };
+use std::sync::Arc;
 use tower::Service;
+use chartered_db::users::User;
 
 use crate::endpoints::ErrorResponse;
 
@@ -52,11 +54,11 @@ where
                 .unwrap()
                 .clone();
 
-            let user = match chartered_db::users::User::find_by_session_key(db, String::from(key))
+            let (session, user) = match User::find_by_session_key(db, String::from(key))
                 .await
                 .unwrap()
             {
-                Some(user) => std::sync::Arc::new(user),
+                Some((session, user)) => (Arc::new(session), Arc::new(user)),
                 None => {
                     return Ok(Response::builder()
                         .status(StatusCode::UNAUTHORIZED)
@@ -71,6 +73,7 @@ where
             };
 
             req.extensions_mut().unwrap().insert(user);
+            req.extensions_mut().unwrap().insert(session);
 
             let response: Response<BoxBody> = inner.call(req.try_into_request().unwrap()).await?;
 

@@ -85,7 +85,7 @@ impl User {
     pub async fn find_by_session_key(
         conn: ConnectionPool,
         given_session_key: String,
-    ) -> Result<Option<User>> {
+    ) -> Result<Option<(UserSession, User)>> {
         use crate::schema::user_sessions::dsl::{expires_at, session_key};
 
         tokio::task::spawn_blocking(move || {
@@ -99,7 +99,7 @@ impl User {
                 )
                 .filter(session_key.eq(given_session_key))
                 .inner_join(users::table)
-                .select(users::all_columns)
+                .select((user_sessions::all_columns, users::all_columns))
                 .get_result(&conn)
                 .optional()?)
         })
@@ -334,6 +334,19 @@ impl UserSession {
             Ok(crate::schema::user_sessions::table
                 .filter(session_key.eq(generated_session_key))
                 .get_result(&conn)?)
+        })
+        .await?
+    }
+
+    pub async fn delete(self: Arc<Self>, conn: ConnectionPool) -> Result<bool> {
+        tokio::task::spawn_blocking(move || {
+            let conn = conn.get()?;
+
+            let res = diesel::delete(user_sessions::table)
+                .filter(user_sessions::id.eq(self.id))
+                .execute(&conn)?;
+
+            Ok(res > 0)
         })
         .await?
     }

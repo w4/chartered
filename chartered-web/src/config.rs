@@ -46,7 +46,7 @@ impl Config {
                         DiscoveredClient::discover(
                             config.client_id.to_string(),
                             config.client_secret.to_string(),
-                            Some("http://127.0.0.1:1234/login/oauth".to_string()),
+                            Some("http://127.0.0.1:1234/auth/login/oauth".to_string()),
                             config.discovery_uri.clone(),
                         )
                         .await?,
