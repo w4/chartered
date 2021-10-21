@@ -1,4 +1,10 @@
-import {useState, useEffect, useRef, SyntheticEvent, MouseEventHandler} from "react";
+import {
+  useState,
+  useEffect,
+  useRef,
+  SyntheticEvent,
+  MouseEventHandler,
+} from "react";
 import { useLocation } from "react-router-dom";
 
 import { useAuth } from "../useAuth";
@@ -37,7 +43,9 @@ export default function Login() {
     }
 
     isMountedRef.current = true;
-    return () => { isMountedRef.current = false };
+    return () => {
+      isMountedRef.current = false;
+    };
   });
 
   const handleSubmit = async (evt: SyntheticEvent) => {

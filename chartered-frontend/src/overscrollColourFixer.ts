@@ -5,9 +5,11 @@
 
 export const backgroundFix = (body: HTMLBodyElement | null) => {
   if (body?.classList.contains("dark")) {
-    document.documentElement.style.backgroundColor = window.scrollY > 70 ? "#0e1825" : "#2a3746";
+    document.documentElement.style.backgroundColor =
+      window.scrollY > 70 ? "#0e1825" : "#2a3746";
   } else {
-    document.documentElement.style.backgroundColor = window.scrollY > 70 ? "var(--bs-primary)" : "white";
+    document.documentElement.style.backgroundColor =
+      window.scrollY > 70 ? "var(--bs-primary)" : "white";
   }
 };
 

@@ -2,10 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 
 import Nav from "../sections/Nav";
 import { useAuth } from "../useAuth";
-import {
-  ProfilePicture,
-  useAuthenticatedRequest,
-} from "../util";
+import { ProfilePicture, useAuthenticatedRequest } from "../util";
 
 import { BoxSeam } from "react-bootstrap-icons";
 import { LoadingSpinner } from "./Loading";
@@ -46,7 +43,7 @@ function UsersResults({ query }: { query: string }) {
   const auth = useAuth();
 
   if (!auth) {
-      return <></>;
+    return <></>;
   }
 
   const { response: results, error } =
@@ -59,7 +56,7 @@ function UsersResults({ query }: { query: string }) {
     );
 
   if (error) {
-      return <div className="alert alert-danger">{error}</div>;
+    return <div className="alert alert-danger">{error}</div>;
   }
 
   if (!results) {
@@ -125,7 +122,7 @@ function CrateResults({
   const auth = useAuth();
 
   if (!auth) {
-      return <></>;
+    return <></>;
   }
 
   const { response: results, error } =
@@ -138,7 +135,7 @@ function CrateResults({
     );
 
   if (error) {
-      return <div className="alert alert-danger">{error}</div>
+    return <div className="alert alert-danger">{error}</div>;
   }
 
   if (!results) {
@@ -175,9 +172,7 @@ function CrateResults({
                       className="text-decoration-none"
                     >
                       <h4 className="text-primary d-inline px-2 m-0">
-                        <span className="text-muted">
-                          {crate.organisation}
-                        </span>
+                        <span className="text-muted">{crate.organisation}</span>
                         /{crate.name}
                       </h4>
                     </Link>

@@ -1,6 +1,6 @@
 import { PropsWithChildren } from "react";
 
-import {Link, Redirect} from "react-router-dom";
+import { Link, Redirect } from "react-router-dom";
 import { useAuth } from "../useAuth";
 import Nav from "../sections/Nav";
 import { Calendar3, ChevronRight, Download } from "react-bootstrap-icons";
@@ -87,9 +87,13 @@ export default function Dashboard() {
         <div className="row">
           <div className="col-12 col-md-4">
             <h4>Newly Created</h4>
-            {recentlyCreatedError ? <div className="alert alert-danger" role="alert">
-              {recentlyCreatedError}
-            </div> : <></>}
+            {recentlyCreatedError ? (
+              <div className="alert alert-danger" role="alert">
+                {recentlyCreatedError}
+              </div>
+            ) : (
+              <></>
+            )}
             {(recentlyCreated?.crates || []).map((v) => (
               <CrateCard
                 key={v.name}
@@ -114,9 +118,13 @@ export default function Dashboard() {
 
           <div className="col-12 col-md-4">
             <h4>Recently Updated</h4>
-            {recentlyUpdatedError ? <div className="alert alert-danger" role="alert">
-              {recentlyUpdatedError}
-            </div> : <></>}
+            {recentlyUpdatedError ? (
+              <div className="alert alert-danger" role="alert">
+                {recentlyUpdatedError}
+              </div>
+            ) : (
+              <></>
+            )}
             {(recentlyUpdated?.versions || []).map((v) => (
               <CrateCard
                 key={v.name}
@@ -130,9 +138,13 @@ export default function Dashboard() {
 
           <div className="col-12 col-md-4">
             <h4>Most Downloaded</h4>
-            {mostDownloadedError ? <div className="alert alert-danger" role="alert">
-              {mostDownloadedError}
-            </div> : <></>}
+            {mostDownloadedError ? (
+              <div className="alert alert-danger" role="alert">
+                {mostDownloadedError}
+              </div>
+            ) : (
+              <></>
+            )}
             {(mostDownloaded?.crates || []).map((v) => (
               <CrateCard
                 key={v.name}

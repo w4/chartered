@@ -1,4 +1,4 @@
-import {SyntheticEvent, useState} from "react";
+import { SyntheticEvent, useState } from "react";
 import { useHistory, useLocation } from "react-router-dom";
 import { NavLink, Link } from "react-router-dom";
 
@@ -51,7 +51,16 @@ export default function Nav() {
               </NavLink>
             </li>
             <li className="nav-item">
-              <NavLink to="/organisations" className="nav-link">
+              <NavLink
+                to="/organisations"
+                className="nav-link"
+                isActive={(match, location) => {
+                  return (
+                    location.pathname.startsWith("/organisations/") ||
+                    location.pathname.startsWith("/crates/")
+                  );
+                }}
+              >
                 Organisations
               </NavLink>
             </li>

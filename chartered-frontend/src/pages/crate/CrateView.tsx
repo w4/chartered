@@ -73,7 +73,11 @@ interface UrlParameters {
 
 export default function SingleCrate() {
   const auth = useAuth();
-  const { organisation, crate, subview: currentTab } = useParams<UrlParameters>();
+  const {
+    organisation,
+    crate,
+    subview: currentTab,
+  } = useParams<UrlParameters>();
 
   if (!auth) {
     return <Redirect to="/login" />;
@@ -315,13 +319,12 @@ interface MembersProps {
   crate: string;
 }
 
-function Members({
-  organisation,
-  crate,
-}: MembersProps) {
+function Members({ organisation, crate }: MembersProps) {
   const auth = useAuth();
 
-  if (!auth) { return <></>; }
+  if (!auth) {
+    return <></>;
+  }
 
   const [reload, setReload] = useState(0);
   const { response, error } = useAuthenticatedRequest<CratesMembersResponse>(
@@ -349,7 +352,7 @@ function Members({
   const saveMemberPermissions = async (
     prospectiveMember: boolean,
     uuid: string,
-    selectedPermissions: string[],
+    selectedPermissions: string[]
   ) => {
     let res = await fetch(
       authenticatedEndpoint(auth, `crates/${organisation}/${crate}/members`),

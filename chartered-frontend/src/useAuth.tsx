@@ -1,6 +1,10 @@
 import { useState, useEffect, useContext, createContext } from "react";
 import { useLocation, Redirect } from "react-router-dom";
-import {authenticatedEndpoint, BASE_URL, unauthenticatedEndpoint} from "./util";
+import {
+  authenticatedEndpoint,
+  BASE_URL,
+  unauthenticatedEndpoint,
+} from "./util";
 import LoadingPage from "./pages/Loading";
 
 export interface OAuthProviders {
@@ -148,18 +152,15 @@ function useProvideAuth(): AuthContext {
     }
 
     try {
-      await fetch(
-          `${BASE_URL}/a/${getAuthKey()}/web/v1/auth/logout`,
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              "User-Agent": window.navigator.userAgent,
-            },
-          }
-      );
+      await fetch(`${BASE_URL}/a/${getAuthKey()}/web/v1/auth/logout`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "User-Agent": window.navigator.userAgent,
+        },
+      });
     } catch (e) {
-      console.error("Failed to fully log user out of session", e)
+      console.error("Failed to fully log user out of session", e);
     } finally {
       setAuth(null);
     }

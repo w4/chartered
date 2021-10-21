@@ -1,5 +1,5 @@
 import { Plus } from "react-bootstrap-icons";
-import {Link, Redirect} from "react-router-dom";
+import { Link, Redirect } from "react-router-dom";
 
 import Nav from "../../sections/Nav";
 import { useAuth } from "../../useAuth";

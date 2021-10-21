@@ -1,9 +1,6 @@
-import {Redirect, useParams} from "react-router-dom";
+import { Redirect, useParams } from "react-router-dom";
 import { useAuth } from "../useAuth";
-import {
-  ProfilePicture,
-  useAuthenticatedRequest,
-} from "../util";
+import { ProfilePicture, useAuthenticatedRequest } from "../util";
 import Nav from "../sections/Nav";
 import ErrorPage from "./ErrorPage";
 import ReactPlaceholder from "react-placeholder/lib";

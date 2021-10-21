@@ -1,14 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import {
-  Trash,
-  CheckLg,
-  PlusLg, PersonPlusFill,
-} from "react-bootstrap-icons";
-import {
-  authenticatedEndpoint,
-  ProfilePicture,
-} from "../../util";
+import { Trash, CheckLg, PlusLg, PersonPlusFill } from "react-bootstrap-icons";
+import { authenticatedEndpoint, ProfilePicture } from "../../util";
 import { useAuth } from "../../useAuth";
 import { Button, Modal } from "react-bootstrap";
 import { AsyncTypeahead } from "react-bootstrap-typeahead";
@@ -250,7 +243,11 @@ function MemberListItem({
 
 interface MemberListInserterProps {
   existingMembers: Member[];
-  onInsert: (username: string, user_uuid: string, picture_url: string | null) => any;
+  onInsert: (
+    username: string,
+    user_uuid: string,
+    picture_url: string | null
+  ) => any;
 }
 
 interface SearchOption {

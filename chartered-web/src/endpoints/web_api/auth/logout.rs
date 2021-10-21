@@ -1,9 +1,9 @@
-use std::sync::Arc;
 use axum::{extract, Json};
+use chartered_db::users::UserSession;
 use chartered_db::ConnectionPool;
 use serde::Serialize;
+use std::sync::Arc;
 use thiserror::Error;
-use chartered_db::users::UserSession;
 
 pub async fn handle(
     extract::Extension(session): extract::Extension<Arc<UserSession>>,
@@ -11,9 +11,7 @@ pub async fn handle(
 ) -> Result<Json<LogoutResponse>, Error> {
     session.delete(db).await?;
 
-    Ok(Json(LogoutResponse {
-        success: true,
-    }))
+    Ok(Json(LogoutResponse { success: true }))
 }
 
 #[derive(Debug, Serialize)]

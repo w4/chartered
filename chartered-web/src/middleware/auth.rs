@@ -3,15 +3,15 @@ use axum::{
     extract::{self, FromRequest, RequestParts},
     http::{Request, Response, StatusCode},
 };
+use chartered_db::users::User;
 use chartered_db::ConnectionPool;
 use futures::future::BoxFuture;
+use std::sync::Arc;
 use std::{
     collections::HashMap,
     task::{Context, Poll},
 };
-use std::sync::Arc;
 use tower::Service;
-use chartered_db::users::User;
 
 use crate::endpoints::ErrorResponse;
 

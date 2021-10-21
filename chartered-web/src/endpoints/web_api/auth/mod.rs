@@ -14,21 +14,20 @@ use futures::future::Future;
 use serde::Serialize;
 use std::convert::Infallible;
 
+pub mod logout;
 pub mod openid;
 pub mod password;
-pub mod logout;
 
 pub fn authenticated_routes() -> Router<
     impl tower::Service<
-        Request<Body>,
-        Response = Response<BoxBody>,
-        Error = Infallible,
-        Future = impl Future<Output = Result<Response<BoxBody>, Infallible>> + Send,
-    > + Clone
-    + Send,
+            Request<Body>,
+            Response = Response<BoxBody>,
+            Error = Infallible,
+            Future = impl Future<Output = Result<Response<BoxBody>, Infallible>> + Send,
+        > + Clone
+        + Send,
 > {
-    crate::axum_box_after_every_route!(Router::new()
-        .route("/logout", get(logout::handle)))
+    crate::axum_box_after_every_route!(Router::new().route("/logout", get(logout::handle)))
 }
 
 pub fn unauthenticated_routes() -> Router<

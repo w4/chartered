@@ -1,5 +1,5 @@
 import { useState } from "react";
-import {Link, Redirect, useParams} from "react-router-dom";
+import { Link, Redirect, useParams } from "react-router-dom";
 
 import Nav from "../../sections/Nav";
 import { useAuth } from "../../useAuth";
