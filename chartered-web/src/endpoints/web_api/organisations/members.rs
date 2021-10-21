@@ -1,3 +1,6 @@
+//! CRUD methods to manage members of an organisation, given the requesting user has the
+//! `MANAGE_USERS` permission at the organisation level.
+
 use axum::{extract, Json};
 use chartered_db::{
     organisations::Organisation, permissions::UserPermission, users::User, ConnectionPool,
@@ -8,12 +11,7 @@ use thiserror::Error;
 
 use crate::endpoints::ErrorResponse;
 
-#[derive(Deserialize)]
-pub struct PutOrPatchRequest {
-    user_uuid: chartered_db::uuid::Uuid,
-    permissions: UserPermission,
-}
-
+/// Updates an organisation member's permissions
 pub async fn handle_patch(
     extract::Path((_session_key, organisation)): extract::Path<(String, String)>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
@@ -37,6 +35,7 @@ pub async fn handle_patch(
     Ok(Json(ErrorResponse { error: None }))
 }
 
+/// Adds a new member to the organisation with a given set of permissions.
 pub async fn handle_put(
     extract::Path((_session_key, organisation)): extract::Path<(String, String)>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
@@ -57,11 +56,7 @@ pub async fn handle_put(
     Ok(Json(ErrorResponse { error: None }))
 }
 
-#[derive(Deserialize)]
-pub struct DeleteRequest {
-    user_uuid: chartered_db::uuid::Uuid,
-}
-
+/// Deletes a member from the organisation entirely
 pub async fn handle_delete(
     extract::Path((_session_key, organisation)): extract::Path<(String, String)>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
@@ -78,6 +73,17 @@ pub async fn handle_delete(
     organisation.delete_member(db, action_user.id).await?;
 
     Ok(Json(ErrorResponse { error: None }))
+}
+
+#[derive(Deserialize)]
+pub struct PutOrPatchRequest {
+    user_uuid: chartered_db::uuid::Uuid,
+    permissions: UserPermission,
+}
+
+#[derive(Deserialize)]
+pub struct DeleteRequest {
+    user_uuid: chartered_db::uuid::Uuid,
 }
 
 #[derive(Error, Debug)]

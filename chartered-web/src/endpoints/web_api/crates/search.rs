@@ -1,29 +1,12 @@
+//! Does a simple search over the crates table for a search term, the organisation and crate name
+//! are concatenated using a `/` so any substring of `org/crate` will return results. The latest
+//! version for each is also fetched so we can show them in the search results.
+
 use axum::{extract, Json};
 use chartered_db::{crates::Crate, permissions::UserPermission, users::User, ConnectionPool};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use thiserror::Error;
-
-#[derive(Deserialize)]
-pub struct RequestParams {
-    q: String,
-}
-
-#[derive(Serialize)]
-pub struct Response {
-    crates: Vec<ResponseCrate>,
-}
-
-#[derive(Serialize)]
-pub struct ResponseCrate {
-    organisation: String,
-    name: String,
-    description: Option<String>,
-    version: String,
-    homepage: Option<String>,
-    repository: Option<String>,
-    permissions: UserPermission,
-}
 
 pub async fn handle(
     extract::Extension(db): extract::Extension<ConnectionPool>,
@@ -63,6 +46,27 @@ pub async fn handle(
     .await?;
 
     Ok(Json(Response { crates }))
+}
+
+#[derive(Deserialize)]
+pub struct RequestParams {
+    q: String,
+}
+
+#[derive(Serialize)]
+pub struct Response {
+    crates: Vec<ResponseCrate>,
+}
+
+#[derive(Serialize)]
+pub struct ResponseCrate {
+    organisation: String,
+    name: String,
+    description: Option<String>,
+    version: String,
+    homepage: Option<String>,
+    repository: Option<String>,
+    permissions: UserPermission,
 }
 
 #[derive(Error, Debug)]

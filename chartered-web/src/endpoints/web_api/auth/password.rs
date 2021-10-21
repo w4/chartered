@@ -1,28 +1,9 @@
+//! Password-based authentication, including registration and login.
+
 use axum::{extract, Json};
 use chartered_db::{users::User, ConnectionPool};
 use serde::Deserialize;
 use thiserror::Error;
-
-#[derive(Error, Debug)]
-pub enum Error {
-    #[error("Failed to query database")]
-    Database(#[from] chartered_db::Error),
-    #[error("Invalid username/password")]
-    UnknownUser,
-}
-
-impl Error {
-    pub fn status_code(&self) -> axum::http::StatusCode {
-        use axum::http::StatusCode;
-
-        match self {
-            Self::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            Self::UnknownUser => StatusCode::FORBIDDEN,
-        }
-    }
-}
-
-define_error_response!(Error);
 
 pub async fn handle(
     extract::Extension(db): extract::Extension<ConnectionPool>,
@@ -49,3 +30,24 @@ pub struct Request {
     username: String,
     password: String,
 }
+
+#[derive(Error, Debug)]
+pub enum Error {
+    #[error("Failed to query database")]
+    Database(#[from] chartered_db::Error),
+    #[error("Invalid username/password")]
+    UnknownUser,
+}
+
+impl Error {
+    pub fn status_code(&self) -> axum::http::StatusCode {
+        use axum::http::StatusCode;
+
+        match self {
+            Self::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::UnknownUser => StatusCode::FORBIDDEN,
+        }
+    }
+}
+
+define_error_response!(Error);

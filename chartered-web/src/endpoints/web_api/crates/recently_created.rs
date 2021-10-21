@@ -1,25 +1,12 @@
+//! Returns a list to the 10 most recently created crates that the user has access to for their
+//! viewing pleasure
+
 use axum::{extract, Json};
 use chartered_db::{crates::Crate, users::User, ConnectionPool};
 use chrono::{DateTime, TimeZone, Utc};
 use serde::Serialize;
 use std::sync::Arc;
 use thiserror::Error;
-
-#[derive(Error, Debug)]
-pub enum Error {
-    #[error("{0}")]
-    Database(#[from] chartered_db::Error),
-}
-
-impl Error {
-    pub fn status_code(&self) -> axum::http::StatusCode {
-        match self {
-            Self::Database(e) => e.status_code(),
-        }
-    }
-}
-
-define_error_response!(Error);
 
 pub async fn handle(
     extract::Extension(db): extract::Extension<ConnectionPool>,
@@ -50,3 +37,19 @@ pub struct ResponseCrate {
     created_at: DateTime<Utc>,
     organisation: String,
 }
+
+#[derive(Error, Debug)]
+pub enum Error {
+    #[error("{0}")]
+    Database(#[from] chartered_db::Error),
+}
+
+impl Error {
+    pub fn status_code(&self) -> axum::http::StatusCode {
+        match self {
+            Self::Database(e) => e.status_code(),
+        }
+    }
+}
+
+define_error_response!(Error);

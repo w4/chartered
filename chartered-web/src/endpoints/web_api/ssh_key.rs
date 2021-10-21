@@ -1,3 +1,6 @@
+//! Handles CRD of SSH keys for the requesting user, these are not updatable as SSH keys are
+//! immutable.
+
 use chartered_db::{users::User, ConnectionPool};
 
 use axum::{extract, Json};
@@ -9,20 +12,6 @@ use thiserror::Error;
 use tracing::warn;
 
 use crate::endpoints::ErrorResponse;
-
-#[derive(Serialize)]
-pub struct GetResponse {
-    keys: Vec<GetResponseKey>,
-}
-
-#[derive(Serialize)]
-pub struct GetResponseKey {
-    uuid: Uuid,
-    name: String,
-    fingerprint: String,
-    created_at: DateTime<Utc>,
-    last_used_at: Option<DateTime<Utc>>,
-}
 
 pub async fn handle_get(
     extract::Extension(db): extract::Extension<ConnectionPool>,
@@ -49,11 +38,6 @@ pub async fn handle_get(
     Ok(Json(GetResponse { keys }))
 }
 
-#[derive(Deserialize)]
-pub struct PutRequest {
-    key: String,
-}
-
 pub async fn handle_put(
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(user): extract::Extension<Arc<User>>,
@@ -78,6 +62,25 @@ pub async fn handle_delete(
     } else {
         Err(Error::NonExistentKey)
     }
+}
+
+#[derive(Serialize)]
+pub struct GetResponse {
+    keys: Vec<GetResponseKey>,
+}
+
+#[derive(Serialize)]
+pub struct GetResponseKey {
+    uuid: Uuid,
+    name: String,
+    fingerprint: String,
+    created_at: DateTime<Utc>,
+    last_used_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Deserialize)]
+pub struct PutRequest {
+    key: String,
 }
 
 #[derive(Error, Debug)]

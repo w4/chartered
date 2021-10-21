@@ -1,3 +1,6 @@
+//! Logs a user out of the session used to send this request and deletes it from the
+//! database.
+
 use axum::{extract, Json};
 use chartered_db::users::UserSession;
 use chartered_db::ConnectionPool;

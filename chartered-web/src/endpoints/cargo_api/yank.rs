@@ -1,29 +1,13 @@
+//! Handles yanking and unyanking a crate version for those with the `YANK_CRATE` and `UNYANK_CRATE`
+//! permissions.
+//!
+//! If a crate is yanked, cargo will refuse to download it.
+
 use axum::{extract, Json};
 use chartered_db::{crates::Crate, users::User, ConnectionPool};
 use serde::Serialize;
 use std::sync::Arc;
 use thiserror::Error;
-
-#[derive(Error, Debug)]
-pub enum Error {
-    #[error("{0}")]
-    Database(#[from] chartered_db::Error),
-}
-
-impl Error {
-    pub fn status_code(&self) -> axum::http::StatusCode {
-        match self {
-            Self::Database(e) => e.status_code(),
-        }
-    }
-}
-
-define_error_response!(Error);
-
-#[derive(Serialize)]
-pub struct Response {
-    ok: bool,
-}
 
 pub async fn handle_yank(
     extract::Path((_session_key, organisation, name, version)): extract::Path<(
@@ -64,3 +48,24 @@ pub async fn handle_unyank(
 
     Ok(Json(Response { ok: true }))
 }
+
+#[derive(Serialize)]
+pub struct Response {
+    ok: bool,
+}
+
+#[derive(Error, Debug)]
+pub enum Error {
+    #[error("{0}")]
+    Database(#[from] chartered_db::Error),
+}
+
+impl Error {
+    pub fn status_code(&self) -> axum::http::StatusCode {
+        match self {
+            Self::Database(e) => e.status_code(),
+        }
+    }
+}
+
+define_error_response!(Error);

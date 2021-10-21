@@ -1,7 +1,21 @@
+//! Returns a user profile, with some customisable information and some fixed information (such
+//! as `alias`) which can be used to uniquely identify a user by another user.
+//!
+//! Users don't need to be in a common organisation to be able to see each other's profiles.
+
 use axum::{extract, Json};
 use chartered_db::{users::User, ConnectionPool};
 use serde::Serialize;
 use thiserror::Error;
+
+pub async fn handle(
+    extract::Path((_session_key, uuid)): extract::Path<(String, chartered_db::uuid::Uuid)>,
+    extract::Extension(db): extract::Extension<ConnectionPool>,
+) -> Result<Json<Response>, Error> {
+    let user = User::find_by_uuid(db, uuid).await?.ok_or(Error::NotFound)?;
+
+    Ok(Json(user.into()))
+}
 
 #[derive(Serialize)]
 pub struct Response {
@@ -26,15 +40,6 @@ impl From<chartered_db::users::User> for Response {
             picture_url: user.picture_url,
         }
     }
-}
-
-pub async fn handle(
-    extract::Path((_session_key, uuid)): extract::Path<(String, chartered_db::uuid::Uuid)>,
-    extract::Extension(db): extract::Extension<ConnectionPool>,
-) -> Result<Json<Response>, Error> {
-    let user = User::find_by_uuid(db, uuid).await?.ok_or(Error::NotFound)?;
-
-    Ok(Json(user.into()))
 }
 
 #[derive(Error, Debug)]

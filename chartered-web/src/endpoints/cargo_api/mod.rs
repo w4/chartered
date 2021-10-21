@@ -1,3 +1,11 @@
+//! This module is used for anything called directly by cargo. The base URL for all the routes
+//! listed in this module is `/a/:key/o/:organisation/api/v1`.
+//!
+//! Generally only endpoints listed in the [Web API section of the Cargo book][cargo-book] should
+//! be implemented here.
+//!
+//! [cargo-book]: https://doc.rust-lang.org/cargo/reference/registries.html#web-api
+
 mod download;
 mod owners;
 mod publish;
@@ -12,6 +20,7 @@ use axum::{
 use futures::future::Future;
 use std::convert::Infallible;
 
+// requests are already authenticated before this router
 pub fn routes() -> Router<
     impl tower::Service<
             Request<Body>,

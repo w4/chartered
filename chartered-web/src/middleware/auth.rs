@@ -1,3 +1,6 @@
+//! Check the API key embedded in the path is valid otherwise returns a 401 for authenticated
+//! endpoints.
+
 use axum::{
     body::{box_body, Body, BoxBody},
     extract::{self, FromRequest, RequestParts},
@@ -41,12 +44,15 @@ where
         Box::pin(async move {
             let mut req = RequestParts::new(req);
 
+            // extracts all parameters from the path so we can get the API key which should
+            // always be named key
             let params = extract::Path::<HashMap<String, String>>::from_request(&mut req)
                 .await
                 .unwrap();
-
             let key = params.get("key").map(String::as_str).unwrap_or_default();
 
+            // grab the ConnectionPool from the extensions created when we initialised the
+            // server
             let db = req
                 .extensions()
                 .unwrap()
@@ -54,6 +60,8 @@ where
                 .unwrap()
                 .clone();
 
+            // grab the UserSession that's currently being used for this request and the User that
+            // owns the key, otherwise return a 401 if the key doesn't exist
             let (session, user) = match User::find_by_session_key(db, String::from(key))
                 .await
                 .unwrap()
@@ -72,9 +80,12 @@ where
                 }
             };
 
+            // insert both the user and the session into extensions so handlers can
+            // get their hands on them
             req.extensions_mut().unwrap().insert(user);
             req.extensions_mut().unwrap().insert(session);
 
+            // calls handlers/other middleware and drives the request to response
             let response: Response<BoxBody> = inner.call(req.try_into_request().unwrap()).await?;
 
             Ok(response)

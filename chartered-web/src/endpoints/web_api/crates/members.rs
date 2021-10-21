@@ -1,3 +1,7 @@
+//! Handles crate-level member overrides that can add permissions on top of organisations.
+//!
+//! This is essentially a CRUD controller, nice and easy one.
+
 use axum::{extract, Json};
 use chartered_db::{
     crates::Crate, permissions::UserPermission, users::User, uuid::Uuid, ConnectionPool,
@@ -8,20 +12,9 @@ use thiserror::Error;
 
 use crate::endpoints::ErrorResponse;
 
-#[derive(Serialize)]
-pub struct GetResponse {
-    allowed_permissions: &'static [&'static str],
-    members: Vec<GetResponseMember>,
-}
-
-#[derive(Deserialize, Serialize)]
-pub struct GetResponseMember {
-    uuid: Uuid,
-    display_name: String,
-    picture_url: Option<String>,
-    permissions: UserPermission,
-}
-
+/// Lists all crate-level members and the permissions they have.
+///
+/// These members could be specific to the crate or they could be overrides ontop of the org.
 pub async fn handle_get(
     extract::Path((_session_key, organisation, name)): extract::Path<(String, String, String)>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
@@ -48,12 +41,7 @@ pub async fn handle_get(
     }))
 }
 
-#[derive(Deserialize)]
-pub struct PutOrPatchRequest {
-    user_uuid: chartered_db::uuid::Uuid,
-    permissions: UserPermission,
-}
-
+/// Updates a crate member's permissions
 pub async fn handle_patch(
     extract::Path((_session_key, organisation, name)): extract::Path<(String, String, String)>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
@@ -77,6 +65,7 @@ pub async fn handle_patch(
     Ok(Json(ErrorResponse { error: None }))
 }
 
+/// Inserts an permissions override for this crate for a specific user
 pub async fn handle_put(
     extract::Path((_session_key, organisation, name)): extract::Path<(String, String, String)>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
@@ -97,11 +86,7 @@ pub async fn handle_put(
     Ok(Json(ErrorResponse { error: None }))
 }
 
-#[derive(Deserialize)]
-pub struct DeleteRequest {
-    user_uuid: chartered_db::uuid::Uuid,
-}
-
+/// Deletes a member override from this crate
 pub async fn handle_delete(
     extract::Path((_session_key, organisation, name)): extract::Path<(String, String, String)>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
@@ -120,6 +105,31 @@ pub async fn handle_delete(
         .await?;
 
     Ok(Json(ErrorResponse { error: None }))
+}
+
+#[derive(Serialize)]
+pub struct GetResponse {
+    allowed_permissions: &'static [&'static str],
+    members: Vec<GetResponseMember>,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct GetResponseMember {
+    uuid: Uuid,
+    display_name: String,
+    picture_url: Option<String>,
+    permissions: UserPermission,
+}
+
+#[derive(Deserialize)]
+pub struct PutOrPatchRequest {
+    user_uuid: chartered_db::uuid::Uuid,
+    permissions: UserPermission,
+}
+
+#[derive(Deserialize)]
+pub struct DeleteRequest {
+    user_uuid: chartered_db::uuid::Uuid,
 }
 
 #[derive(Error, Debug)]

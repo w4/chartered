@@ -1,24 +1,13 @@
+//! Searches through all users for the given search terms, matching on either full name, username
+//! or nickname. This is used on the overall search form and also when adding members to either
+//! an organisation or a crate.
+//!
+//! Users are not restricted in what other users they can see.
+
 use axum::{extract, Json};
 use chartered_db::{users::User, ConnectionPool};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-
-#[derive(Deserialize)]
-pub struct RequestParams {
-    q: String,
-}
-
-#[derive(Serialize)]
-pub struct Response {
-    users: Vec<ResponseUser>,
-}
-
-#[derive(Serialize)]
-pub struct ResponseUser {
-    user_uuid: chartered_db::uuid::Uuid,
-    display_name: String,
-    picture_url: Option<String>,
-}
 
 pub async fn handle(
     extract::Extension(db): extract::Extension<ConnectionPool>,
@@ -35,6 +24,23 @@ pub async fn handle(
         .collect();
 
     Ok(Json(Response { users }))
+}
+
+#[derive(Deserialize)]
+pub struct RequestParams {
+    q: String,
+}
+
+#[derive(Serialize)]
+pub struct Response {
+    users: Vec<ResponseUser>,
+}
+
+#[derive(Serialize)]
+pub struct ResponseUser {
+    user_uuid: chartered_db::uuid::Uuid,
+    display_name: String,
+    picture_url: Option<String>,
 }
 
 #[derive(Error, Debug)]

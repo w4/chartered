@@ -58,8 +58,11 @@ pub(crate) use axum_box_after_every_route;
 #[tokio::main]
 #[allow(clippy::semicolon_if_nothing_returned)] // lint breaks with tokio::main
 async fn main() -> Result<(), InitError> {
+    // parse CLI arguments
     let opts: Opts = Opts::parse();
 
+    // overrides the RUST_LOG variable to our own value based on the
+    // amount of `-v`s that were passed when calling the service
     std::env::set_var(
         "RUST_LOG",
         match opts.verbose {
@@ -71,11 +74,13 @@ async fn main() -> Result<(), InitError> {
 
     let config: config::Config = toml::from_slice(&std::fs::read(&opts.config)?)?;
 
+    // initialise logging/tracing
     tracing_subscriber::fmt::init();
 
     let bind_address = config.bind_address;
     let pool = chartered_db::init(&config.database_uri)?;
 
+    // the base stack of middleware that is applied to _all_ routes
     let middleware_stack = ServiceBuilder::new()
         .layer_fn(middleware::logging::LoggingMiddleware)
         .into_inner();

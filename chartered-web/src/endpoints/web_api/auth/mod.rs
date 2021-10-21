@@ -54,6 +54,8 @@ pub struct LoginResponse {
     picture_url: Option<String>,
 }
 
+/// Takes the given `User` and generates a session for it and returns a response containing an API
+/// key to the frontend that it can save for further request
 pub async fn login(
     db: ConnectionPool,
     user: User,

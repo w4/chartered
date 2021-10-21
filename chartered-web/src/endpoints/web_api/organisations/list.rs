@@ -1,24 +1,11 @@
+//! Lists all the organisations that the requesting user is apart of returning their names and
+//! descriptions.
+
 use axum::{extract, Json};
 use chartered_db::{organisations::Organisation, users::User, ConnectionPool};
 use serde::Serialize;
 use std::sync::Arc;
 use thiserror::Error;
-
-#[derive(Error, Debug)]
-pub enum Error {
-    #[error("{0}")]
-    Database(#[from] chartered_db::Error),
-}
-
-impl Error {
-    pub fn status_code(&self) -> axum::http::StatusCode {
-        match self {
-            Self::Database(e) => e.status_code(),
-        }
-    }
-}
-
-define_error_response!(Error);
 
 pub async fn handle_get(
     extract::Extension(db): extract::Extension<ConnectionPool>,
@@ -47,3 +34,19 @@ pub struct ResponseOrganisation {
     name: String,
     description: String,
 }
+
+#[derive(Error, Debug)]
+pub enum Error {
+    #[error("{0}")]
+    Database(#[from] chartered_db::Error),
+}
+
+impl Error {
+    pub fn status_code(&self) -> axum::http::StatusCode {
+        match self {
+            Self::Database(e) => e.status_code(),
+        }
+    }
+}
+
+define_error_response!(Error);
