@@ -184,7 +184,6 @@ impl Crate {
                         .eq(UserPermission::VISIBLE.bits()),
                 )
                 .inner_join(organisations::table)
-                .inner_join(crate_versions::table)
                 .select((crates::all_columns, organisations::all_columns))
                 .limit(10)
                 .order_by(crate::schema::crates::dsl::created_at.desc())
@@ -209,7 +208,6 @@ impl Crate {
                         .eq(UserPermission::VISIBLE.bits()),
                 )
                 .inner_join(organisations::table)
-                .inner_join(crate_versions::table)
                 .select((crates::all_columns, organisations::all_columns))
                 .limit(10)
                 .order_by(crate::schema::crates::dsl::downloads.desc())
