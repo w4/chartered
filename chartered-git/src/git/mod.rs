@@ -6,6 +6,7 @@ use std::fmt::Write;
 
 use self::packfile::low_level::PackFile;
 
+/// Every packet sent to the client from us should be a `PktLine`.
 pub enum PktLine<'a> {
     Data(&'a [u8]),
     /// Similar to a data packet, but used during packfile sending to indicate this

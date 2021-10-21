@@ -1,5 +1,6 @@
 use serde::Serialize;
 
+/// The `config.json` file to write to the repository.
 #[derive(Serialize, Debug, Clone)]
 pub struct CargoConfig {
     pub dl: String,

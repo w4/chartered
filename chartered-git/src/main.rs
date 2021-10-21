@@ -201,6 +201,12 @@ impl server::Handler for Handler {
         }.instrument(tracing::info_span!(parent: span, "shell request")))
     }
 
+    /// Initially when setting up the SSH connection, the remote Git client will send us an
+    /// exec request (instead of the usual shell request that is sent when invoking `ssh`).
+    ///
+    /// The client will set `git-upload-pack` as the requested executable to run and also
+    /// sends the path that was appended to the end of the connection string defined in
+    /// cargo.
     fn exec_request(
         mut self,
         channel: ChannelId,
@@ -213,21 +219,29 @@ impl server::Handler for Handler {
             Ok(data) => data,
             Err(e) => return Box::pin(futures::future::err(e.into())),
         };
+        // parses the given args in the same fashion as a POSIX shell
         let args = shlex::split(data);
 
         Box::pin(async move {
             debug!("exec {:?}", args);
 
+            // if the client didn't send `GIT_PROTOCOL=version=2` as an environment
+            // variable when connecting, we'll just close the connection
             if !self.is_git_protocol_v2 {
                 anyhow::bail!("not git protocol v2");
             }
 
             let mut args = args.into_iter().flat_map(Vec::into_iter);
 
+            // check the executable requested to be ran is the `git-upload-pack` we
+            // expect. we're not actually going to execute this, but we'll pretend
+            // to be it instead in `data`.
             if args.next().as_deref() != Some("git-upload-pack") {
                 anyhow::bail!("not git-upload-pack");
             }
 
+            // parse the requested organisation from the given path (the argument
+            // given to `git-upload-pack`)
             if let Some(org) = args.next().filter(|v| v.as_str() != "/") {
                 let org = org
                     .trim_start_matches('/')
@@ -243,6 +257,7 @@ impl server::Handler for Handler {
                 session.close(channel);
             }
 
+            // preamble, sending our capabilities and what have you
             self.write(PktLine::Data(b"version 2\n"))?;
             self.write(PktLine::Data(b"agent=chartered/0.1.0\n"))?; // TODO: clap::crate_name!()/clap::crate_version!()
             self.write(PktLine::Data(b"ls-refs=unborn\n"))?;
@@ -265,6 +280,9 @@ impl server::Handler for Handler {
         Box::pin(futures::future::ready(Ok((self, session))))
     }
 
+    /// User is attempting to connect via pubkey, we'll lookup the key in the
+    /// user database and create a new session if it exists, otherwise we'll
+    /// reject the authentication attempt.
     fn auth_publickey(mut self, _username: &str, key: &key::PublicKey) -> Self::FutureAuth {
         let span = self.span.clone();
         let public_key = key.public_key_bytes();
@@ -339,7 +357,10 @@ impl server::Handler for Handler {
                     let authed = self.authed()?;
                     let org_name = self.org_name()?;
 
+                    // start building the packfile we're going to send to the user
                     let mut packfile = GitRepository::default();
+
+                    // write the config.json to the root of the repository
                     let config = CargoConfig::new(
                         &Url::parse("http://127.0.0.1:8888/")?,
                         &authed.auth_key,
@@ -347,12 +368,17 @@ impl server::Handler for Handler {
                     );
                     let config = serde_json::to_vec(&config)?;
                     packfile.insert(ArrayVec::<_, 0>::new(), "config.json", &config)?;
+
+                    // build the tree of all the crates the user has access to, then write them
+                    // to the in-memory repository.
                     // todo: the whole tree needs caching and then we can filter in code rather than at
                     //  the database
                     let tree =
                         Tree::build(self.db.clone(), authed.user.id, org_name.to_string()).await;
                     tree.write_to_packfile(&mut packfile)?;
 
+                    // finalises the git repository, creating a commit and fetching the finalised
+                    // packfile and commit hash to return in `ls-refs` calls.
                     let (commit_hash, packfile_entries) =
                         packfile.commit("computer", "john@computer.no", "Update crates")?;
 
