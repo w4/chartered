@@ -324,6 +324,12 @@ is a quick overview of all settings, with detailed descriptions found below</p>
 <h3 id="configuration-format"><a class="header" href="#configuration-format">Configuration format</a></h3>
 <pre><code class="language-toml">bind_address = &quot;127.0.0.1:2233&quot;
 database_uri = &quot;postgres://user:password@localhost/chartered&quot; # can also be `sqlite://`
+web_base_url = &quot;http://localhost:8888/&quot;
+
+[committer]
+name = &quot;Chartered&quot;
+email = &quot;noreply@chart.rs&quot;
+message = &quot;Updated crates!&quot;
 </code></pre>
 <h3 id="configuration-keys"><a class="header" href="#configuration-keys">Configuration keys</a></h3>
 <h4 id="bind_address"><a class="header" href="#bind_address"><code>bind_address</code></a></h4>
@@ -338,6 +344,33 @@ database_uri = &quot;postgres://user:password@localhost/chartered&quot; # can al
 <p>A connection string for the backing database, either <code>postgres</code> or <code>sqlite</code>, either in the
 format of <code>postgres://user:password@localhost/chartered</code> (a <a href="https://www.postgresql.org/docs/9.4/libpq-connect.html#LIBPQ-CONNSTRING">postgres connection URI</a>),
 <code>sqlite:///path/to/chartered.db</code> or <code>sqlite://:memory:</code>.</p>
+<h4 id="web_base_uri"><a class="header" href="#web_base_uri"><code>web_base_uri</code></a></h4>
+<ul>
+<li>Type: string</li>
+</ul>
+<p>The path at which the Chartered API (<code>chartered-web</code>) is running. This should <em>always</em> be HTTPS when
+running in production.</p>
+<h4 id="committer"><a class="header" href="#committer"><code>committer</code></a></h4>
+<p>The <code>committer</code> table defines the author of the commit that's sent to the
+user.</p>
+<h5 id="name"><a class="header" href="#name"><code>name</code></a></h5>
+<ul>
+<li>Type: string</li>
+<li>Default: <code>chartered</code></li>
+</ul>
+<p>The name of the committer for any commits being created by <code>chartered-git</code>.</p>
+<h5 id="email"><a class="header" href="#email"><code>email</code></a></h5>
+<ul>
+<li>Type: string</li>
+<li>Default: <code>noreply@chart.rs</code></li>
+</ul>
+<p>The email address to list for the author of the commit pushed to the user</p>
+<h5 id="message"><a class="header" href="#message"><code>message</code></a></h5>
+<ul>
+<li>Type: string</li>
+<li>Default: <code>Update crates</code></li>
+</ul>
+<p>The commit message to use for any commits sent out.</p>
 <hr />
 <h2 id="chartered-web"><a class="header" href="#chartered-web">chartered-web</a></h2>
 <h3 id="configuration-format-1"><a class="header" href="#configuration-format-1">Configuration format</a></h3>
