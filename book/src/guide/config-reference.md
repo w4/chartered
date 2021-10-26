@@ -12,6 +12,12 @@ is a quick overview of all settings, with detailed descriptions found below
 ```toml
 bind_address = "127.0.0.1:2233"
 database_uri = "postgres://user:password@localhost/chartered" # can also be `sqlite://`
+web_base_uri = "http://localhost:8888/"
+
+[committer]
+name = "Chartered"
+email = "noreply@chart.rs"
+message = "Updated crates!"
 ```
 
 ### Configuration keys
@@ -29,6 +35,38 @@ format of `postgres://user:password@localhost/chartered` (a [postgres connection
 `sqlite:///path/to/chartered.db` or `sqlite://:memory:`.
 
 [pg-uri]: https://www.postgresql.org/docs/9.4/libpq-connect.html#LIBPQ-CONNSTRING
+
+#### `web_base_uri`
+- Type: string
+
+The path at which the Chartered API (`chartered-web`) is running. This should _always_ be HTTPS when
+running in production.
+
+#### `committer`
+
+The `committer` table defines the author of the commit that's sent to the
+user.
+
+##### `name`
+
+- Type: string
+- Default: `chartered`
+
+The name of the committer for any commits being created by `chartered-git`.
+
+##### `email`
+
+- Type: string
+- Default: `noreply@chart.rs`
+
+The email address to list for the author of the commit pushed to the user
+
+##### `message`
+
+- Type: string
+- Default: `Update crates`
+
+The commit message to use for any commits sent out.
 
 ---
 

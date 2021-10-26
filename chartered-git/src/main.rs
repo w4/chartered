@@ -30,7 +30,14 @@ use thrussh::{
 use thrussh_keys::{key, PublicKeyBase64};
 use tokio_util::codec::{Decoder, Encoder as TokioEncoder};
 use tracing::{debug, error, info, warn, Instrument};
-use url::Url;
+
+const AGENT: &str = concat!(
+    "agent=",
+    clap::crate_name!(),
+    "/",
+    clap::crate_version!(),
+    "\n"
+);
 
 #[derive(Parser)]
 #[clap(version = clap::crate_version!(), author = clap::crate_authors!())]
@@ -65,13 +72,16 @@ async fn main() -> anyhow::Result<()> {
         ..thrussh::server::Config::default()
     });
 
+    let bind_address = config.bind_address;
+
     let server = Server {
         db: chartered_db::init(&config.database_uri)?,
+        config: Arc::new(config),
     };
 
-    info!("SSH server listening on {}", config.bind_address);
+    info!("SSH server listening on {}", bind_address);
 
-    thrussh::server::run(trussh_config, &config.bind_address.to_string(), server).await?;
+    thrussh::server::run(trussh_config, &bind_address.to_string(), server).await?;
 
     Ok(())
 }
@@ -79,6 +89,7 @@ async fn main() -> anyhow::Result<()> {
 #[derive(Clone)]
 struct Server {
     db: chartered_db::ConnectionPool,
+    config: Arc<config::Config>,
 }
 
 impl server::Server for Server {
@@ -93,6 +104,7 @@ impl server::Server for Server {
         Handler {
             ip,
             span,
+            config: self.config.clone(),
             codec: GitCodec::default(),
             input_bytes: BytesMut::default(),
             output_bytes: BytesMut::default(),
@@ -108,6 +120,7 @@ struct Handler {
     ip: Option<std::net::SocketAddr>,
     span: tracing::Span,
     codec: GitCodec,
+    config: Arc<config::Config>,
     input_bytes: BytesMut,
     output_bytes: BytesMut,
     db: chartered_db::ConnectionPool,
@@ -167,6 +180,144 @@ impl server::Handler for Handler {
 
     fn finished(self, s: Session) -> Self::FutureUnit {
         Box::pin(futures::future::ready(Ok((self, s))))
+    }
+
+    fn auth_none(self, _user: &str) -> Self::FutureAuth {
+        self.finished_auth(server::Auth::UnsupportedMethod)
+    }
+
+    fn auth_password(self, _user: &str, _password: &str) -> Self::FutureAuth {
+        self.finished_auth(server::Auth::UnsupportedMethod)
+    }
+
+    /// User is attempting to connect via pubkey, we'll lookup the key in the
+    /// user database and create a new session if it exists, otherwise we'll
+    /// reject the authentication attempt.
+    fn auth_publickey(mut self, _username: &str, key: &key::PublicKey) -> Self::FutureAuth {
+        let span = self.span.clone();
+        let public_key = key.public_key_bytes();
+
+        Box::pin(
+            async move {
+                let (ssh_key, user) =
+                    match chartered_db::users::User::find_by_ssh_key(self.db.clone(), public_key)
+                        .await?
+                    {
+                        Some(user) => user,
+                        None => return self.finished_auth(server::Auth::Reject).await,
+                    };
+                let ssh_key = Arc::new(ssh_key);
+
+                if let Err(e) = ssh_key.clone().update_last_used(self.db.clone()).await {
+                    warn!("Failed to update last used key: {:?}", e);
+                }
+
+                let auth_key = ssh_key
+                    .clone()
+                    .get_or_insert_session(self.db.clone(), self.ip.map(|v| v.to_string()))
+                    .await?
+                    .session_key;
+
+                self.authed = Some(Authed { user, auth_key });
+
+                self.finished_auth(server::Auth::Accept).await
+            }
+            .instrument(tracing::info_span!(parent: span, "auth pubkey")),
+        )
+    }
+
+    fn auth_keyboard_interactive(
+        self,
+        _user: &str,
+        _submethods: &str,
+        _response: Option<server::Response<'_>>,
+    ) -> Self::FutureAuth {
+        self.finished_auth(server::Auth::UnsupportedMethod)
+    }
+
+    fn data(mut self, channel: ChannelId, data: &[u8], mut session: Session) -> Self::FutureUnit {
+        let span = self.span.clone();
+        self.input_bytes.extend_from_slice(data);
+
+        Box::pin(
+            async move {
+                while let Some(frame) = self.codec.decode(&mut self.input_bytes)? {
+                    debug!(
+                        "decoded frame command={:?} metadata={:?}",
+                        frame.command, frame.metadata
+                    );
+
+                    // if the client flushed without giving us a command, we're expected to close
+                    // the connection or else the client will just hang
+                    if frame.command.is_empty() {
+                        session.exit_status_request(channel, 0);
+                        session.eof(channel);
+                        session.close(channel);
+                        return Ok((self, session));
+                    }
+
+                    let authed = self.authed()?;
+                    let org_name = self.org_name()?;
+
+                    // start building the packfile we're going to send to the user
+                    let mut packfile = GitRepository::default();
+
+                    // write the config.json to the root of the repository
+                    let config =
+                        CargoConfig::new(&self.config.web_base_uri, &authed.auth_key, org_name);
+                    let config = serde_json::to_vec(&config)?;
+                    packfile.insert(ArrayVec::<_, 0>::new(), "config.json", &config)?;
+
+                    // build the tree of all the crates the user has access to, then write them
+                    // to the in-memory repository.
+                    // todo: the whole tree needs caching and then we can filter in code rather than at
+                    //  the database
+                    let tree =
+                        Tree::build(self.db.clone(), authed.user.id, org_name.to_string()).await;
+                    tree.write_to_packfile(&mut packfile)?;
+
+                    let config = self.config.clone();
+
+                    // finalises the git repository, creating a commit and fetching the finalised
+                    // packfile and commit hash to return in `ls-refs` calls.
+                    let (commit_hash, packfile_entries) = packfile.commit(
+                        &config.committer.name,
+                        &config.committer.email,
+                        &config.committer.message,
+                    )?;
+
+                    match frame.command.as_ref() {
+                        b"command=ls-refs" => {
+                            command_handlers::ls_refs::handle(
+                                &mut self,
+                                &mut session,
+                                channel,
+                                frame.metadata,
+                                &commit_hash,
+                            )?;
+                        }
+                        b"command=fetch" => {
+                            command_handlers::fetch::handle(
+                                &mut self,
+                                &mut session,
+                                channel,
+                                frame.metadata,
+                                packfile_entries,
+                            )?;
+                        }
+                        v => {
+                            error!(
+                                "Client sent unknown command, ignoring command {}",
+                                std::str::from_utf8(v).unwrap_or("invalid utf8")
+                            );
+                        }
+                    }
+                }
+
+                Ok((self, session))
+            }
+            .instrument(tracing::info_span!(parent: span, "data")),
+        )
     }
 
     fn env_request(
@@ -259,7 +410,7 @@ impl server::Handler for Handler {
 
             // preamble, sending our capabilities and what have you
             self.write(PktLine::Data(b"version 2\n"))?;
-            self.write(PktLine::Data(b"agent=chartered/0.1.0\n"))?; // TODO: clap::crate_name!()/clap::crate_version!()
+            self.write(PktLine::Data(AGENT.as_bytes()))?;
             self.write(PktLine::Data(b"ls-refs=unborn\n"))?;
             self.write(PktLine::Data(b"fetch=shallow wait-for-done\n"))?;
             self.write(PktLine::Data(b"server-option\n"))?;
@@ -278,141 +429,5 @@ impl server::Handler for Handler {
         session: Session,
     ) -> Self::FutureUnit {
         Box::pin(futures::future::ready(Ok((self, session))))
-    }
-
-    /// User is attempting to connect via pubkey, we'll lookup the key in the
-    /// user database and create a new session if it exists, otherwise we'll
-    /// reject the authentication attempt.
-    fn auth_publickey(mut self, _username: &str, key: &key::PublicKey) -> Self::FutureAuth {
-        let span = self.span.clone();
-        let public_key = key.public_key_bytes();
-
-        Box::pin(
-            async move {
-                let (ssh_key, user) =
-                    match chartered_db::users::User::find_by_ssh_key(self.db.clone(), public_key)
-                        .await?
-                    {
-                        Some(user) => user,
-                        None => return self.finished_auth(server::Auth::Reject).await,
-                    };
-                let ssh_key = Arc::new(ssh_key);
-
-                if let Err(e) = ssh_key.clone().update_last_used(self.db.clone()).await {
-                    warn!("Failed to update last used key: {:?}", e);
-                }
-
-                let auth_key = ssh_key
-                    .clone()
-                    .get_or_insert_session(self.db.clone(), self.ip.map(|v| v.to_string()))
-                    .await?
-                    .session_key;
-
-                self.authed = Some(Authed { user, auth_key });
-
-                self.finished_auth(server::Auth::Accept).await
-            }
-            .instrument(tracing::info_span!(parent: span, "auth pubkey")),
-        )
-    }
-
-    fn auth_keyboard_interactive(
-        self,
-        _user: &str,
-        _submethods: &str,
-        _response: Option<server::Response<'_>>,
-    ) -> Self::FutureAuth {
-        self.finished_auth(server::Auth::UnsupportedMethod)
-    }
-
-    fn auth_none(self, _user: &str) -> Self::FutureAuth {
-        self.finished_auth(server::Auth::UnsupportedMethod)
-    }
-
-    fn auth_password(self, _user: &str, _password: &str) -> Self::FutureAuth {
-        self.finished_auth(server::Auth::UnsupportedMethod)
-    }
-
-    fn data(mut self, channel: ChannelId, data: &[u8], mut session: Session) -> Self::FutureUnit {
-        let span = self.span.clone();
-        self.input_bytes.extend_from_slice(data);
-
-        Box::pin(
-            async move {
-                while let Some(frame) = self.codec.decode(&mut self.input_bytes)? {
-                    debug!(
-                        "decoded frame command={:?} metadata={:?}",
-                        frame.command, frame.metadata
-                    );
-
-                    // if the client flushed without giving us a command, we're expected to close
-                    // the connection or else the client will just hang
-                    if frame.command.is_empty() {
-                        session.exit_status_request(channel, 0);
-                        session.eof(channel);
-                        session.close(channel);
-                        return Ok((self, session));
-                    }
-
-                    let authed = self.authed()?;
-                    let org_name = self.org_name()?;
-
-                    // start building the packfile we're going to send to the user
-                    let mut packfile = GitRepository::default();
-
-                    // write the config.json to the root of the repository
-                    let config = CargoConfig::new(
-                        &Url::parse("http://127.0.0.1:8888/")?,
-                        &authed.auth_key,
-                        org_name,
-                    );
-                    let config = serde_json::to_vec(&config)?;
-                    packfile.insert(ArrayVec::<_, 0>::new(), "config.json", &config)?;
-
-                    // build the tree of all the crates the user has access to, then write them
-                    // to the in-memory repository.
-                    // todo: the whole tree needs caching and then we can filter in code rather than at
-                    //  the database
-                    let tree =
-                        Tree::build(self.db.clone(), authed.user.id, org_name.to_string()).await;
-                    tree.write_to_packfile(&mut packfile)?;
-
-                    // finalises the git repository, creating a commit and fetching the finalised
-                    // packfile and commit hash to return in `ls-refs` calls.
-                    let (commit_hash, packfile_entries) =
-                        packfile.commit("computer", "john@computer.no", "Update crates")?;
-
-                    match frame.command.as_ref() {
-                        b"command=ls-refs" => {
-                            command_handlers::ls_refs::handle(
-                                &mut self,
-                                &mut session,
-                                channel,
-                                frame.metadata,
-                                &commit_hash,
-                            )?;
-                        }
-                        b"command=fetch" => {
-                            command_handlers::fetch::handle(
-                                &mut self,
-                                &mut session,
-                                channel,
-                                frame.metadata,
-                                packfile_entries,
-                            )?;
-                        }
-                        v => {
-                            error!(
-                                "Client sent unknown command, ignoring command {}",
-                                std::str::from_utf8(v).unwrap_or("invalid utf8")
-                            );
-                        }
-                    }
-                }
-
-                Ok((self, session))
-            }
-            .instrument(tracing::info_span!(parent: span, "data")),
-        )
     }
 }

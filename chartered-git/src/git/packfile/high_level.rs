@@ -80,9 +80,9 @@ impl<'a> GitRepository<'a> {
     /// and also the commit hash so it can be referred to by `ls-ref`s.
     pub fn commit(
         &'a mut self,
-        name: &'static str,
-        email: &'static str,
-        message: &'static str,
+        name: &'a str,
+        email: &'a str,
+        message: &'a str,
     ) -> Result<(HashOutput, Vec<PackFileEntry<'a>>), anyhow::Error> {
         // gets the hash of the entire tree from the root
         let tree_hash = self.tree.to_packfile_entries(&mut self.packfile_entries)?;
