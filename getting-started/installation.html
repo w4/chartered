@@ -160,13 +160,14 @@ use for obvious reasons.</p>
 running the binary, the services will bind to <code>127.0.0.1:8899</code> and <code>127.0.0.1:8080</code> respectively
 and store crate files in <code>/tmp/chartered</code>, configuration away from these defaults is simple.</p>
 <p>Using the recommended setup, S3 &amp; PostgreSQL:</p>
-<pre><code class="language-toml">bind_address = &quot;127.0.0.1:8080&quot; # hint: use a different port for each service
+<h4 id="chartered-web-config"><a class="header" href="#chartered-web-config"><code>chartered-web</code> config</a></h4>
+<pre><code class="language-toml">bind_address = &quot;127.0.0.1:8080&quot;
 database_uri = &quot;postgres://user:password@localhost/chartered&quot;
-
-# the below configuration options should only be set for chartered-web
 storage_uri  = &quot;s3://s3-eu-west-1.amazonaws.com/my-cool-crate-store/&quot;
-frontend_url = &quot;https://my.instance.chart.rs&quot; # this is used for CORS
-                                              # if unset defaults to *
+frontend_base_uri = &quot;http://localhost:1234/&quot;
+
+[auth.password]
+enabled = true
 
 # openid connect provider
 [auth.gitlab]
@@ -175,11 +176,15 @@ discovery_uri = &quot;https://gitlab.com/&quot;
 client_id = &quot;[client-id]&quot;
 client_secret = &quot;[client-secret]&quot;
 </code></pre>
-<p>Or, using the defaults of <code>chartered-web</code> as an example:</p>
-<pre><code class="language-toml">bind_address = &quot;127.0.0.1:8899&quot;
-database_uri = &quot;sqlite://chartered.db&quot;
+<h4 id="chartered-git-config"><a class="header" href="#chartered-git-config"><code>chartered-git</code> config</a></h4>
+<pre><code class="language-toml">bind_address = &quot;127.0.0.1:2233&quot;
+database_uri = &quot;postgres://user:password@localhost/chartered&quot; # can also be `sqlite://`
+web_base_uri = &quot;http://localhost:8888/&quot;
 
-storage_uri  = &quot;file:///tmp/chartered&quot;
+[committer]
+name = &quot;Chartered&quot;
+email = &quot;noreply@chart.rs&quot;
+message = &quot;Updated crates!&quot;
 </code></pre>
 <p>These configuration files can be passed into each binary using the <code>-c</code> CLI argument.</p>
 <p>Alternative crate stores will be considered, please consider contributing or
@@ -192,8 +197,8 @@ Dockerfile:</p>
 $ docker build https://github.com/w4/chartered.git#main \
     --target chartered-git \
     -t chartered-git:master
-$ docker run -d chartered-web
-$ docker run -d chartered-git
+$ docker -v $PWD/web-config.toml:/config.toml run -d chartered-web --config /config.toml
+$ docker -v $PWD/git-config.toml:/config.toml run -d chartered-git --config /config.toml
 </code></pre>
 <h3 id="frontend"><a class="header" href="#frontend">Frontend</a></h3>
 <p>The frontend only needs to be configured to point to the <code>chartered-web</code> service. This can be
@@ -209,6 +214,7 @@ $ docker run -d -p 8080:80 chartered-frontend:master
 $ curl http://127.0.0.1:8080
 &lt;!DOCTYPE html&gt;&lt;html lang=&quot;en&quot;&gt;&lt;head&gt;&lt;meta charset=&quot;UTF-8&quot;&gt;...
 </code></pre>
+<p>Where <code>BASE_URL</code> points to the <code>chartered-web</code> instance.</p>
 
                     </main>
 
