@@ -95,6 +95,7 @@ table! {
         id -> Integer,
         uuid -> Binary,
         username -> Text,
+        password -> Nullable<Text>,
         name -> Nullable<Text>,
         nick -> Nullable<Text>,
         email -> Nullable<Text>,

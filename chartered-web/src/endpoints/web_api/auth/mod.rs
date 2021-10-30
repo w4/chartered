@@ -40,7 +40,8 @@ pub fn unauthenticated_routes() -> Router<
         + Send,
 > {
     crate::axum_box_after_every_route!(Router::new()
-        .route("/login/password", post(password::handle))
+        .route("/register/password", post(password::handle_register))
+        .route("/login/password", post(password::handle_login))
         .route("/login/oauth/:provider/begin", get(openid::begin_oidc))
         .route("/login/oauth/complete", get(openid::complete_oidc))
         .route("/login/oauth/providers", get(openid::list_providers)))

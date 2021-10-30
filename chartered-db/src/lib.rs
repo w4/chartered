@@ -131,6 +131,8 @@ pub enum Error {
     MissingOrganisation,
     /// Version {0} already exists for this crate
     VersionConflict(String),
+    /// Username is already taken
+    UsernameTaken,
 }
 
 impl Error {

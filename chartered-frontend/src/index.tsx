@@ -26,6 +26,7 @@ import CreateOrganisation from "./pages/organisations/CreateOrganisation";
 import User from "./pages/User";
 import Search from "./pages/Search";
 import { backgroundFix } from "./overscrollColourFixer";
+import Register from "./pages/Register";
 
 if (
   window.matchMedia &&
@@ -52,6 +53,12 @@ function App() {
             unauthedOnly
             path="/login"
             component={() => <Login />}
+          />
+          <PublicRoute
+            extract
+            unauthedOnly
+            path="/register"
+            component={() => <Register />}
           />
           <PublicRoute
             exact

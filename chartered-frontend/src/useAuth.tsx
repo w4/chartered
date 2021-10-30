@@ -54,7 +54,7 @@ export function HandleOAuthLogin() {
         <Redirect
           to={{
             pathname: "/login",
-            state: { error: err.message },
+            state: { prompt: { message: err.message, kind: "danger" } },
           }}
         />
       );

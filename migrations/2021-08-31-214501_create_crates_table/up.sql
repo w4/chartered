@@ -2,6 +2,7 @@ CREATE TABLE users (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     uuid BINARY(128) NOT NULL UNIQUE,
     username VARCHAR(255) NOT NULL UNIQUE,
+    password CHAR(60),
     name VARCHAR(255),
     nick VARCHAR(255),
     email VARCHAR(255),

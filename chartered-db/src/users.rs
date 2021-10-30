@@ -3,9 +3,12 @@ use super::{
     permissions::UserPermission,
     schema::{user_crate_permissions, user_sessions, user_ssh_keys, users},
     uuid::SqlUuid,
-    ConnectionPool, Result,
+    ConnectionPool, Error, Result,
 };
-use diesel::{insert_into, prelude::*, Associations, Identifiable, Queryable};
+use diesel::result::DatabaseErrorKind;
+use diesel::{
+    insert_into, prelude::*, result::Error as DieselError, Associations, Identifiable, Queryable,
+};
 use rand::{thread_rng, Rng};
 use std::sync::Arc;
 use thrussh_keys::PublicKeyBase64;
@@ -15,6 +18,7 @@ pub struct User {
     pub id: i32,
     pub uuid: SqlUuid,
     pub username: String,
+    pub password: Option<String>,
     pub name: Option<String>,
     pub nick: Option<String>,
     pub email: Option<String>,
@@ -168,6 +172,33 @@ impl User {
             Ok(crate::schema::users::table
                 .filter(username.eq(given_username))
                 .get_result(&conn)?)
+        })
+        .await?
+    }
+
+    pub async fn register(
+        conn: ConnectionPool,
+        username: String,
+        password_hash: String,
+    ) -> Result<()> {
+        tokio::task::spawn_blocking(move || {
+            let conn = conn.get()?;
+
+            let res = diesel::insert_into(users::table)
+                .values((
+                    users::username.eq(&username),
+                    users::uuid.eq(SqlUuid::random()),
+                    users::password.eq(&password_hash),
+                ))
+                .execute(&conn);
+
+            match res {
+                Ok(_) => Ok(()),
+                Err(DieselError::DatabaseError(DatabaseErrorKind::UniqueViolation, _)) => {
+                    Err(Error::UsernameTaken)
+                }
+                Err(e) => Err(e.into()),
+            }
         })
         .await?
     }

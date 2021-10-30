@@ -5,84 +5,71 @@ import {
   SyntheticEvent,
   MouseEventHandler,
 } from "react";
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link, Redirect } from "react-router-dom";
 
 import { useAuth } from "../useAuth";
-import { useUnauthenticatedRequest } from "../util";
+import { unauthenticatedEndpoint, useUnauthenticatedRequest } from "../util";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faGithub,
-  faGitlab,
-  faGoogle,
-  IconDefinition,
-} from "@fortawesome/free-brands-svg-icons";
+import { IconDefinition } from "@fortawesome/free-brands-svg-icons";
 import { faSignInAlt } from "@fortawesome/free-solid-svg-icons";
-import { PersonPlus } from "react-bootstrap-icons";
 
 interface OAuthProviders {
   providers: string[];
 }
 
-interface Prompt {
-  message: string;
-  kind: string;
-}
-
-export default function Login() {
-  const location = useLocation();
-  const auth = useAuth();
-
-  const [ackLocation, setAckLocation] = useState(false);
+export default function Register() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [prompt, setPrompt] = useState<Prompt | null>(null);
-  const [loading, setLoading] = useState<string | null>(null);
-  const isMountedRef = useRef(null);
-
-  const { response: oauthProviders } =
-    useUnauthenticatedRequest<OAuthProviders>({
-      endpoint: "auth/login/oauth/providers",
-    });
-
-  useEffect(() => {
-    if (location.state?.prompt && !ackLocation) {
-      setPrompt(location.state.prompt);
-      setAckLocation(true);
-    }
-
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState<boolean>(false);
+  const [complete, setComplete] = useState<boolean>(false);
 
   const handleSubmit = async (evt: SyntheticEvent) => {
     evt.preventDefault();
 
-    setPrompt(null);
-    setLoading("password");
+    setError("");
+    setLoading(true);
 
     try {
-      await auth?.login(username, password);
-    } catch (e: any) {
-      setPrompt({ message: e.message, kind: "danger" });
-    } finally {
-      if (isMountedRef.current) {
-        setLoading(null);
+      let res = await fetch(unauthenticatedEndpoint("auth/register/password"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "User-Agent": window.navigator.userAgent,
+        },
+        body: JSON.stringify({ username, password }),
+      });
+      let json = await res.json();
+
+      if (json.error) {
+        throw new Error(json.error);
+      } else if (!json.success) {
+        throw new Error("Failed to register, please try again later.");
+      } else {
+        setComplete(true);
       }
-    }
-  };
-
-  const handleOAuthLogin = async (provider: string) => {
-    setPrompt(null);
-    setLoading(provider);
-
-    try {
-      await auth?.oauthLogin(provider);
     } catch (e: any) {
-      setPrompt({ message: e.message, kind: "danger" });
+      setError(e.message);
+    } finally {
+      setLoading(false);
     }
   };
+
+  if (complete) {
+    return (
+      <Redirect
+        to={{
+          pathname: "/login",
+          state: {
+            prompt: {
+              message: "Successfully registered, please login.",
+              kind: "success",
+            },
+          },
+        }}
+      />
+    );
+  }
 
   return (
     <div className="p-4 min-vh-100 d-flex justify-content-center align-items-center">
@@ -96,17 +83,17 @@ export default function Login() {
         >
           <div className="card-body">
             <div
-              className={`alert alert-${prompt?.kind} alert-dismissible`}
+              className="alert alert-danger alert-dismissible"
               role="alert"
-              style={{ display: prompt ? "block" : "none" }}
+              style={{ display: error ? "block" : "none" }}
             >
-              {prompt?.message}
+              {error}
 
               <button
                 type="button"
                 className="btn-close"
                 aria-label="Close"
-                onClick={() => setPrompt(null)}
+                onClick={() => setError("")}
               />
             </div>
 
@@ -117,12 +104,12 @@ export default function Login() {
                   className="form-control"
                   placeholder="john.smith"
                   id="username"
-                  disabled={!!loading}
+                  disabled={loading}
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                 />
 
-                <label htmlFor="email" className="form-label">
+                <label htmlFor="username" className="form-label">
                   Username
                 </label>
               </div>
@@ -133,7 +120,7 @@ export default function Login() {
                   className="form-control"
                   placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"
                   id="password"
-                  disabled={!!loading}
+                  disabled={loading}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
@@ -146,63 +133,18 @@ export default function Login() {
               <ButtonOrSpinner
                 type="submit"
                 variant="primary"
-                disabled={!!loading}
-                showSpinner={loading === "password"}
-                text={`Login`}
+                disabled={loading}
+                showSpinner={loading}
+                text={`Register`}
                 icon={faSignInAlt}
                 onClick={handleSubmit}
               />
             </form>
-
-            <Link
-              to="/register"
-              className="btn btn-lg w-100 btn-outline-primary mt-2"
-            >
-              <PersonPlus /> Register
-            </Link>
-
-            {oauthProviders?.providers.length > 0 ? (
-              <>
-                <div className="side-lines mt-2">or</div>
-
-                {oauthProviders.providers.map((v, i) => (
-                  <ButtonOrSpinner
-                    key={i}
-                    type="button"
-                    variant="dark"
-                    disabled={!!loading}
-                    showSpinner={loading === v}
-                    text={`Login with ${
-                      v.charAt(0).toUpperCase() + v.slice(1)
-                    }`}
-                    icon={getIconForProvider(v)[0]}
-                    background={getIconForProvider(v)[1]}
-                    onClick={(evt) => {
-                      evt.preventDefault();
-                      handleOAuthLogin(v);
-                    }}
-                  />
-                ))}
-              </>
-            ) : (
-              <></>
-            )}
           </div>
         </div>
       </div>
     </div>
   );
-}
-
-const BRANDS = {
-  default: [faSignInAlt, ""],
-  github: [faGithub, "#4078c0"],
-  gitlab: [faGitlab, "#6E49cb"],
-  google: [faGoogle, "#4285f4"],
-};
-
-function getIconForProvider(provider: string): [IconDefinition, string] {
-  return BRANDS[provider] || BRANDS.default;
 }
 
 function ButtonOrSpinner({
