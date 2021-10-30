@@ -38,3 +38,4 @@ tower-http = { git = "https://github.com/tower-rs/tower-http", branch = "cors", 
 toml = "0.5"
 tracing = "0.1"
 tracing-subscriber = "0.2"
+url = { version = "2.2", features = ["serde"] }

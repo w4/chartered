@@ -562,6 +562,7 @@ dependencies = [
  "tower-http 0.1.1 (git+https://github.com/tower-rs/tower-http?branch=cors)",
  "tracing",
  "tracing-subscriber",
+ "url",
 ]
 
 [[package]]

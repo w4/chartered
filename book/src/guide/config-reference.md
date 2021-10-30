@@ -80,6 +80,8 @@ database_uri = "postgres://user:password@localhost/chartered" # can also be `sql
 
 storage_uri  = "s3://s3-eu-west-1.amazonaws.com/my-cool-crate-store/" # or file:///var/lib/chartered
 
+frontend_base_uri = "http://localhost:1234/"
+
 [auth.password]
 enabled = true # enables password auth 
 
@@ -111,6 +113,11 @@ format of `postgres://user:password@localhost/chartered` (a [postgres connection
 
 A URI in which crates should be stored, this can either be an `s3://` connection URI, or a local file path using
 `file://`.
+
+#### `frontend_base_uri`
+- Type: `string`
+
+The base URL at which the frontend is being hosted.
 
 #### `[auth.password]`
 The `[auth.password]` table controls the username/password-based authentication method.

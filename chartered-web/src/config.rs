@@ -5,6 +5,7 @@ use serde::{de::Error as SerdeDeError, Deserialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use thiserror::Error;
+use url::Url;
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -12,6 +13,8 @@ pub enum Error {
     OpenId(#[from] openid::error::Error),
     #[error("Failed to create file system handle: {0}")]
     Fs(#[from] Box<chartered_fs::Error>),
+    #[error("Failed to build URL: {0}")]
+    Parse(#[from] url::ParseError),
 }
 
 pub type OidcClients = HashMap<String, DiscoveredClient>;
@@ -22,6 +25,7 @@ pub struct Config {
     pub bind_address: SocketAddr,
     pub database_uri: String,
     pub storage_uri: String,
+    pub frontend_base_uri: Url,
     pub auth: AuthConfig,
     #[serde(deserialize_with = "deserialize_encryption_key")]
     pub encryption_key: ChaCha20Poly1305Key,
@@ -41,12 +45,14 @@ impl Config {
                 .iter()
                 .filter(|(_, config)| config.enabled)
                 .map(|(name, config)| async move {
+                    let redirect = self.frontend_base_uri.join("auth/login/oauth")?;
+
                     Ok::<_, Error>((
                         name.to_string(),
                         DiscoveredClient::discover(
                             config.client_id.to_string(),
                             config.client_secret.to_string(),
-                            Some("http://127.0.0.1:1234/auth/login/oauth".to_string()),
+                            Some(redirect.to_string()),
                             config.discovery_uri.clone(),
                         )
                         .await?,
@@ -75,8 +81,7 @@ pub struct PasswordAuthConfig {
 #[derive(Deserialize, Debug)]
 pub struct OAuthConfig {
     pub enabled: bool,
-    #[serde(deserialize_with = "deserialize_url")]
-    pub discovery_uri: reqwest::Url,
+    pub discovery_uri: Url,
     pub client_id: String,
     pub client_secret: String,
 }
@@ -91,11 +96,4 @@ fn deserialize_encryption_key<'de, D: serde::Deserializer<'de>>(
     }
 
     Ok(ChaCha20Poly1305Key::clone_from_slice(key.as_bytes()))
-}
-
-fn deserialize_url<'de, D: serde::Deserializer<'de>>(
-    deserializer: D,
-) -> Result<reqwest::Url, D::Error> {
-    let uri = String::deserialize(deserializer)?;
-    reqwest::Url::parse(&uri).map_err(D::Error::custom)
 }

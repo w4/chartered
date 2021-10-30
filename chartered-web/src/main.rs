@@ -15,8 +15,9 @@ use clap::Parser;
 use std::{fmt::Formatter, path::PathBuf, sync::Arc};
 use thiserror::Error;
 use tower::ServiceBuilder;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::{CorsLayer, Origin};
 use tracing::info;
+use url::Url;
 
 #[derive(Parser)]
 #[clap(version = clap::crate_version!(), author = clap::crate_authors!())]
@@ -85,6 +86,8 @@ async fn main() -> Result<(), InitError> {
         .layer_fn(middleware::logging::LoggingMiddleware)
         .into_inner();
 
+    let config = Arc::new(config);
+
     let app = Router::new()
         .route("/", get(hello_world))
         .nest(
@@ -105,7 +108,6 @@ async fn main() -> Result<(), InitError> {
             ),
         )
         .layer(middleware_stack)
-        // TODO!!!
         .layer(
             CorsLayer::new()
                 .allow_methods(vec![
@@ -117,7 +119,16 @@ async fn main() -> Result<(), InitError> {
                     Method::OPTIONS,
                 ])
                 .allow_headers(vec![header::CONTENT_TYPE, header::USER_AGENT])
-                .allow_origin(Any)
+                .allow_origin(Origin::predicate({
+                    let config = config.clone();
+                    move |url, _| {
+                        url.to_str()
+                            .ok()
+                            .and_then(|url| Url::parse(url).ok())
+                            .map(|url| url.host_str() == config.frontend_base_uri.host_str())
+                            .unwrap_or_default()
+                    }
+                }))
                 .allow_credentials(false),
         )
         .layer(AddExtensionLayer::new(pool))
@@ -127,7 +138,7 @@ async fn main() -> Result<(), InitError> {
         .layer(AddExtensionLayer::new(Arc::new(
             config.get_file_system().await?,
         )))
-        .layer(AddExtensionLayer::new(Arc::new(config)));
+        .layer(AddExtensionLayer::new(config.clone()));
 
     info!("HTTP server listening on {}", bind_address);
 
@@ -151,6 +162,8 @@ pub enum InitError {
     Database(#[from] chartered_db::Error),
     #[error("Failed to spawn HTTP server: {0}")]
     ServerSpawn(Box<dyn std::error::Error>),
+    #[error("Failed to build CORS header: {0}")]
+    Cors(axum::http::header::InvalidHeaderValue),
 }
 
 impl std::fmt::Debug for InitError {
