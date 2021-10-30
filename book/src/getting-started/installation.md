@@ -27,14 +27,17 @@ and store crate files in `/tmp/chartered`, configuration away from these default
 
 Using the recommended setup, S3 & PostgreSQL:
 
-```toml
-bind_address = "127.0.0.1:8080" # hint: use a different port for each service
-database_uri = "postgres://user:password@localhost/chartered"
 
-# the below configuration options should only be set for chartered-web
+#### `chartered-web` config
+
+```toml
+bind_address = "127.0.0.1:8080"
+database_uri = "postgres://user:password@localhost/chartered"
 storage_uri  = "s3://s3-eu-west-1.amazonaws.com/my-cool-crate-store/"
-frontend_url = "https://my.instance.chart.rs" # this is used for CORS
-                                              # if unset defaults to *
+frontend_base_uri = "http://localhost:1234/"
+
+[auth.password]
+enabled = true
 
 # openid connect provider
 [auth.gitlab]
@@ -44,13 +47,17 @@ client_id = "[client-id]"
 client_secret = "[client-secret]"
 ```
 
-Or, using the defaults of `chartered-web` as an example:
+#### `chartered-git` config
 
 ```toml
-bind_address = "127.0.0.1:8899"
-database_uri = "sqlite://chartered.db"
+bind_address = "127.0.0.1:2233"
+database_uri = "postgres://user:password@localhost/chartered" # can also be `sqlite://`
+web_base_uri = "http://localhost:8888/"
 
-storage_uri  = "file:///tmp/chartered"
+[committer]
+name = "Chartered"
+email = "noreply@chart.rs"
+message = "Updated crates!"
 ```
 
 These configuration files can be passed into each binary using the `-c` CLI argument.
@@ -68,8 +75,8 @@ $ docker build https://github.com/w4/chartered.git#main \
 $ docker build https://github.com/w4/chartered.git#main \
     --target chartered-git \
     -t chartered-git:master
-$ docker run -d chartered-web
-$ docker run -d chartered-git
+$ docker -v $PWD/web-config.toml:/config.toml run -d chartered-web --config /config.toml
+$ docker -v $PWD/git-config.toml:/config.toml run -d chartered-git --config /config.toml
 ```
 
 [gh-issue]: https://github.com/w4/chartered/issues
@@ -91,5 +98,7 @@ $ docker run -d -p 8080:80 chartered-frontend:master
 $ curl http://127.0.0.1:8080
 <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">...
 ```
+
+Where `BASE_URL` points to the `chartered-web` instance.
 
 [sws]: https://github.com/joseluisq/static-web-server
