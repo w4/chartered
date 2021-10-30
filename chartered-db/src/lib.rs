@@ -36,6 +36,7 @@ pub mod crates;
 pub mod organisations;
 pub mod permissions;
 pub mod schema;
+pub mod server_private_key;
 pub mod users;
 pub mod uuid;
 

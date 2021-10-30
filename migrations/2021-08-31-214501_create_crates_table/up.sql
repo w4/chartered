@@ -97,3 +97,9 @@ CREATE TABLE user_sessions (
     FOREIGN KEY (user_id) REFERENCES users (id)
     FOREIGN KEY (user_ssh_key_id) REFERENCES user_ssh_keys (id)
 );
+
+CREATE TABLE server_private_keys (
+     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+     ssh_key_type VARCHAR(255) NOT NULL UNIQUE,
+     ssh_private_key BLOB NOT NULL UNIQUE
+);

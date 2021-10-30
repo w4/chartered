@@ -41,6 +41,14 @@ table! {
 }
 
 table! {
+    server_private_keys (id) {
+        id -> Integer,
+        ssh_key_type -> Text,
+        ssh_private_key -> Binary,
+    }
+}
+
+table! {
     user_crate_permissions (id) {
         id -> Integer,
         user_id -> Integer,
@@ -110,6 +118,7 @@ allow_tables_to_appear_in_same_query!(
     crate_versions,
     crates,
     organisations,
+    server_private_keys,
     user_crate_permissions,
     user_organisation_permissions,
     user_sessions,

@@ -20,6 +20,7 @@ use crate::{
 
 use arrayvec::ArrayVec;
 use bytes::BytesMut;
+use chartered_db::server_private_key::ServerPrivateKey;
 use clap::Parser;
 use futures::future::Future;
 use std::{fmt::Write, path::PathBuf, pin::Pin, sync::Arc};
@@ -66,16 +67,24 @@ async fn main() -> anyhow::Result<()> {
 
     tracing_subscriber::fmt::init();
 
+    let db = chartered_db::init(&config.database_uri)?;
+
+    ServerPrivateKey::create_if_not_exists(db.clone()).await?;
+    let keys = ServerPrivateKey::fetch_all(db.clone()).await?;
+
     let trussh_config = Arc::new(thrussh::server::Config {
         methods: thrussh::MethodSet::PUBLICKEY,
-        keys: vec![key::KeyPair::generate_ed25519().unwrap()],
+        keys: keys
+            .into_iter()
+            .map(ServerPrivateKey::into_private_key)
+            .collect::<Result<_, _>>()?,
         ..thrussh::server::Config::default()
     });
 
     let bind_address = config.bind_address;
 
     let server = Server {
-        db: chartered_db::init(&config.database_uri)?,
+        db,
         config: Arc::new(config),
     };
 

@@ -6,3 +6,4 @@ DROP TABLE user_organisation_permissions;
 DROP TABLE user_crate_permissions;
 DROP TABLE user_ssh_keys;
 DROP TABLE user_sessions;
+DROP TABLE server_private_keys;

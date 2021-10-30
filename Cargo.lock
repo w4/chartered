@@ -465,6 +465,7 @@ dependencies = [
  "thiserror",
  "thrussh-keys",
  "tokio",
+ "tracing",
  "uuid",
 ]
 
