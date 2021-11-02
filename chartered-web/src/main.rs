@@ -7,8 +7,8 @@ mod endpoints;
 mod middleware;
 
 use axum::{
-    handler::get,
     http::{header, Method},
+    routing::get,
     AddExtensionLayer, Router,
 };
 use clap::Parser;
@@ -32,29 +32,6 @@ pub struct Opts {
 async fn hello_world() -> &'static str {
     "hello, world!"
 }
-
-// there's some sort of issue with monomorphization of axum routes
-// which causes compile times to increase exponentially with every
-// new route, the workaround is to box the router down to a
-// dynamically dispatched version with every new route.
-macro_rules! axum_box_after_every_route {
-    (Router::new()
-        $(.nest($nest_path:expr, $nest_svc:expr$(,)?))*
-        $(.route($route_path:expr, $route_svc:expr$(,)?))*
-    ) => {
-        Router::new()
-            $(
-                .nest($nest_path, $nest_svc)
-                .boxed()
-            )*
-            $(
-                .route($route_path, $route_svc)
-                .boxed()
-            )*
-    };
-}
-
-pub(crate) use axum_box_after_every_route;
 
 #[tokio::main]
 #[allow(clippy::semicolon_if_nothing_returned)] // lint breaks with tokio::main

@@ -5,32 +5,20 @@ mod recently_created;
 mod recently_updated;
 mod search;
 
-use axum::{
-    body::{Body, BoxBody},
-    handler::{delete, get, patch, put},
-    http::{Request, Response},
-    Router,
-};
-use futures::future::Future;
-use std::convert::Infallible;
+use axum::{routing::get, Router};
 
-pub fn routes() -> Router<
-    impl tower::Service<
-            Request<Body>,
-            Response = Response<BoxBody>,
-            Error = Infallible,
-            Future = impl Future<Output = Result<Response<BoxBody>, Infallible>> + Send,
-        > + Clone
-        + Send,
-> {
-    crate::axum_box_after_every_route!(Router::new()
+pub fn routes() -> Router {
+    Router::new()
         .route("/:org/:crate", get(info::handle))
-        .route("/:org/:crate/members", get(members::handle_get))
-        .route("/:org/:crate/members", patch(members::handle_patch))
-        .route("/:org/:crate/members", put(members::handle_put))
-        .route("/:org/:crate/members", delete(members::handle_delete))
+        .route(
+            "/:org/:crate/members",
+            get(members::handle_get)
+                .patch(members::handle_patch)
+                .put(members::handle_put)
+                .delete(members::handle_delete),
+        )
         .route("/recently-updated", get(recently_updated::handle))
         .route("/recently-created", get(recently_created::handle))
         .route("/most-downloaded", get(most_downloaded::handle))
-        .route("/search", get(search::handle)))
+        .route("/search", get(search::handle))
 }

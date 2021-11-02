@@ -1,8 +1,6 @@
 use axum::{
-    body::{Body, BoxBody},
     extract,
-    handler::{get, post},
-    http::{Request, Response},
+    routing::{get, post},
     Router,
 };
 use chartered_db::{
@@ -10,41 +8,24 @@ use chartered_db::{
     uuid::Uuid,
     ConnectionPool,
 };
-use futures::future::Future;
+
 use serde::Serialize;
-use std::convert::Infallible;
 
 pub mod logout;
 pub mod openid;
 pub mod password;
 
-pub fn authenticated_routes() -> Router<
-    impl tower::Service<
-            Request<Body>,
-            Response = Response<BoxBody>,
-            Error = Infallible,
-            Future = impl Future<Output = Result<Response<BoxBody>, Infallible>> + Send,
-        > + Clone
-        + Send,
-> {
-    crate::axum_box_after_every_route!(Router::new().route("/logout", get(logout::handle)))
+pub fn authenticated_routes() -> Router {
+    Router::new().route("/logout", get(logout::handle))
 }
 
-pub fn unauthenticated_routes() -> Router<
-    impl tower::Service<
-            Request<Body>,
-            Response = Response<BoxBody>,
-            Error = Infallible,
-            Future = impl Future<Output = Result<Response<BoxBody>, Infallible>> + Send,
-        > + Clone
-        + Send,
-> {
-    crate::axum_box_after_every_route!(Router::new()
+pub fn unauthenticated_routes() -> Router {
+    Router::new()
         .route("/register/password", post(password::handle_register))
         .route("/login/password", post(password::handle_login))
         .route("/login/oauth/:provider/begin", get(openid::begin_oidc))
         .route("/login/oauth/complete", get(openid::complete_oidc))
-        .route("/login/oauth/providers", get(openid::list_providers)))
+        .route("/login/oauth/providers", get(openid::list_providers))
 }
 
 #[derive(Serialize)]
