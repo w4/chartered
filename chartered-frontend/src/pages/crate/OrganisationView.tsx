@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, Redirect, useParams } from "react-router-dom";
+import { Link, Navigate, useParams } from "react-router-dom";
 
 import Nav from "../../sections/Nav";
 import { useAuth } from "../../useAuth";
@@ -42,12 +42,12 @@ export default function ShowOrganisation() {
     members: "Members",
   };
 
-  const { organisation } = useParams<UrlParams>();
+  const { organisation } = useParams();
   const auth = useAuth();
   const [activeTab, setActiveTab] = useState(Object.keys(tabs)[0]);
 
   if (!auth) {
-    return <Redirect to="/login" />;
+    return <Navigate to="/login" />;
   }
 
   const [reload, setReload] = useState(0);

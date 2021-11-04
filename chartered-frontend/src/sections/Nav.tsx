@@ -1,5 +1,5 @@
 import { SyntheticEvent, useState } from "react";
-import { useHistory, useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { NavLink, Link } from "react-router-dom";
 
 import { BoxArrowRight, Search } from "react-bootstrap-icons";
@@ -9,7 +9,7 @@ import { ProfilePicture } from "../util";
 
 export default function Nav() {
   const auth = useAuth();
-  const history = useHistory();
+  const navigate = useNavigate();
   const location = useLocation();
 
   const logout = async (e: SyntheticEvent) => {
@@ -26,7 +26,7 @@ export default function Nav() {
     e.preventDefault();
 
     if (search != "") {
-      history.push(`/search?q=${encodeURIComponent(search)}`);
+      navigate(`/search?q=${encodeURIComponent(search)}`);
     }
   };
 
@@ -51,16 +51,7 @@ export default function Nav() {
               </NavLink>
             </li>
             <li className="nav-item">
-              <NavLink
-                to="/organisations"
-                className="nav-link"
-                isActive={(match, location) => {
-                  return (
-                    location.pathname.startsWith("/organisations/") ||
-                    location.pathname.startsWith("/crates/")
-                  );
-                }}
-              >
+              <NavLink to="/organisations" className="nav-link">
                 Organisations
               </NavLink>
             </li>

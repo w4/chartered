@@ -5,7 +5,7 @@ import {
   SyntheticEvent,
   MouseEventHandler,
 } from "react";
-import { useLocation, Link, Redirect } from "react-router-dom";
+import { useLocation, Link, Navigate } from "react-router-dom";
 
 import { useAuth } from "../useAuth";
 import { unauthenticatedEndpoint, useUnauthenticatedRequest } from "../util";
@@ -57,14 +57,12 @@ export default function Register() {
 
   if (complete) {
     return (
-      <Redirect
-        to={{
-          pathname: "/login",
-          state: {
-            prompt: {
-              message: "Successfully registered, please login.",
-              kind: "success",
-            },
+      <Navigate
+        to="/login"
+        state={{
+          prompt: {
+            message: "Successfully registered, please login.",
+            kind: "success",
           },
         }}
       />

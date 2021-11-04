@@ -7,10 +7,10 @@ import { useEffect } from "react";
 import ReactDOM from "react-dom";
 import {
   BrowserRouter as Router,
-  Switch,
+  Routes,
   Route,
-  Redirect,
   useLocation,
+  Navigate,
 } from "react-router-dom";
 
 import { ProvideAuth, HandleOAuthLogin, useAuth } from "./useAuth";
@@ -43,83 +43,36 @@ window
     backgroundFix(body);
   });
 
+// prettier-ignore
 function App() {
   return (
     <ProvideAuth>
       <Router>
-        <Switch>
-          <PublicRoute
-            exact
-            unauthedOnly
-            path="/login"
-            component={() => <Login />}
-          />
-          <PublicRoute
-            extract
-            unauthedOnly
-            path="/register"
-            component={() => <Register />}
-          />
-          <PublicRoute
-            exact
-            unauthedOnly
-            path="/login/oauth"
-            component={() => <HandleOAuthLogin />}
-          />
+        <Routes>
+          {/* Public routes, visible only to unauthenticated users */}
+          <Route path="/login" element={<Public element={<Login />} />} />
+          <Route path="/register" element={<Public element={<Register />} />} />
+          <Route path="/login/oauth" element={<Public element={<HandleOAuthLogin />} />} />
 
-          <PrivateRoute
-            exact
-            path="/"
-            component={() => <Redirect to="/dashboard" />}
-          />
-          <PrivateRoute
-            exact
-            path="/dashboard"
-            component={() => <Dashboard />}
-          />
-          <PrivateRoute
-            exact
-            path="/crates/:organisation"
-            component={() => <OrganisationView />}
-          />
-          <PrivateRoute
-            exact
-            path="/crates/:organisation/:crate/:subview?"
-            component={() => <CrateView />}
-          />
-          <PrivateRoute exact path="/users/:uuid" component={() => <User />} />
-          <PrivateRoute
-            exact
-            path="/ssh-keys"
-            component={() => <Redirect to="/ssh-keys/list" />}
-          />
-          <PrivateRoute
-            exact
-            path="/ssh-keys/list"
-            component={() => <ListSshKeys />}
-          />
-          <PrivateRoute
-            exact
-            path="/ssh-keys/add"
-            component={() => <AddSshKeys />}
-          />
-          <PrivateRoute
-            exact
-            path="/organisations"
-            component={() => <Redirect to="/organisations/list" />}
-          />
-          <PrivateRoute
-            exact
-            path="/organisations/list"
-            component={() => <ListOrganisations />}
-          />
-          <PrivateRoute
-            exact
-            path="/organisations/create"
-            component={() => <CreateOrganisation />}
-          />
-          <PrivateRoute exact path="/search" component={() => <Search />} />
-        </Switch>
+          {/* Private routes, visible only to authenticated users */}
+          <Route path="/" element={<Private element={<Navigate to="/dashboard" />} />} />
+          <Route path="/dashboard" element={<Private element={<Dashboard />} />} />
+          <Route path="/search" element={<Private element={<Search />} />} />
+
+          <Route path="/crates/:organisation" element={<Private element={<OrganisationView />} />} />
+          <Route path="/crates/:organisation/:crate" element={<Private element={<CrateView />} />} />
+          <Route path="/crates/:organisation/:crate/:subview" element={<Private element={<CrateView />} />} />
+
+          <Route path="/users/:uuid" element={<Private element={<User />} />} />
+
+          <Route path="/ssh-keys" element={<Private element={<Navigate to="/ssh-keys/list" />} />} />
+          <Route path="/ssh-keys/list" element={<Private element={<ListSshKeys />} />} />
+          <Route path="/ssh-keys/add" element={<Private element={<AddSshKeys />} />} />
+
+          <Route path="/organisations" element={<Private element={<Navigate to="/organisations/list" />} />} />
+          <Route path="/organisations/list" element={<Private element={<ListOrganisations />} />} />
+          <Route path="/organisations/create" element={<Private element={<CreateOrganisation />} />} />
+        </Routes>
       </Router>
     </ProvideAuth>
   );
@@ -127,57 +80,25 @@ function App() {
 
 ReactDOM.render(<App />, document.getElementById("root"));
 
-function PublicRoute({
-  component: Component,
-  unauthedOnly,
-  ...rest
-}: {
-  component: ({
-    match,
-    location,
-  }: {
-    match: any;
-    location: ReturnType<typeof useLocation>;
-  }) => JSX.Element;
-  unauthedOnly: boolean;
-} & { [r: string]: any }) {
+function Public(i: { element: JSX.Element }) {
   const auth = useAuth();
+  const location = useLocation();
 
-  return (
-    <Route
-      {...rest}
-      render={(props: any) => {
-        // TODO: check if valid key
-        if (!unauthedOnly || !auth || !auth?.getAuthKey()) {
-          return <Component {...props} />;
-        } else {
-          return (
-            <Redirect
-              to={{
-                pathname: props.location.state?.from?.pathname ?? "/dashboard",
-                state: { from: props.location },
-              }}
-            />
-          );
-        }
-      }}
-    />
-  );
+  if (auth?.getAuthKey()) {
+    return (
+      <Navigate
+        to={location.state?.from?.pathname ?? "/dashboard"}
+        state={{ from: location }}
+      />
+    );
+  } else {
+    return <>{i.element}</>;
+  }
 }
 
-function PrivateRoute({
-  component: Component,
-  ...rest
-}: {
-  component: ({
-    match,
-    location,
-  }: {
-    match: any;
-    location: ReturnType<typeof useLocation>;
-  }) => JSX.Element;
-} & { [r: string]: any }) {
+function Private(i: { element: JSX.Element }) {
   const auth = useAuth();
+  const location = useLocation();
 
   const isAuthenticated = auth?.getAuthKey();
   useEffect(() => {
@@ -186,21 +107,9 @@ function PrivateRoute({
     }
   }, [isAuthenticated]);
 
-  return (
-    <Route
-      {...rest}
-      render={(props) => {
-        // TODO: check if valid key
-        if (auth && isAuthenticated) {
-          return <Component {...props} />;
-        } else {
-          return (
-            <Redirect
-              to={{ pathname: "/login", state: { from: props.location } }}
-            />
-          );
-        }
-      }}
-    />
-  );
+  if (auth && isAuthenticated) {
+    return <>{i.element}</>;
+  } else {
+    return <Navigate to="/login" state={{ from: location }} />;
+  }
 }

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, Redirect } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 
 import Nav from "../../sections/Nav";
 import { useAuth } from "../../useAuth";
@@ -27,7 +27,7 @@ export default function ListSshKeys() {
   const auth = useAuth();
 
   if (!auth) {
-    return <Redirect to="/login" />;
+    return <Navigate to="/login" />;
   }
 
   const [error, setError] = useState("");

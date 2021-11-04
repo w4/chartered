@@ -1,5 +1,5 @@
 import { SyntheticEvent, useState } from "react";
-import { Link, useHistory } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import Nav from "../../sections/Nav";
 import { useAuth } from "../../useAuth";
@@ -7,7 +7,7 @@ import { authenticatedEndpoint } from "../../util";
 
 export default function ListSshKeys() {
   const auth = useAuth();
-  const router = useHistory();
+  const navigate = useNavigate();
 
   if (!auth) {
     return <></>;
@@ -38,10 +38,9 @@ export default function ListSshKeys() {
       }
 
       setSshKey("");
-      router.push("/ssh-keys/list");
+      navigate("/ssh-keys/list");
     } catch (e: any) {
       setError(e.message);
-    } finally {
       setLoading(false);
     }
   };

@@ -37,7 +37,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [prompt, setPrompt] = useState<Prompt | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
-  const isMountedRef = useRef(null);
+  const isMountedRef = useRef<boolean | null>(null);
 
   const { response: oauthProviders } =
     useUnauthenticatedRequest<OAuthProviders>({

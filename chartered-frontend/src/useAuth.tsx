@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext, createContext } from "react";
-import { useLocation, Redirect } from "react-router-dom";
+import { useLocation, Navigate, useNavigate } from "react-router-dom";
 import {
   authenticatedEndpoint,
   BASE_URL,
@@ -39,7 +39,7 @@ export function ProvideAuth({ children }: { children: any }) {
 export function HandleOAuthLogin() {
   const location = useLocation();
   const auth = useAuth();
-  const [result, setResult] = useState<JSX.Element | null>(null);
+  const navigate = useNavigate();
 
   useEffect(async () => {
     try {
@@ -50,18 +50,13 @@ export function HandleOAuthLogin() {
 
       auth?.handleLoginResponse(json);
     } catch (err: any) {
-      setResult(
-        <Redirect
-          to={{
-            pathname: "/login",
-            state: { prompt: { message: err.message, kind: "danger" } },
-          }}
-        />
-      );
+      navigate("/login", {
+        state: { prompt: { message: err.message, kind: "danger" } },
+      });
     }
   });
 
-  return result ?? <LoadingPage />;
+  return <LoadingPage />;
 }
 
 export const useAuth = (): AuthContext | null => {

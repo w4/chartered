@@ -1,6 +1,6 @@
 import { PropsWithChildren } from "react";
 
-import { Link, Redirect } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "../useAuth";
 import Nav from "../sections/Nav";
 import { Calendar3, ChevronRight, Download } from "react-bootstrap-icons";
@@ -42,7 +42,7 @@ export default function Dashboard() {
   const auth = useAuth();
 
   if (!auth) {
-    return <Redirect to="/login" />;
+    return <Navigate to="/login" />;
   }
 
   const { response: recentlyCreated, error: recentlyCreatedError } =

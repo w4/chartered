@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import Nav from "../sections/Nav";
 import { useAuth } from "../useAuth";
@@ -8,12 +8,9 @@ import { BoxSeam } from "react-bootstrap-icons";
 import { LoadingSpinner } from "./Loading";
 
 export default function Search() {
-  const location = useLocation();
+  const [searchParams] = useSearchParams();
 
-  const query =
-    location.pathname === "/search"
-      ? new URLSearchParams(location.search).get("q") || ""
-      : "";
+  const query = searchParams.get("q");
 
   return (
     <div>
@@ -85,7 +82,7 @@ function UsersResults({ query }: { query: string }) {
     <div className="card border-0 shadow-sm text-black p-2">
       <div className="card-body d-flex">
         {results.users.map((user, i) => (
-          <Link to={`users/${user.user_uuid}`} key={i}>
+          <Link to={`/users/${user.user_uuid}`} key={i}>
             <ProfilePicture
               height="5rem"
               width="5rem"

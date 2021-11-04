@@ -1,5 +1,5 @@
 import { SyntheticEvent, useState } from "react";
-import { Link, useHistory } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import Nav from "../../sections/Nav";
 import { useAuth } from "../../useAuth";
@@ -7,7 +7,7 @@ import { authenticatedEndpoint } from "../../util";
 
 export default function CreateOrganisation() {
   const auth = useAuth();
-  const router = useHistory();
+  const navigate = useNavigate();
 
   if (!auth) {
     return <></>;
@@ -42,10 +42,9 @@ export default function CreateOrganisation() {
 
       setName("");
       setDescription("");
-      router.push(`/crates/${name}`);
+      navigate(`/crates/${name}`);
     } catch (e: any) {
       setError(e.message);
-    } finally {
       setLoading(false);
     }
   };

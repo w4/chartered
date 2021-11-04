@@ -15,7 +15,7 @@ import {
   CheckSquare,
   Square,
 } from "react-bootstrap-icons";
-import { useParams, NavLink, Redirect, Link } from "react-router-dom";
+import { useParams, NavLink, Navigate, Link } from "react-router-dom";
 import {
   authenticatedEndpoint,
   ProfilePicture,
@@ -73,18 +73,10 @@ interface UrlParameters {
 
 export default function SingleCrate() {
   const auth = useAuth();
-  const {
-    organisation,
-    crate,
-    subview: currentTab,
-  } = useParams<UrlParameters>();
+  const { organisation, crate, subview: currentTab } = useParams();
 
   if (!auth) {
-    return <Redirect to="/login" />;
-  }
-
-  if (!currentTab) {
-    return <Redirect to={`/crates/${organisation}/${crate}/readme`} />;
+    return <Navigate to="/login" />;
   }
 
   const { response: crateInfo, error } = useAuthenticatedRequest<CrateInfo>(
@@ -94,6 +86,10 @@ export default function SingleCrate() {
     },
     [organisation, crate]
   );
+
+  if (!currentTab) {
+    return <Navigate to={`/crates/${organisation}/${crate}/readme`} />;
+  }
 
   if (error) {
     return <ErrorPage message={error} />;
@@ -185,8 +181,10 @@ export default function SingleCrate() {
                   <li className="nav-item">
                     <NavLink
                       to={`/crates/${organisation}/${crate}/readme`}
-                      className="nav-link"
-                      activeClassName="bg-primary bg-gradient active"
+                      className={({ isActive }) =>
+                        "nav-link" +
+                        (isActive ? " bg-primary bg-gradient active" : "")
+                      }
                     >
                       Readme
                     </NavLink>
@@ -194,8 +192,10 @@ export default function SingleCrate() {
                   <li className="nav-item">
                     <NavLink
                       to={`/crates/${organisation}/${crate}/versions`}
-                      className="nav-link"
-                      activeClassName="bg-primary bg-gradient active"
+                      className={({ isActive }) =>
+                        "nav-link" +
+                        (isActive ? " bg-primary bg-gradient active" : "")
+                      }
                     >
                       Versions
                       <span className={`badge rounded-pill bg-danger ms-1`}>
@@ -206,8 +206,10 @@ export default function SingleCrate() {
                   <li className="nav-item">
                     <NavLink
                       to={`/crates/${organisation}/${crate}/members`}
-                      className="nav-link"
-                      activeClassName="bg-primary bg-gradient active"
+                      className={({ isActive }) =>
+                        "nav-link" +
+                        (isActive ? " bg-primary bg-gradient active" : "")
+                      }
                     >
                       Members
                     </NavLink>

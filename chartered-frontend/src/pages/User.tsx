@@ -1,4 +1,4 @@
-import { Redirect, useParams } from "react-router-dom";
+import { useParams, Navigate } from "react-router-dom";
 import { useAuth } from "../useAuth";
 import { ProfilePicture, useAuthenticatedRequest } from "../util";
 import Nav from "../sections/Nav";
@@ -22,10 +22,10 @@ interface UrlParams {
 
 export default function User() {
   const auth = useAuth();
-  const { uuid } = useParams<UrlParams>();
+  const { uuid } = useParams();
 
   if (!auth) {
-    return <Redirect to="/login" />;
+    return <Navigate to="/login" />;
   }
 
   const { response: user, error } = useAuthenticatedRequest<Response>({
