@@ -245,10 +245,11 @@ impl Error {
         use axum::http::StatusCode;
 
         match self {
+            Self::JsonParse(_)
+            | Self::MetadataParse
+            | Self::InvalidCrateName
+            | Self::Database(chartered_db::Error::MissingOrganisation) => StatusCode::BAD_REQUEST,
             Self::Database(e) => e.status_code(),
-            Self::JsonParse(_) | Self::MetadataParse | Self::InvalidCrateName => {
-                StatusCode::BAD_REQUEST
-            }
             Self::File(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }

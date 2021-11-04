@@ -301,7 +301,9 @@ impl Crate {
                         .on(organisation_id.eq(id).and(user_id.eq(requesting_user_id))),
                 )
                 .select((id, permissions))
-                .first::<(i32, UserPermission)>(&conn)?;
+                .first::<(i32, UserPermission)>(&conn)
+                .optional()?
+                .ok_or(Error::MissingOrganisation)?;
 
             #[allow(clippy::if_not_else)]
             if !perms.contains(UserPermission::VISIBLE) {
