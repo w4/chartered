@@ -99,6 +99,10 @@ export default function Nav() {
                     Your profile
                   </Dropdown.Item>
 
+                  <Dropdown.Item as={Link} to="/sessions">
+                    Sessions
+                  </Dropdown.Item>
+
                   <Dropdown.Divider />
 
                   <Dropdown.Item

@@ -1,6 +1,7 @@
 mod auth;
 mod crates;
 mod organisations;
+mod sessions;
 mod ssh_key;
 mod users;
 
@@ -15,6 +16,7 @@ pub fn authenticated_routes() -> Router {
         .nest("/crates", crates::routes())
         .nest("/users", users::routes())
         .nest("/auth", auth::authenticated_routes())
+        .nest("/sessions", sessions::routes())
         .route(
             "/ssh-key",
             get(ssh_key::handle_get).put(ssh_key::handle_put),

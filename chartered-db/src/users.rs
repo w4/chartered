@@ -369,6 +369,28 @@ impl UserSession {
         .await?
     }
 
+    pub async fn list(
+        conn: ConnectionPool,
+        given_user_id: i32,
+    ) -> Result<Vec<(Self, Option<UserSshKey>)>> {
+        use crate::schema::user_sessions::dsl::{expires_at, user_id};
+
+        tokio::task::spawn_blocking(move || {
+            let conn = conn.get()?;
+
+            Ok(crate::schema::user_sessions::table
+                .filter(
+                    expires_at
+                        .is_null()
+                        .or(expires_at.gt(chrono::Utc::now().naive_utc())),
+                )
+                .filter(user_id.eq(given_user_id))
+                .left_join(user_ssh_keys::table)
+                .load(&conn)?)
+        })
+        .await?
+    }
+
     pub async fn delete(self: Arc<Self>, conn: ConnectionPool) -> Result<bool> {
         tokio::task::spawn_blocking(move || {
             let conn = conn.get()?;

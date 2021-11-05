@@ -38,7 +38,7 @@ where
         self.0.poll_ready(cx)
     }
 
-    fn call(&mut self, mut req: Request<ReqBody>) -> Self::Future {
+    fn call(&mut self, req: Request<ReqBody>) -> Self::Future {
         // best practice is to clone the inner service like this
         // see https://github.com/tower-rs/tower/issues/547 for details
         let clone = self.0.clone();
@@ -49,7 +49,7 @@ where
 
         Box::pin(async move {
             let start = std::time::Instant::now();
-            let user_agent = req.headers_mut().remove(axum::http::header::USER_AGENT);
+            let user_agent = req.headers().get(axum::http::header::USER_AGENT).cloned();
             let method = req.method().clone();
             let uri = replace_sensitive_path(req.uri().path());
 

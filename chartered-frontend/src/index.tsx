@@ -27,6 +27,7 @@ import User from "./pages/User";
 import Search from "./pages/Search";
 import { backgroundFix } from "./overscrollColourFixer";
 import Register from "./pages/Register";
+import ListSessions from "./pages/sessions/ListSessions";
 
 if (
   window.matchMedia &&
@@ -72,6 +73,9 @@ function App() {
           <Route path="/organisations" element={<Private element={<Navigate to="/organisations/list" />} />} />
           <Route path="/organisations/list" element={<Private element={<ListOrganisations />} />} />
           <Route path="/organisations/create" element={<Private element={<CreateOrganisation />} />} />
+
+          <Route path="/sessions" element={<Private element={<Navigate to="/sessions/list" />} />} />
+          <Route path="/sessions/list" element={<Private element={<ListSessions />} />} />
         </Routes>
       </Router>
     </ProvideAuth>
