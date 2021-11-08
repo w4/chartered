@@ -75,6 +75,7 @@ table! {
         expires_at -> Nullable<Timestamp>,
         user_agent -> Nullable<Text>,
         ip -> Nullable<Text>,
+        uuid -> Binary,
     }
 }
 

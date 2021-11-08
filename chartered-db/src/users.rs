@@ -327,6 +327,7 @@ pub struct UserSession {
     pub expires_at: Option<chrono::NaiveDateTime>,
     pub user_agent: Option<String>,
     pub ip: Option<String>,
+    pub uuid: SqlUuid,
 }
 
 impl UserSession {
@@ -339,7 +340,7 @@ impl UserSession {
         given_ip: Option<String>,
     ) -> Result<Self> {
         use crate::schema::user_sessions::dsl::{
-            expires_at, ip, session_key, user_agent, user_id, user_sessions, user_ssh_key_id,
+            expires_at, ip, session_key, user_agent, user_id, user_sessions, user_ssh_key_id, uuid,
         };
 
         tokio::task::spawn_blocking(move || {
@@ -359,6 +360,7 @@ impl UserSession {
                     expires_at.eq(given_expires_at),
                     user_agent.eq(given_user_agent),
                     ip.eq(given_ip),
+                    uuid.eq(SqlUuid::random()),
                 ))
                 .execute(&conn)?;
 
@@ -397,6 +399,19 @@ impl UserSession {
 
             let res = diesel::delete(user_sessions::table)
                 .filter(user_sessions::id.eq(self.id))
+                .execute(&conn)?;
+
+            Ok(res > 0)
+        })
+        .await?
+    }
+
+    pub async fn delete_by_uuid(conn: ConnectionPool, uuid: uuid::Uuid) -> Result<bool> {
+        tokio::task::spawn_blocking(move || {
+            let conn = conn.get()?;
+
+            let res = diesel::delete(user_sessions::table)
+                .filter(user_sessions::uuid.eq(SqlUuid(uuid)))
                 .execute(&conn)?;
 
             Ok(res > 0)

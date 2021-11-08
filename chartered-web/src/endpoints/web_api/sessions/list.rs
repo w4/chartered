@@ -15,6 +15,7 @@ pub async fn handle_get(
         sessions: sessions
             .into_iter()
             .map(|(session, ssh_key)| ResponseSession {
+                uuid: session.uuid.0,
                 expires_at: session.expires_at,
                 user_agent: session.user_agent,
                 ip: session.ip,
@@ -32,6 +33,7 @@ pub struct Response {
 
 #[derive(Serialize)]
 pub struct ResponseSession {
+    uuid: chartered_db::uuid::Uuid,
     expires_at: Option<chrono::NaiveDateTime>,
     user_agent: Option<String>,
     ip: Option<String>,
