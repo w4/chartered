@@ -19,6 +19,11 @@ interface LoginResponse {
   picture_url?: string;
 }
 
+interface ExtendResponse {
+  expires: number;
+  error?: string;
+}
+
 export interface AuthContext {
   login: (username: string, password: string) => Promise<void>;
   oauthLogin: (provider: string) => Promise<void>;
@@ -73,18 +78,6 @@ function useProvideAuth(): AuthContext {
       authStorage.pictureUrl,
     ];
   });
-
-  useEffect(() => {
-    localStorage.setItem(
-      "charteredAuthentication",
-      JSON.stringify({
-        userUuid: auth?.[0],
-        authKey: auth?.[1],
-        expires: auth?.[2],
-        pictureUrl: auth?.[3],
-      })
-    );
-  }, [auth]);
 
   const handleLoginResponse = (response: LoginResponse) => {
     if (response.error) {
@@ -161,6 +154,36 @@ function useProvideAuth(): AuthContext {
     }
   };
 
+  const extendSession = async () => {
+    if (auth === null || auth?.[2] < new Date()) {
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `${BASE_URL}/a/${getAuthKey()}/web/v1/auth/extend`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "User-Agent": window.navigator.userAgent,
+          },
+        }
+      );
+      const response: ExtendResponse = await res.json();
+
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      const newAuth = [...auth];
+      newAuth[2] = new Date(response.expires);
+      setAuth(newAuth);
+    } catch (e) {
+      console.error("Failed to extend user session", e);
+    }
+  };
+
   const getUserUuid = () => {
     if (auth?.[2] > new Date()) {
       return auth?.[0];
@@ -176,6 +199,30 @@ function useProvideAuth(): AuthContext {
       return null;
     }
   };
+
+  useEffect(() => {
+    localStorage.setItem(
+      "charteredAuthentication",
+      JSON.stringify({
+        userUuid: auth?.[0],
+        authKey: auth?.[1],
+        expires: auth?.[2],
+        pictureUrl: auth?.[3],
+      })
+    );
+
+    const extendInterval = 60000;
+    if (auth?.[2] && auth?.[2].getTime() - new Date().getTime() <= 0) {
+      extendSession();
+    }
+
+    const extendSessionIntervalId = setInterval(
+      () => extendSession(),
+      extendInterval
+    );
+
+    return () => clearInterval(extendSessionIntervalId);
+  }, [auth]);
 
   return {
     login,

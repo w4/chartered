@@ -11,12 +11,15 @@ use chartered_db::{
 
 use serde::Serialize;
 
+pub mod extend;
 pub mod logout;
 pub mod openid;
 pub mod password;
 
 pub fn authenticated_routes() -> Router {
-    Router::new().route("/logout", get(logout::handle))
+    Router::new()
+        .route("/logout", get(logout::handle))
+        .route("/extend", get(extend::handle))
 }
 
 pub fn unauthenticated_routes() -> Router {

@@ -403,6 +403,26 @@ impl UserSession {
         })
         .await?
     }
+
+    pub async fn extend(
+        self: Arc<Self>,
+        conn: ConnectionPool,
+        given_expires_at: chrono::NaiveDateTime,
+    ) -> Result<bool> {
+        use crate::schema::user_sessions::dsl::expires_at;
+
+        tokio::task::spawn_blocking(move || {
+            let conn = conn.get()?;
+
+            let res = diesel::update(user_sessions::table)
+                .filter(user_sessions::id.eq(self.id))
+                .set(expires_at.eq(given_expires_at))
+                .execute(&conn)?;
+
+            Ok(res > 0)
+        })
+        .await?
+    }
 }
 
 #[derive(Identifiable, Queryable, Associations, PartialEq, Eq, Hash, Debug)]
