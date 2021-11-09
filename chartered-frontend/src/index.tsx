@@ -28,6 +28,7 @@ import Search from "./pages/Search";
 import { backgroundFix } from "./overscrollColourFixer";
 import Register from "./pages/Register";
 import ListSessions from "./pages/sessions/ListSessions";
+import NotFound from "./pages/NotFound";
 
 if (
   window.matchMedia &&
@@ -76,6 +77,9 @@ function App() {
 
           <Route path="/sessions" element={<Private element={<Navigate to="/sessions/list" />} />} />
           <Route path="/sessions/list" element={<Private element={<ListSessions />} />} />
+
+          <Route path="/404" element={<NotFound />} />
+          <Route path="*" element={<Navigate to="/404" />} />
         </Routes>
       </Router>
     </ProvideAuth>
