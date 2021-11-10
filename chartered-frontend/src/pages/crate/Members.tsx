@@ -16,11 +16,13 @@ interface Member {
 export default function Members({
   members,
   possiblePermissions,
+  impliedPermissions,
   saveMemberPermissions,
   deleteMember,
 }: {
   members: Member[];
   possiblePermissions?: string[];
+  impliedPermissions?: string[][][];
   saveMemberPermissions: (
     prospectiveMember: boolean,
     uuid: string,
@@ -53,6 +55,7 @@ export default function Members({
             member={member}
             prospectiveMember={false}
             possiblePermissions={possiblePermissions}
+            impliedPermissions={impliedPermissions}
             saveMemberPermissions={saveMemberPermissions}
             deleteMember={deleteMember}
           />
@@ -64,6 +67,7 @@ export default function Members({
             member={member}
             prospectiveMember={true}
             possiblePermissions={possiblePermissions}
+            impliedPermissions={impliedPermissions}
             saveMemberPermissions={saveMemberPermissions}
             deleteMember={deleteMember}
           />
@@ -96,12 +100,14 @@ function MemberListItem({
   member,
   prospectiveMember,
   possiblePermissions,
+  impliedPermissions,
   saveMemberPermissions,
   deleteMember,
 }: {
   member: Member;
   prospectiveMember: boolean;
   possiblePermissions?: string[];
+  impliedPermissions?: string[][][];
   saveMemberPermissions: (
     prospectiveMember: boolean,
     uuid: string,
@@ -225,6 +231,7 @@ function MemberListItem({
             <td className="align-middle">
               <RenderPermissions
                 possiblePermissions={possiblePermissions}
+                impliedPermissions={impliedPermissions}
                 selectedPermissions={selectedPermissions}
                 userUuid={member.uuid}
                 onChange={setSelectedPermissions}
@@ -368,11 +375,13 @@ function MemberListInserter({
 function RenderPermissions({
   possiblePermissions,
   selectedPermissions,
+  impliedPermissions,
   userUuid,
   onChange,
 }: {
   possiblePermissions: string[];
   selectedPermissions: string[];
+  impliedPermissions: string[][][];
   userUuid: string;
   onChange: (permissions: string[]) => any;
 }) {
@@ -394,6 +403,12 @@ function RenderPermissions({
 
               if (e.target.checked) {
                 newUserPermissions.add(permission);
+
+                for (const [a, b] of impliedPermissions) {
+                  if (a[0] === permission) {
+                    newUserPermissions.add(b[0]);
+                  }
+                }
               } else {
                 newUserPermissions.delete(permission);
               }

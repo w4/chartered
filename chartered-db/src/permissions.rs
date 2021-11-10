@@ -17,6 +17,17 @@ impl UserPermission {
     pub fn names() -> &'static [&'static str] {
         Self::NAMES
     }
+
+    /// Returns a list of permissions that implied by setting other permissions,
+    /// those these can be overridden if the user adding the permssion explicitly
+    /// removes the permission.
+    #[must_use]
+    pub fn implications() -> &'static [[UserPermission; 2]] {
+        &[
+            // original => implied
+            [Self::CREATE_CRATE, Self::PUBLISH_VERSION],
+        ]
+    }
 }
 
 impl<B: diesel::backend::Backend> diesel::deserialize::FromSql<diesel::sql_types::Integer, B>

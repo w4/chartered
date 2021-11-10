@@ -16,6 +16,7 @@ import ReactPlaceholder from "react-placeholder";
 
 interface OrganisationDetails {
   possible_permissions?: string[];
+  implied_permissions?: string[][][];
   crates: Crate[];
   members: Member[];
   description: string;
@@ -153,6 +154,9 @@ export default function ShowOrganisation() {
                       possiblePermissions={
                         organisationDetails.possible_permissions
                       }
+                      impliedPermissions={
+                        organisationDetails.implied_permissions
+                      }
                       reload={() => setReload(reload + 1)}
                     />
                   ) : (
@@ -219,6 +223,7 @@ interface ListMemberParams {
   organisation: string;
   members: Member[];
   possiblePermissions?: string[];
+  impliedPermissions?: string[][][];
   reload: () => any;
 }
 
@@ -226,6 +231,7 @@ function ListMembers({
   organisation,
   members,
   possiblePermissions,
+  impliedPermissions,
   reload,
 }: ListMemberParams) {
   const auth = useAuth();
@@ -289,6 +295,7 @@ function ListMembers({
     <Members
       members={members}
       possiblePermissions={possiblePermissions}
+      impliedPermissions={impliedPermissions}
       saveMemberPermissions={saveMemberPermissions}
       deleteMember={deleteMember}
     />

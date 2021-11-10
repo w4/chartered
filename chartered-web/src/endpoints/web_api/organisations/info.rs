@@ -34,6 +34,7 @@ pub async fn handle_get(
         description: organisation.organisation().description.to_string(),
         // all the permissions the requesting user can give out for this organisation
         possible_permissions: can_manage_users.then(UserPermission::all),
+        implied_permissions: can_manage_users.then(UserPermission::implications),
         crates: crates
             .into_iter()
             .map(|v| ResponseCrate {
@@ -57,6 +58,7 @@ pub async fn handle_get(
 pub struct Response {
     description: String,
     possible_permissions: Option<UserPermission>,
+    implied_permissions: Option<&'static [[UserPermission; 2]]>,
     crates: Vec<ResponseCrate>,
     members: Vec<ResponseUser>,
 }

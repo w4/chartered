@@ -36,7 +36,8 @@ pub async fn handle_get(
         .collect();
 
     Ok(Json(GetResponse {
-        allowed_permissions: UserPermission::names(),
+        possible_permissions: UserPermission::names(),
+        implied_permissions: UserPermission::implications(),
         members,
     }))
 }
@@ -109,7 +110,8 @@ pub async fn handle_delete(
 
 #[derive(Serialize)]
 pub struct GetResponse {
-    allowed_permissions: &'static [&'static str],
+    possible_permissions: &'static [&'static str],
+    implied_permissions: &'static [[UserPermission; 2]],
     members: Vec<GetResponseMember>,
 }
 

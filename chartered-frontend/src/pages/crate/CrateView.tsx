@@ -270,7 +270,8 @@ export default function SingleCrate() {
 }
 
 interface CratesMembersResponse {
-  allowed_permissions: string[];
+  possible_permissions: string[];
+  implied_permissions: string[];
   members: Member[];
 }
 
@@ -405,7 +406,8 @@ function Members({ organisation, crate }: MembersProps) {
   return (
     <CommonMembers
       members={response.members}
-      possiblePermissions={response.allowed_permissions}
+      possiblePermissions={response.possible_permissions}
+      impliedPermssions={response.implied_permissions}
       saveMemberPermissions={saveMemberPermissions}
       deleteMember={deleteMember}
     />
