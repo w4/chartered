@@ -57,7 +57,7 @@ function App() {
           <Route path="/login/oauth" element={<Public element={<HandleOAuthLogin />} />} />
 
           {/* Private routes, visible only to authenticated users */}
-          <Route path="/" element={<Private element={<Navigate to="/dashboard" />} />} />
+          <Route path="/" element={<Private element={<Navigate replace to="/dashboard" />} />} />
           <Route path="/dashboard" element={<Private element={<Dashboard />} />} />
           <Route path="/search" element={<Private element={<Search />} />} />
 
@@ -67,19 +67,19 @@ function App() {
 
           <Route path="/users/:uuid" element={<Private element={<User />} />} />
 
-          <Route path="/ssh-keys" element={<Private element={<Navigate to="/ssh-keys/list" />} />} />
+          <Route path="/ssh-keys" element={<Private element={<Navigate replace to="/ssh-keys/list" />} />} />
           <Route path="/ssh-keys/list" element={<Private element={<ListSshKeys />} />} />
           <Route path="/ssh-keys/add" element={<Private element={<AddSshKeys />} />} />
 
-          <Route path="/organisations" element={<Private element={<Navigate to="/organisations/list" />} />} />
+          <Route path="/organisations" element={<Private element={<Navigate replace to="/organisations/list" />} />} />
           <Route path="/organisations/list" element={<Private element={<ListOrganisations />} />} />
           <Route path="/organisations/create" element={<Private element={<CreateOrganisation />} />} />
 
-          <Route path="/sessions" element={<Private element={<Navigate to="/sessions/list" />} />} />
+          <Route path="/sessions" element={<Private element={<Navigate replace to="/sessions/list" />} />} />
           <Route path="/sessions/list" element={<Private element={<ListSessions />} />} />
 
           <Route path="/404" element={<NotFound />} />
-          <Route path="*" element={<Navigate to="/404" />} />
+          <Route path="*" element={<Navigate replace to="/404" />} />
         </Routes>
       </Router>
     </ProvideAuth>
