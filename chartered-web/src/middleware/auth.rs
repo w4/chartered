@@ -2,7 +2,7 @@
 //! endpoints.
 
 use axum::{
-    body::{box_body, Body, BoxBody},
+    body::{boxed, Body, BoxBody},
     extract::{self, FromRequest, RequestParts},
     http::{Request, Response, StatusCode},
 };
@@ -70,7 +70,7 @@ where
                 None => {
                     return Ok(Response::builder()
                         .status(StatusCode::UNAUTHORIZED)
-                        .body(box_body(Body::from(
+                        .body(boxed(Body::from(
                             serde_json::to_vec(&ErrorResponse {
                                 error: Some("Expired auth token".into()),
                             })
