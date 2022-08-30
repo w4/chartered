@@ -9,13 +9,13 @@ mod middleware;
 use axum::{
     http::{header, Method},
     routing::get,
-    AddExtensionLayer, Router,
+    Extension, Router,
 };
 use clap::Parser;
 use std::{fmt::Formatter, path::PathBuf, sync::Arc};
 use thiserror::Error;
 use tower::ServiceBuilder;
-use tower_http::cors::{CorsLayer, Origin};
+use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::info;
 use url::Url;
 
@@ -96,7 +96,7 @@ async fn main() -> Result<(), InitError> {
                     Method::OPTIONS,
                 ])
                 .allow_headers(vec![header::CONTENT_TYPE, header::USER_AGENT])
-                .allow_origin(Origin::predicate({
+                .allow_origin(AllowOrigin::predicate({
                     let config = config.clone();
                     move |url, _| {
                         url.to_str()
@@ -108,19 +108,15 @@ async fn main() -> Result<(), InitError> {
                 }))
                 .allow_credentials(false),
         )
-        .layer(AddExtensionLayer::new(pool))
-        .layer(AddExtensionLayer::new(Arc::new(
-            config.create_oidc_clients().await?,
-        )))
-        .layer(AddExtensionLayer::new(Arc::new(
-            config.get_file_system().await?,
-        )))
-        .layer(AddExtensionLayer::new(config.clone()));
+        .layer(Extension(pool))
+        .layer(Extension(Arc::new(config.create_oidc_clients().await?)))
+        .layer(Extension(Arc::new(config.get_file_system().await?)))
+        .layer(Extension(config.clone()));
 
     info!("HTTP server listening on {}", bind_address);
 
     axum::Server::bind(&bind_address)
-        .serve(app.into_make_service_with_connect_info::<std::net::SocketAddr, _>())
+        .serve(app.into_make_service_with_connect_info::<std::net::SocketAddr>())
         .await
         .map_err(|e| InitError::ServerSpawn(Box::new(e)))?;
 

@@ -4,10 +4,7 @@
 
 use crate::config::{Config, OidcClients};
 use axum::{extract, Json};
-use chacha20poly1305::{
-    aead::{Aead, NewAead},
-    ChaCha20Poly1305, Nonce as ChaCha20Poly1305Nonce,
-};
+use chacha20poly1305::{aead::Aead, ChaCha20Poly1305, KeyInit, Nonce as ChaCha20Poly1305Nonce};
 use chartered_db::{users::User, ConnectionPool};
 use openid::{Options, Token};
 use serde::{Deserialize, Serialize};

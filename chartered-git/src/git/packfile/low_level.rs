@@ -1,12 +1,12 @@
 use bytes::{BufMut, BytesMut};
 use flate2::{write::ZlibEncoder, Compression};
 use sha1::{
-    digest::{generic_array::GenericArray, FixedOutputDirty},
+    digest::{generic_array::GenericArray, OutputSizeUser},
     Digest, Sha1,
 };
 use std::{convert::TryInto, fmt::Write, io::Write as IoWrite};
 
-pub type HashOutput = GenericArray<u8, <Sha1 as FixedOutputDirty>::OutputSize>; // [u8; 20], but sha-1 returns a GenericArray
+pub type HashOutput = GenericArray<u8, <Sha1 as OutputSizeUser>::OutputSize>; // [u8; 20], but sha-1 returns a GenericArray
 
 // The packfile itself is a very simple format. There is a header, a
 // series of packed objects (each with it's own header and body) and

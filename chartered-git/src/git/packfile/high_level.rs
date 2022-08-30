@@ -17,7 +17,7 @@ use super::low_level::{
 ///
 /// Builds a whole packfile containing files, directories and commits - essentially
 /// building out a full Git repository in memory.
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct GitRepository<'a> {
     /// A map containing all the blobs and their corresponding hashes so they're
     /// not inserted more than once for any files in the whole tree with the same
@@ -26,6 +26,15 @@ pub struct GitRepository<'a> {
     /// An in-progress `Tree` currently being built out, the tree refers to items
     /// in `file_entries` by hash.
     tree: Tree<'a>,
+}
+
+impl Default for GitRepository<'_> {
+    fn default() -> Self {
+        Self {
+            packfile_entries: IndexMap::new(),
+            tree: Tree::default(),
+        }
+    }
 }
 
 impl<'a> GitRepository<'a> {

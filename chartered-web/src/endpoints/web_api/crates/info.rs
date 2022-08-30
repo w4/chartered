@@ -5,8 +5,7 @@
 //! Unlike crates.io, we're only keeping the _latest_ README pushed to the crate, so there's no
 //! need to have version-specific info responses - we'll just send an overview of each one.
 
-use axum::{body::Full, extract, response::IntoResponse, Json};
-use bytes::Bytes;
+use axum::{extract, response::IntoResponse, Json};
 use chartered_db::{crates::Crate, users::User, ConnectionPool};
 use chartered_types::cargo::CrateVersion;
 use chrono::TimeZone;
@@ -18,7 +17,7 @@ pub async fn handle(
     extract::Path((_session_key, organisation, name)): extract::Path<(String, String, String)>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(user): extract::Extension<Arc<User>>,
-) -> Result<axum::http::Response<Full<Bytes>>, Error> {
+) -> Result<axum::response::Response, Error> {
     let crate_with_permissions =
         Arc::new(Crate::find_by_name(db.clone(), user.id, organisation, name).await?);
 

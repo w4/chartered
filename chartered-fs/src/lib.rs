@@ -7,7 +7,9 @@ use std::{path::PathBuf, time::Duration};
 use async_trait::async_trait;
 use aws_sdk_s3::error::{GetObjectError, PutObjectError};
 use aws_sdk_s3::{
-    model::ObjectCannedAcl, presigning::config::PresigningConfig, ByteStream, SdkError,
+    model::ObjectCannedAcl,
+    presigning::config::PresigningConfig,
+    types::{ByteStream, SdkError},
 };
 use bytes::Bytes;
 use itertools::Itertools;
@@ -194,6 +196,7 @@ impl FileSystemIo for Local {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct S3 {
     host: String,
     bucket: String,
@@ -209,7 +212,7 @@ impl FileSystemIo for S3 {
         Ok(FilePointer::Redirect(
             self.client
                 .get_object()
-                .key(format!("{}/{}", self.path, file_ref.reference.to_string()))
+                .key(format!("{}/{}", self.path, file_ref.reference))
                 .bucket(&self.bucket)
                 .presigned(PresigningConfig::expires_in(Duration::from_secs(600))?)
                 .await?
@@ -223,7 +226,7 @@ impl FileSystemIo for S3 {
 
         self.client
             .put_object()
-            .key(format!("{}/{}", self.path, file_ref.reference.to_string()))
+            .key(format!("{}/{}", self.path, file_ref.reference))
             .content_md5(format!("{:x}", md5::compute(&data)))
             .body(ByteStream::new(data.into()))
             .bucket(&self.bucket)

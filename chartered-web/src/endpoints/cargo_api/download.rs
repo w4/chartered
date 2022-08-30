@@ -3,12 +3,9 @@
 //! crate. It all really depends on the `FileSystem` in use in `chartered-fs`.
 
 use axum::{
-    body::{Full, HttpBody},
     extract,
-    http::Response,
-    response::{IntoResponse, Redirect},
+    response::{IntoResponse, Redirect, Response},
 };
-use bytes::Bytes;
 use chartered_db::{crates::Crate, users::User, ConnectionPool};
 use chartered_fs::{FilePointer, FileReference, FileSystem};
 use std::{str::FromStr, sync::Arc};
@@ -49,7 +46,9 @@ pub async fn handle(
     let res = fs.read(file_ref).await.map_err(Box::new)?;
 
     match res {
-        FilePointer::Redirect(uri) => Ok(ResponseOrRedirect::Redirect(Redirect::to(uri))),
+        FilePointer::Redirect(uri) => {
+            Ok(ResponseOrRedirect::Redirect(Redirect::to(&uri.to_string())))
+        }
         FilePointer::Content(content) => Ok(ResponseOrRedirect::Response(content)),
     }
 }
@@ -61,13 +60,10 @@ pub enum ResponseOrRedirect {
 }
 
 impl IntoResponse for ResponseOrRedirect {
-    type Body = Full<Bytes>;
-    type BodyError = <Self::Body as HttpBody>::Error;
-
-    fn into_response(self) -> Response<Self::Body> {
+    fn into_response(self) -> Response {
         match self {
             Self::Response(v) => v.into_response(),
-            Self::Redirect(v) => v.into_response().map(|_| Full::from(Bytes::new())),
+            Self::Redirect(v) => v.into_response(),
         }
     }
 }

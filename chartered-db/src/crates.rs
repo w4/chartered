@@ -624,7 +624,7 @@ impl CrateWithPermissions {
     }
 }
 
-#[derive(Identifiable, Queryable, Associations, PartialEq, Debug)]
+#[derive(Identifiable, Queryable, Associations, PartialEq, Eq, Debug)]
 #[belongs_to(Crate)]
 #[belongs_to(User)]
 pub struct CrateVersion<'a> {
@@ -673,7 +673,7 @@ pub struct CrateFeatures(pub chartered_types::cargo::CrateFeatures);
 
 derive_diesel_json!(CrateFeatures);
 
-impl<'a> From<chartered_types::cargo::CrateFeatures> for CrateFeatures {
+impl From<chartered_types::cargo::CrateFeatures> for CrateFeatures {
     fn from(o: chartered_types::cargo::CrateFeatures) -> Self {
         Self(o)
     }

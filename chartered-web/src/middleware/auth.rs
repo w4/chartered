@@ -53,12 +53,7 @@ where
 
             // grab the ConnectionPool from the extensions created when we initialised the
             // server
-            let db = req
-                .extensions()
-                .unwrap()
-                .get::<ConnectionPool>()
-                .unwrap()
-                .clone();
+            let db = req.extensions().get::<ConnectionPool>().unwrap().clone();
 
             // grab the UserSession that's currently being used for this request and the User that
             // owns the key, otherwise return a 401 if the key doesn't exist
@@ -82,8 +77,8 @@ where
 
             // insert both the user and the session into extensions so handlers can
             // get their hands on them
-            req.extensions_mut().unwrap().insert(user);
-            req.extensions_mut().unwrap().insert(session);
+            req.extensions_mut().insert(user);
+            req.extensions_mut().insert(session);
 
             // calls handlers/other middleware and drives the request to response
             let response: Response<BoxBody> = inner.call(req.try_into_request().unwrap()).await?;
