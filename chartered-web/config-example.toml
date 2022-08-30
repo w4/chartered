@@ -1,0 +1,14 @@
+bind_address = "127.0.0.1:8888"                     # address to bind server to, don't forget to configure the frontend too via the BASE_URL env var
+database_uri = "sqlite:///tmp/chartered.db"         # must build with either sqlite or postgres features accordingly
+storage_uri  = "file:///tmp/chartered"              # this can also be an S3 URI
+frontend_base_uri = "http://localhost:1234/"        # URI for your chartered-frontend instance
+encryption_key = "thisisanexamplekeydontuseme4prod" # any 32 char string will do
+
+[auth.password]
+enabled = true
+
+# [auth.gitlab]
+# enabled = true
+# discovery_uri = "https://gitlab.com/"
+# client_id = "[client-id]"
+# client_secret = "[client-secret]"

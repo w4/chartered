@@ -1,0 +1,8 @@
+bind_address = "127.0.0.1:2233"             # address to bind SSH server to
+database_uri = "sqlite:///tmp/chartered.db" # must build with either sqlite or postgres features accordingly
+web_base_uri = "http://localhost:8888/"     # URI of chartered-web
+
+[committer]
+name = "Chartered"
+email = "noreply@chart.rs"
+message = "Updated crates!"
