@@ -1,7 +1,7 @@
 # chartered
 
-a little dig at creating a private cargo repository with authenticated downloads, the plan is to have git connect to
-a git server we setup that we can serve a fake index from generated just for the authenticated user that we can embed
+a little dig at creating a private cargo repository with authenticated downloads, the plan is to have cargo connect to
+a git server we setup that can serve a fake index generated just for the authenticated user that we can embed temporary
 authentication credentials into.
 
 learn more at https://book.chart.rs/
