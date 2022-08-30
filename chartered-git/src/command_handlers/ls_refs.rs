@@ -22,7 +22,7 @@ pub(crate) fn handle(
     let commit_hash = hex::encode(&commit_hash);
 
     handle.write(PktLine::Data(
-        format!("{} HEAD symref-target:refs/heads/master\n", commit_hash).as_bytes(),
+        format!("{} HEAD symref-target:refs/heads/master", commit_hash).as_bytes(),
     ))?;
     handle.write(PktLine::Flush)?;
     handle.flush(session, channel);

@@ -4,7 +4,7 @@ use sha1::{
     digest::{generic_array::GenericArray, OutputSizeUser},
     Digest, Sha1,
 };
-use std::{convert::TryInto, fmt::Write, io::Write as IoWrite};
+use std::{borrow::Cow, convert::TryInto, fmt::Write, io::Write as IoWrite};
 
 pub type HashOutput = GenericArray<u8, <Sha1 as OutputSizeUser>::OutputSize>; // [u8; 20], but sha-1 returns a GenericArray
 
@@ -141,10 +141,11 @@ impl TreeItemKind {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub struct TreeItem<'a> {
     pub kind: TreeItemKind,
     pub name: &'a str,
+    pub sort_name: Cow<'a, str>,
     pub hash: HashOutput,
 }
 

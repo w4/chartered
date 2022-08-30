@@ -6,6 +6,8 @@
 //! for our purposes because `cargo` will `git pull --force` from our Git
 //! server, allowing us to ignore any history the client may have.
 
+use std::borrow::Cow;
+
 use arrayvec::ArrayVec;
 use indexmap::IndexMap;
 
@@ -141,11 +143,13 @@ impl<'a> Tree<'a> {
                 TreeItem::Blob(hash) => LowLevelTreeItem {
                     kind: TreeItemKind::File,
                     name,
+                    sort_name: Cow::Borrowed(name),
                     hash: *hash,
                 },
                 TreeItem::Tree(tree) => LowLevelTreeItem {
                     kind: TreeItemKind::Directory,
                     name,
+                    sort_name: Cow::Owned(format!("{}/", name)),
                     // we're essentially working through our tree from the bottom up,
                     // so we can grab the hash of each directory along the way and
                     // reference it from the parent directory
@@ -153,6 +157,11 @@ impl<'a> Tree<'a> {
                 },
             });
         }
+
+        // we need to sort our tree alphabetically, otherwise Git will silently
+        // stop parsing the rest of the tree once it comes across an unsorted
+        // tree entry.
+        tree.sort_unstable_by(|a, b| a.sort_name.cmp(&b.sort_name));
 
         // gets the hash of the tree we've just worked on, and
         // pushes it to the packfile
