@@ -2,14 +2,19 @@
 //! enabled providers so they can show them to the frontend and provide methods for actually doing
 //! the authentication.
 
-use crate::config::{Config, OidcClients};
+use crate::config::{Config, OidcClient, OidcClients};
 use axum::{extract, Json};
 use chacha20poly1305::{aead::Aead, ChaCha20Poly1305, KeyInit, Nonce as ChaCha20Poly1305Nonce};
 use chartered_db::{users::User, ConnectionPool};
-use openid::{Options, Token};
+use oauth2::{
+    basic::BasicErrorResponseType, AuthorizationCode, CsrfToken, RequestTokenError, Scope,
+    StandardErrorResponse, TokenResponse,
+};
+use openid::{Options, Token, Userinfo};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use thiserror::Error;
+use url::Url;
 
 pub type Nonce = [u8; 16];
 
@@ -42,16 +47,27 @@ pub async fn begin_oidc(
 
     let nonce = rand::random::<Nonce>();
     let state = serde_json::to_vec(&State { provider, nonce })?;
+    let state = encrypt_url_safe(&state, &config)?;
 
-    let auth_url = client.auth_url(&Options {
-        scope: Some("openid email profile".into()),
-        nonce: Some(base64::encode_config(&nonce, base64::URL_SAFE_NO_PAD)),
-        state: Some(encrypt_url_safe(&state, &config)?),
-        ..Options::default()
-    });
+    let redirect_url = match client {
+        OidcClient::Discovered(client) => client.auth_url(&Options {
+            scope: Some("openid email profile".into()),
+            nonce: Some(base64::encode_config(&nonce, base64::URL_SAFE_NO_PAD)),
+            state: Some(state),
+            ..Options::default()
+        }),
+        OidcClient::GitHub(client) => {
+            client
+                .authorize_url(move || CsrfToken::new(state))
+                .add_scope(Scope::new("read:user".to_string()))
+                .add_scope(Scope::new("user:email".to_string()))
+                .url()
+                .0
+        }
+    };
 
     Ok(Json(BeginResponse {
-        redirect_url: auth_url.to_string(),
+        redirect_url: redirect_url.to_string(),
     }))
 }
 
@@ -62,6 +78,7 @@ pub async fn complete_oidc(
     extract::Extension(config): extract::Extension<Arc<Config>>,
     extract::Extension(oidc_clients): extract::Extension<Arc<OidcClients>>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
+    extract::Extension(http_client): extract::Extension<reqwest::Client>,
     user_agent: Option<extract::TypedHeader<headers::UserAgent>>,
     addr: extract::ConnectInfo<std::net::SocketAddr>,
 ) -> Result<Json<super::LoginResponse>, Error> {
@@ -74,40 +91,108 @@ pub async fn complete_oidc(
         .get(&state.provider)
         .ok_or(Error::UnknownOauthProvider)?;
 
-    let mut token: Token = client.request_token(&params.code).await?.into();
+    let user = match client {
+        OidcClient::Discovered(client) => {
+            let mut token: Token = client.request_token(&params.code).await?.into();
 
-    if let Some(id_token) = token.id_token.as_mut() {
-        // ensure the id_token is valid, checking `exp`, etc.
-        client.decode_token(id_token)?;
+            if let Some(id_token) = token.id_token.as_mut() {
+                // ensure the id_token is valid, checking `exp`, etc.
+                client.decode_token(id_token)?;
 
-        // ensure the nonce in the returned id_token is the same as the one we sent out encrypted
-        // with the original request
-        let nonce = base64::encode_config(state.nonce, base64::URL_SAFE_NO_PAD);
-        client.validate_token(id_token, Some(nonce.as_str()), None)?;
-    } else {
-        // the provider didn't send us back a id_token
-        return Err(Error::MissingToken);
-    }
+                // ensure the nonce in the returned id_token is the same as the one we sent out encrypted
+                // with the original request
+                let nonce = base64::encode_config(state.nonce, base64::URL_SAFE_NO_PAD);
+                client.validate_token(id_token, Some(nonce.as_str()), None)?;
+            } else {
+                // the provider didn't send us back a id_token
+                return Err(Error::MissingToken);
+            }
 
-    // get some basic info from the provider using the claims we requested in `begin_oidc`
-    let userinfo = client.request_userinfo(&token).await?;
+            // get some basic info from the provider using the claims we requested in `begin_oidc`
+            UserIr::from(client.request_userinfo(&token).await?)
+        }
+        OidcClient::GitHub(client) => {
+            let token_result = client
+                .exchange_code(AuthorizationCode::new(params.code))
+                .request_async(oauth2::reqwest::async_http_client)
+                .await?;
+
+            eprintln!("{}", token_result.access_token().secret());
+
+            let res: GitHubUserResponse = http_client
+                .get("https://api.github.com/user")
+                .bearer_auth(token_result.access_token().secret())
+                .header("Accept", "application/vnd.github+json")
+                .send()
+                .await?
+                .json()
+                .await?;
+
+            UserIr::from(res)
+        }
+    };
 
     let user = User::find_or_create(
         db.clone(),
         // we're using `provider:uid` as the format for OIDC logins, this is fine to create
         // without a password because (1) password auth rejects blank passwords and (2) password
         // auth also rejects any usernames with a `:` in.
-        format!("{}:{}", state.provider, userinfo.sub.unwrap()),
-        userinfo.name,
-        userinfo.nickname,
-        userinfo.email,
-        userinfo.profile,
-        userinfo.picture,
+        format!("{}:{}", state.provider, user.id),
+        user.name,
+        user.nick,
+        user.email,
+        user.profile_url,
+        user.avatar_url,
     )
     .await?;
 
     // request looks good, log the user in!
     Ok(Json(super::login(db, user, user_agent, addr).await?))
+}
+
+pub struct UserIr {
+    id: String,
+    name: Option<String>,
+    nick: Option<String>,
+    email: Option<String>,
+    profile_url: Option<Url>,
+    avatar_url: Option<Url>,
+}
+
+impl From<GitHubUserResponse> for UserIr {
+    fn from(v: GitHubUserResponse) -> Self {
+        UserIr {
+            id: v.id.to_string(),
+            name: Some(v.name.unwrap_or_else(|| v.login.to_string())),
+            nick: Some(v.login),
+            email: Some(v.email),
+            profile_url: v.html_url,
+            avatar_url: Some(v.avatar_url),
+        }
+    }
+}
+
+impl From<Userinfo> for UserIr {
+    fn from(v: Userinfo) -> Self {
+        UserIr {
+            id: v.sub.unwrap(),
+            name: v.name,
+            nick: v.nickname,
+            email: v.email,
+            profile_url: v.profile,
+            avatar_url: v.picture,
+        }
+    }
+}
+
+#[derive(Deserialize)]
+pub struct GitHubUserResponse {
+    id: u64,
+    login: String,
+    avatar_url: Url,
+    html_url: Option<Url>,
+    name: Option<String>,
+    email: String,
 }
 
 const NONCE_LEN: usize = 12;
@@ -182,6 +267,16 @@ pub enum Error {
     Base64(#[from] base64::DecodeError),
     #[error("Missing id_token")]
     MissingToken,
+    #[error("Failed to request profile from OAuth provider")]
+    FetchProfile(#[from] reqwest::Error),
+    #[error("Failed to request token from OAuth provider")]
+    RequestOAuthToken(
+        #[from]
+        RequestTokenError<
+            oauth2::reqwest::Error<reqwest::Error>,
+            StandardErrorResponse<BasicErrorResponseType>,
+        >,
+    ),
 }
 
 impl Error {
@@ -190,6 +285,7 @@ impl Error {
 
         match self {
             Self::Database(e) => e.status_code(),
+            Self::FetchProfile(_) | Self::RequestOAuthToken(_) => StatusCode::BAD_GATEWAY,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }

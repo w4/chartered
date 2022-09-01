@@ -11,7 +11,7 @@ use axum::{
     routing::get,
     Extension, Router,
 };
-use clap::Parser;
+use clap::{crate_name, crate_version, Parser};
 use std::{fmt::Formatter, path::PathBuf, sync::Arc};
 use thiserror::Error;
 use tower::ServiceBuilder;
@@ -64,6 +64,9 @@ async fn main() -> Result<(), InitError> {
         .into_inner();
 
     let config = Arc::new(config);
+    let http_client = reqwest::Client::builder()
+        .user_agent(format!("{}/{}", crate_name!(), crate_version!()))
+        .build()?;
 
     let app = Router::new()
         .route("/", get(hello_world))
@@ -111,7 +114,8 @@ async fn main() -> Result<(), InitError> {
         .layer(Extension(pool))
         .layer(Extension(Arc::new(config.create_oidc_clients().await?)))
         .layer(Extension(Arc::new(config.get_file_system().await?)))
-        .layer(Extension(config.clone()));
+        .layer(Extension(config.clone()))
+        .layer(Extension(http_client));
 
     info!("HTTP server listening on {}", bind_address);
 
@@ -137,6 +141,8 @@ pub enum InitError {
     ServerSpawn(Box<dyn std::error::Error>),
     #[error("Failed to build CORS header: {0}")]
     Cors(axum::http::header::InvalidHeaderValue),
+    #[error("Failed to initialise reqwest client: {0}")]
+    Reqwest(#[from] reqwest::Error),
 }
 
 impl std::fmt::Debug for InitError {

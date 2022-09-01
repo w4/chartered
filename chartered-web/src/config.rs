@@ -1,5 +1,6 @@
 use chacha20poly1305::Key as ChaCha20Poly1305Key;
 use chartered_fs::FileSystem;
+use oauth2::{AuthUrl, ClientId, ClientSecret, RedirectUrl, TokenUrl};
 use openid::DiscoveredClient;
 use serde::{de::Error as SerdeDeError, Deserialize};
 use std::collections::HashMap;
@@ -16,8 +17,6 @@ pub enum Error {
     #[error("Failed to build URL: {0}")]
     Parse(#[from] url::ParseError),
 }
-
-pub type OidcClients = HashMap<String, DiscoveredClient>;
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
@@ -39,16 +38,15 @@ impl Config {
     }
 
     pub async fn create_oidc_clients(&self) -> Result<OidcClients, Error> {
-        Ok(futures::future::try_join_all(
+        let mut clients: OidcClients = futures::future::try_join_all(
             self.auth
                 .oauth
                 .iter()
                 .filter(|(_, config)| config.enabled)
                 .map(|(name, config)| async move {
-                    let redirect = self.frontend_base_uri.join("auth/login/oauth")?;
+                    let redirect = self.frontend_base_uri.join("login/oauth")?;
 
-                    Ok::<_, Error>((
-                        name.to_string(),
+                    let client = Box::new(
                         DiscoveredClient::discover(
                             config.client_id.to_string(),
                             config.client_secret.to_string(),
@@ -56,18 +54,41 @@ impl Config {
                             config.discovery_uri.clone(),
                         )
                         .await?,
-                    ))
+                    );
+
+                    Ok::<_, Error>((name.to_string(), OidcClient::Discovered(client)))
                 }),
         )
         .await?
         .into_iter()
-        .collect())
+        .collect();
+
+        if let Some(github) = self.auth.github.clone() {
+            let redirect = self.frontend_base_uri.join("login/oauth")?;
+
+            let client = Box::new(
+                oauth2::basic::BasicClient::new(
+                    github.client_id,
+                    Some(github.client_secret),
+                    AuthUrl::new("https://github.com/login/oauth/authorize".to_string())?,
+                    Some(TokenUrl::new(
+                        "https://github.com/login/oauth/access_token".to_string(),
+                    )?),
+                )
+                .set_redirect_uri(RedirectUrl::from_url(redirect)),
+            );
+
+            clients.insert("github".to_string(), OidcClient::GitHub(client));
+        }
+
+        Ok(clients)
     }
 }
 
 #[derive(Deserialize, Default, Debug)]
 pub struct AuthConfig {
     pub password: PasswordAuthConfig,
+    pub github: Option<GitHubConfig>,
     #[serde(flatten)]
     pub oauth: HashMap<String, OAuthConfig>,
 }
@@ -78,12 +99,27 @@ pub struct PasswordAuthConfig {
     pub enabled: bool,
 }
 
+#[derive(Deserialize, Clone, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct GitHubConfig {
+    pub enabled: bool,
+    pub client_id: ClientId,
+    pub client_secret: ClientSecret,
+}
+
 #[derive(Deserialize, Debug)]
 pub struct OAuthConfig {
     pub enabled: bool,
     pub discovery_uri: Url,
     pub client_id: String,
     pub client_secret: String,
+}
+
+pub type OidcClients = HashMap<String, OidcClient>;
+
+pub enum OidcClient {
+    Discovered(Box<DiscoveredClient>),
+    GitHub(Box<oauth2::basic::BasicClient>),
 }
 
 fn deserialize_encryption_key<'de, D: serde::Deserializer<'de>>(
