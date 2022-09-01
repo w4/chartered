@@ -21,9 +21,11 @@ pub type Nonce = [u8; 16];
 /// Lists all the available and enabled providers that the user can authenticate with.
 #[allow(clippy::unused_async)]
 pub async fn list_providers(
+    extract::Extension(config): extract::Extension<Arc<Config>>,
     extract::Extension(oidc_clients): extract::Extension<Arc<OidcClients>>,
 ) -> Json<ListProvidersResponse> {
     Json(ListProvidersResponse {
+        password: config.auth.password.enabled,
         providers: oidc_clients
             .keys()
             .into_iter()
@@ -226,6 +228,7 @@ fn decrypt_url_safe(input: &str, config: &Config) -> Result<Vec<u8>, Error> {
 
 #[derive(Serialize)]
 pub struct ListProvidersResponse {
+    password: bool,
     providers: Vec<String>,
 }
 

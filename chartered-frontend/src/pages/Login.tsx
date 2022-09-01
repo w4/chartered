@@ -20,6 +20,7 @@ import { faSignInAlt } from "@fortawesome/free-solid-svg-icons";
 import { PersonPlus } from "react-bootstrap-icons";
 
 interface OAuthProviders {
+  password: boolean;
   providers: string[];
 }
 
@@ -110,60 +111,62 @@ export default function Login() {
               />
             </div>
 
-            <form onSubmit={handleSubmit}>
-              <div className="form-floating">
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="john.smith"
-                  id="username"
-                  disabled={!!loading}
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+            {oauthProviders?.password ?? true ? <>
+              <form onSubmit={handleSubmit}>
+                <div className="form-floating">
+                  <input
+                      type="text"
+                      className="form-control"
+                      placeholder="john.smith"
+                      id="username"
+                      disabled={!!loading}
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                  />
+
+                  <label htmlFor="email" className="form-label">
+                    Username
+                  </label>
+                </div>
+
+                <div className="form-floating mt-2">
+                  <input
+                      type="password"
+                      className="form-control"
+                      placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"
+                      id="password"
+                      disabled={!!loading}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                  />
+
+                  <label htmlFor="password" className="form-label">
+                    Password
+                  </label>
+                </div>
+
+                <ButtonOrSpinner
+                    type="submit"
+                    variant="primary"
+                    disabled={!!loading}
+                    showSpinner={loading === "password"}
+                    text={`Login`}
+                    icon={faSignInAlt}
+                    onClick={handleSubmit}
                 />
+              </form>
 
-                <label htmlFor="email" className="form-label">
-                  Username
-                </label>
-              </div>
-
-              <div className="form-floating mt-2">
-                <input
-                  type="password"
-                  className="form-control"
-                  placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"
-                  id="password"
-                  disabled={!!loading}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-
-                <label htmlFor="password" className="form-label">
-                  Password
-                </label>
-              </div>
-
-              <ButtonOrSpinner
-                type="submit"
-                variant="primary"
-                disabled={!!loading}
-                showSpinner={loading === "password"}
-                text={`Login`}
-                icon={faSignInAlt}
-                onClick={handleSubmit}
-              />
-            </form>
-
-            <Link
-              to="/register"
-              className="btn btn-lg w-100 btn-outline-primary mt-2"
-            >
-              <PersonPlus /> Register
-            </Link>
+              <Link
+                  to="/register"
+                  className="btn btn-lg w-100 btn-outline-primary mt-2"
+              >
+                <PersonPlus /> Register
+              </Link>
+            </> : <></>}
 
             {oauthProviders?.providers.length > 0 ? (
               <>
-                <div className="side-lines mt-2">or</div>
+                {oauthProviders?.password ? <div className="side-lines mt-2">or</div> : <></>}
 
                 {oauthProviders.providers.map((v, i) => (
                   <ButtonOrSpinner
@@ -181,6 +184,7 @@ export default function Login() {
                       evt.preventDefault();
                       handleOAuthLogin(v);
                     }}
+                    noPadding={i == 0 && !oauthProviders?.password}
                   />
                 ))}
               </>
@@ -214,6 +218,7 @@ function ButtonOrSpinner({
   icon,
   background,
   onClick,
+  noPadding,
 }: {
   type: "button" | "submit";
   variant: string;
@@ -223,11 +228,12 @@ function ButtonOrSpinner({
   icon?: IconDefinition;
   background?: string;
   onClick: MouseEventHandler<HTMLButtonElement>;
+  noPadding?: boolean;
 }) {
   if (showSpinner) {
     return (
       <div
-        className="spinner-border text-primary mt-3 m-auto d-block"
+        className={`spinner-border text-primary ${noPadding ? '' : 'mt-3'} m-auto d-block`}
         role="status"
       >
         <span className="visually-hidden">Logging in...</span>
@@ -241,7 +247,7 @@ function ButtonOrSpinner({
         type={type}
         disabled={disabled}
         onClick={onClick}
-        className={`btn btn-lg mt-2 btn-${variant} w-100`}
+        className={`btn btn-lg ${noPadding ? '' : 'mt-2'} btn-${variant} w-100`}
         style={{ background, borderColor: background }}
       >
         {icon ? <FontAwesomeIcon icon={icon} className="me-2" /> : <></>}
