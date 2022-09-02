@@ -1,5 +1,9 @@
-node_modules/
-.parcel-cache/
-.cache/
-dist/
-parcel-bundle-reports/
+.DS_Store
+node_modules
+/build
+/.svelte-kit
+/package
+.env
+.env.*
+!.env.example
+/.vite
