@@ -16,10 +16,3 @@ export interface OrganisationCrate {
     name: string;
     description: string;
 }
-
-export interface OrganisationMember {
-    uuid: string;
-    display_name: string;
-    picture_url?: string;
-    permissions: string[];
-}

@@ -1,5 +1,6 @@
 import { get, writable } from 'svelte/store';
 import { goto } from '$app/navigation';
+import { getErrorMessage } from '../util';
 
 /**
  * The base URL of the chartered-web instance
@@ -82,11 +83,17 @@ export async function extendSession() {
         // if the user's token is invalid for whatever reason after trying to refresh it,
         // we should log them out. otherwise, we don't really know how to handle the error,
         // and we should just print the error out to the console
-        if (e === 'Expired auth token') {
+        if (getErrorMessage(e) === 'Expired auth token') {
             auth.set(null);
         } else {
             console.error('Failed to extend user session', e);
         }
+    }
+}
+
+declare global {
+    interface Window {
+        extendSessionInterval: NodeJS.Timer;
     }
 }
 
@@ -245,8 +252,9 @@ interface OAuthProviders {
 /**
  * Grab all the possible authentication methods from the backend.
  */
-export function fetchOAuthProviders(): Promise<OAuthProviders> {
-    return fetch(`${BASE_URL}/a/-/web/v1/auth/login/oauth/providers`).then((v) => v.json());
+export async function fetchOAuthProviders(): Promise<OAuthProviders> {
+    const result = await fetch(`${BASE_URL}/a/-/web/v1/auth/login/oauth/providers`);
+    return await result.json();
 }
 
 /**

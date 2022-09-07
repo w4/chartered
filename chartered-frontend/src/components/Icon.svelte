@@ -2,10 +2,10 @@
     import feather from 'feather-icons';
     export const directions = ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'];
 
-    export let name;
+    export let name: string;
     export let direction = 'n';
-    export let strokeWidth = null;
-    export let stroke = null;
+    export let strokeWidth: string | null = null;
+    export let stroke: string | null = null;
     export let width = '1em';
     export let height = '1em';
 

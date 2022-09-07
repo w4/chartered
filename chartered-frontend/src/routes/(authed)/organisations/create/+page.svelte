@@ -4,6 +4,7 @@
     import { BASE_URL, auth } from '../../../../stores/auth';
     import { goto } from '$app/navigation';
     import Spinner from '../../../../components/Spinner.svelte';
+    import { getErrorMessage } from '../../../../util';
 
     /**
      * Binding to the name field in the form.
@@ -43,7 +44,7 @@
 
         try {
             // attempt the actual creation of the organisation
-            let result = await fetch(`${BASE_URL}/a/${$auth.auth_key}/web/v1/organisations`, {
+            let result = await fetch(`${BASE_URL}/a/${$auth?.auth_key}/web/v1/organisations`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -59,7 +60,7 @@
             // successful creation, return the user back to the list
             await goto('/organisations/list');
         } catch (e) {
-            error = e.toString();
+            error = getErrorMessage(e);
         } finally {
             // stop showing the spinner once creation is complete
             submitting = false;

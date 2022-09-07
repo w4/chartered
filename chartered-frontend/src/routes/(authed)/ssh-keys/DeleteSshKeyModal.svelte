@@ -6,6 +6,7 @@
     import RelativeTime from '../../../components/RelativeTime.svelte';
     import Spinner from '../../../components/Spinner.svelte';
     import { auth, BASE_URL } from '../../../stores/auth';
+    import { getErrorMessage } from '../../../util';
 
     const dispatch = createEventDispatcher();
 
@@ -18,7 +19,7 @@
      * Any errors that came of the last submission. If this is not null the user will be shown
      * an alert.
      */
-    let deleteError = null;
+    let deleteError: string | null = null;
 
     /**
      * Simple boolean flag to determine if a key is currently being submitted, so we can
@@ -29,7 +30,7 @@
     /**
      * Binds helper keys for the modal, so we can provide some expected functions of a modal.
      */
-    function handleKeydown(event) {
+    function handleKeydown(event: KeyboardEvent) {
         if (event.key == 'Escape') {
             closeModal();
         }
@@ -48,7 +49,7 @@
 
         try {
             // submit deletion request to backend
-            let res = await fetch(`${BASE_URL}/a/${$auth.auth_key}/web/v1/ssh-key/${deleting.uuid}`, {
+            let res = await fetch(`${BASE_URL}/a/${$auth?.auth_key}/web/v1/ssh-key/${deleting.uuid}`, {
                 method: 'DELETE',
             });
             let json: DeleteSshKeyResult = await res.json();
@@ -64,7 +65,7 @@
             closeModal();
         } catch (e) {
             isDeleting = false;
-            deleteError = e.toString();
+            deleteError = getErrorMessage(e);
         }
     }
 

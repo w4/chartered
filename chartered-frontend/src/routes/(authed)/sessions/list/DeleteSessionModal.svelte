@@ -5,6 +5,7 @@
     import Spinner from '../../../../components/Spinner.svelte';
     import { auth, BASE_URL } from '../../../../stores/auth';
     import type { Session } from '../../../../types/sessions';
+    import { getErrorMessage } from '../../../../util';
 
     const dispatch = createEventDispatcher();
 
@@ -17,7 +18,7 @@
      * Any errors that came of the last submission. If this is not null the user will be shown
      * an alert.
      */
-    let deleteError = null;
+    let deleteError: string | null = null;
 
     /**
      * Simple boolean flag to determine if a session is currently being submitted, so we can
@@ -28,7 +29,7 @@
     /**
      * Binds helper keys for the modal, so we can provide some expected functions of a modal.
      */
-    function handleKeydown(event) {
+    function handleKeydown(event: KeyboardEvent) {
         if (event.key == 'Escape') {
             closeModal();
         }
@@ -47,7 +48,7 @@
 
         try {
             // submit deletion request to backend
-            let res = await fetch(`${BASE_URL}/a/${$auth.auth_key}/web/v1/sessions`, {
+            let res = await fetch(`${BASE_URL}/a/${$auth?.auth_key}/web/v1/sessions`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
@@ -67,7 +68,7 @@
             closeModal();
         } catch (e) {
             isDeleting = false;
-            deleteError = e.toString();
+            deleteError = getErrorMessage(e);
         }
     }
 

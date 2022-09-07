@@ -2,7 +2,7 @@
  * The result of a `GET /web/v1/ssh-key`
  */
 export interface SshKeys {
-    keys: { [k: number]: SshKey };
+    keys: SshKey[];
 }
 
 /**

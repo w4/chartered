@@ -3,6 +3,7 @@
     import Spinner from '../../../../components/Spinner.svelte';
     import ErrorAlert from '../../../../components/ErrorAlert.svelte';
     import { goto } from '$app/navigation';
+    import { getErrorMessage } from '../../../../util';
 
     /**
      * Once OAuth providers are loaded this will contain whether password auth
@@ -20,7 +21,7 @@
     /**
      * Displays an error to the user, if empty will hide the error popup.
      */
-    let error = null;
+    let error: string | null = null;
 
     /**
      * A binding to the username field in the form.
@@ -42,7 +43,7 @@
         try {
             await login(username, password);
         } catch (e) {
-            error = e.toString();
+            error = getErrorMessage(e);
         } finally {
             // behave like a real application and set the password to empty so
             // if the user fails authentication they can type it in again
@@ -72,7 +73,7 @@
             // attempt to redirect the user to the OAuth login page
             await loginOAuth(provider);
         } catch (e) {
-            error = e.toString();
+            error = getErrorMessage(e);
         } finally {
             loginInProgress = false;
         }

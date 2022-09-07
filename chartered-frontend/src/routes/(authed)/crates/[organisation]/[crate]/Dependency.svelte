@@ -6,10 +6,10 @@
     export let dependency: VersionDependency;
     export { clazz as class };
 
-    function getLocalDependencyOrganisation(): string {
-        const s = dependency.registry.split('/');
+    function getLocalDependencyOrganisation(): string | undefined {
+        const s = dependency.registry?.split('/');
 
-        return s[s.length - 1];
+        return s ? s[s.length - 1] : dependency.registry;
     }
 </script>
 
@@ -18,7 +18,7 @@
         <a href={`https://crates.io/crates/${dependency.name}`} target="_blank">
             {dependency.name}
         </a>
-    {:else if dependency.registry.indexOf('ssh://') === 0}
+    {:else if dependency.registry?.indexOf('ssh://') === 0}
         <a href={`/crates/${getLocalDependencyOrganisation()}/${dependency.name}`} target="_blank">
             {dependency.name}
         </a>

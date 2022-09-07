@@ -77,7 +77,7 @@
     <DeleteSessionModal {deleting} on:complete={reloadSessions} on:close={() => (deleting = null)} />
 {/if}
 
-<style>
+<style lang="postcss">
     th,
     td {
         @apply text-left px-5;

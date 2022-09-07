@@ -25,6 +25,20 @@
     async function performSearch() {
         await goto(`/search?q=${search}`);
     }
+
+    /**
+     * Prevents the dropdown from automatically closing if it was a non-link element
+     * that was clicked.
+     *
+     * @param e mouse click event
+     */
+    function handleDropdownClick(e: MouseEvent) {
+        let tagName = (e.target as HTMLElement)?.tagName.toLowerCase();
+
+        if (tagName !== 'a' && tagName != 'button') {
+            e.stopPropagation();
+        }
+    }
 </script>
 
 <svelte:window on:click={() => (userDropdownShown = false)} />
@@ -68,8 +82,8 @@
                     class="ml-2 relative flex items-center text-gray-300 dark:text-inherit"
                 >
                     <span class="sr-only">Open user menu</span>
-                    {#if $auth.picture_url}
-                        <img alt="You" src={$auth.picture_url} class="rounded-[50%] h-[2.4rem] inline mr-0.5" />
+                    {#if $auth?.picture_url}
+                        <img alt="You" src={$auth?.picture_url} class="rounded-[50%] h-[2.4rem] inline mr-0.5" />
                     {:else}
                         <div
                             class="h-[2.4rem] w-[2.4rem] rounded-[50%] inline mr-0.5 bg-gray-100 dark:bg-gray-800 overflow-hidden"
@@ -83,12 +97,12 @@
                 <div
                     class:hidden={!userDropdownShown}
                     class="absolute top-7 right-0 z-50 w-[10rem] my-4 text-base list-none bg-white rounded divide-y divide-gray-100 shadow dark:bg-gray-700 dark:divide-gray-600"
-                    on:click={(e) => (e.target.tagName.toLowerCase() === 'a' ? null : e.stopPropagation())}
+                    on:click={handleDropdownClick}
                 >
                     <ul class="py-1">
                         <li>
                             <a
-                                href={`/users/${$auth.uuid}`}
+                                href={`/users/${$auth?.uuid}`}
                                 class="block py-2 px-4 text-sm text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 dark:text-gray-200 dark:hover:text-white"
                             >
                                 Profile

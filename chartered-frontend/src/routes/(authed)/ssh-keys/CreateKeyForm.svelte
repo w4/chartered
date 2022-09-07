@@ -5,6 +5,7 @@
     import { createEventDispatcher } from 'svelte';
     import Spinner from '../../../components/Spinner.svelte';
     import ErrorAlert from '../../../components/ErrorAlert.svelte';
+    import { getErrorMessage } from '../../../util';
 
     // set up the event dispatcher for alerting the main page when the user has successfully
     // added a key, so it can reload the full key list from the backend again
@@ -25,7 +26,7 @@
      * Any errors that came of the last submission. If this is not null the user will be shown
      * an alert.
      */
-    let error = null;
+    let error: string | null = null;
 
     /**
      * Submits an SSH key to the server to attempt to add it to the user, all our validation
@@ -40,7 +41,7 @@
 
         try {
             // submit the key to the backend
-            let result = await fetch(`${BASE_URL}/a/${$auth.auth_key}/web/v1/ssh-key`, {
+            let result = await fetch(`${BASE_URL}/a/${$auth?.auth_key}/web/v1/ssh-key`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -58,7 +59,7 @@
             sshKey = '';
             dispatch('complete');
         } catch (e) {
-            error = e.toString();
+            error = getErrorMessage(e);
         } finally {
             // stop showing the spinner since we've finished working
             submitting = false;

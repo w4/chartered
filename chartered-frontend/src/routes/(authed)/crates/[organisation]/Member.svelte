@@ -5,6 +5,8 @@
     import { auth, BASE_URL } from '../../../../stores/auth';
     import ErrorAlert from '../../../../components/ErrorAlert.svelte';
     import { createEventDispatcher } from 'svelte';
+    import type { CrateMember } from '../../../../types/crate';
+    import { getErrorMessage } from '../../../../util';
 
     const dispatch = createEventDispatcher();
 
@@ -12,13 +14,13 @@
 
     export let organisation: string;
     export let crate: string | null = null;
-    export let member;
+    export let member: CrateMember;
     export let newPermissions = member.permissions;
     export let possiblePermissions: string[];
     export { clazz as class };
 
     let saving = false;
-    let error = null;
+    let error: string | null = null;
 
     async function save() {
         saving = true;
@@ -41,7 +43,7 @@
                 url = `web/v1/organisations/${organisation}`;
             }
 
-            let result = await fetch(`${BASE_URL}/a/${$auth.auth_key}/${url}/members`, {
+            let result = await fetch(`${BASE_URL}/a/${$auth?.auth_key}/${url}/members`, {
                 method,
                 headers: {
                     Accept: 'application/json',
@@ -62,7 +64,7 @@
             member.permissions = newPermissions;
             dispatch('updated', member.uuid);
         } catch (e) {
-            error = e.toString();
+            error = getErrorMessage(e);
         } finally {
             saving = false;
         }

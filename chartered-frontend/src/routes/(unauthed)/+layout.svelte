@@ -1,5 +1,5 @@
 <script type="typescript">
-    import { auth } from '../../stores/auth.ts';
+    import { auth } from '../../stores/auth';
     import { goto } from '$app/navigation';
 
     $: if ($auth) {

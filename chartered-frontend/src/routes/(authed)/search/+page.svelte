@@ -2,8 +2,9 @@
     import { page } from '$app/stores';
     import { request } from '../../../stores/auth';
     import Spinner from '../../../components/Spinner.svelte';
+    import type { Search } from '../../../types/crate';
 
-    let searchPromise;
+    let searchPromise: Promise<Search>;
     $: searchPromise = request(`/web/v1/crates/search?q=${$page.url.searchParams.get('q')}`);
 </script>
 

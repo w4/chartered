@@ -10,7 +10,7 @@
 <div class="h-[18rem]">
     {#await callback}
         <Spinner />
-    {:then x}
+    {:then}
         <Spinner />
     {:catch error}
         <!-- todo: redirect back to login -->

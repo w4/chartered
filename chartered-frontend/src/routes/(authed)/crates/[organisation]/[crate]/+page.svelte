@@ -33,8 +33,8 @@
         },
     ];
 
-    let cratePromise;
-    $: cratePromise = request<Crate>(`/web/v1/crates/${$page.params.organisation}/${$page.params.crate}`);
+    let cratePromise: Promise<Crate>;
+    $: cratePromise = request(`/web/v1/crates/${$page.params.organisation}/${$page.params.crate}`);
 
     let currentTab = Tab.README;
 </script>
@@ -129,7 +129,7 @@
                 <h1 class="text-xl p-3 border-b border-gray-200 dark:border-gray-700 font-medium">Dependencies</h1>
 
                 <div class="divide-y divide-gray-200 dark:divide-gray-700">
-                    {#each crate.versions[0].deps as dependency, i}
+                    {#each crate.versions[0].deps as dependency}
                         <Dependency {dependency} class="p-3" />
                     {/each}
                 </div>
@@ -138,7 +138,7 @@
     {/await}
 </main>
 
-<style>
+<style lang="postcss">
     .card-header-button {
         @apply inline-flex items-center gap-x-1;
     }

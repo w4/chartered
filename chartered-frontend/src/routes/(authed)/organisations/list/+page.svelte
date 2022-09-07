@@ -33,7 +33,7 @@
             class:hidden={organisations.organisations.length === 0}
             class="mb-4 grid md:grid-cols-2 lg:grid-cols-4 gap-2"
         >
-            {#each organisations.organisations as organisation, i}
+            {#each organisations.organisations as organisation}
                 <a class="card flex space-x-2 items-center" href={`/crates/${organisation.name}`}>
                     <div class="flex-grow h-full">
                         <h5 class="text-highlight card-header">{organisation.name}</h5>

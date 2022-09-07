@@ -7,12 +7,13 @@
     import type { OrganisationDetail } from '../../../../types/organisations';
     import Member from './Member.svelte';
     import AddMember from './AddMember.svelte';
+    import type { CrateMembers, CrateMember } from '../../../../types/crate';
 
-    let organisationPromise;
-    $: organisationPromise = request<OrganisationDetail>(`/web/v1/organisations/${$page.params.organisation}`);
+    let organisationPromise: Promise<OrganisationDetail & CrateMembers>;
+    $: organisationPromise = request(`/web/v1/organisations/${$page.params.organisation}`);
 
-    function reload(event) {
-        organisationPromise = request<OrganisationDetail>(`/web/v1/organisations/${$page.params.organisation}`);
+    function reload(event: { detail: string }) {
+        organisationPromise = request(`/web/v1/organisations/${$page.params.organisation}`);
 
         if (newMember && event.detail === newMember.uuid) {
             newMember = null;
@@ -38,7 +39,7 @@
     ];
 
     let currentTab = Tab.CRATES;
-    let newMember = null;
+    let newMember: CrateMember | null = null;
 </script>
 
 <header>
@@ -138,7 +139,7 @@
                 {/if}
             {:else if currentTab === Tab.MEMBERS}
                 <div class="card p-0 divide-y card-divide">
-                    {#each organisation.members as member, i}
+                    {#each organisation.members as member}
                         <Member
                             {member}
                             organisation={$page.params.organisation}

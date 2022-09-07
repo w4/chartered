@@ -1,9 +1,10 @@
 <script type="typescript">
     import { debounce } from 'lodash';
-    import { auth, BASE_URL } from '../../../../stores/auth';
+    import { request } from '../../../../stores/auth';
     import Spinner from '../../../../components/Spinner.svelte';
     import Icon from '../../../../components/Icon.svelte';
     import { createEventDispatcher } from 'svelte';
+    import type { UserSearch, UserSearchUser } from '../../../../types/user';
 
     const dispatch = createEventDispatcher();
 
@@ -12,7 +13,7 @@
     let loading = false;
 
     let search = '';
-    let searchResults = [];
+    let searchResults: UserSearchUser[] = [];
     $: performSearch(search);
 
     const onInput = debounce((event) => {
@@ -27,22 +28,17 @@
         loading = true;
 
         try {
-            let result = await fetch(`${BASE_URL}/a/${$auth.auth_key}/web/v1/users/search?q=${search}`);
-            let json = await result.json();
+            let result = await request<UserSearch>(`/web/v1/users/search?q=${search}`);
 
-            if (json.error) {
-                throw new Error(json.error);
-            }
-
-            searchResults = json.users || [];
-        } catch (e) {
+            searchResults = result.users || [];
+        } catch (e: unknown) {
             console.log(e);
         } finally {
             loading = false;
         }
     }
 
-    function dispatchNewMember(member) {
+    function dispatchNewMember(member: UserSearchUser) {
         dispatch('new', member);
         searchResults = [];
         search = '';

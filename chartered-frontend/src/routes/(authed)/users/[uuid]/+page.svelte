@@ -5,9 +5,9 @@
     import Icon from '../../../../components/Icon.svelte';
     import type { User } from '../../../../types/user';
 
-    let userPromise;
+    let userPromise: Promise<User & { displayName?: string }>;
     $: userPromise = request<User>(`/web/v1/users/info/${$page.params.uuid}`).then(
-        (user: User & { displayName: string }) => {
+        (user: User & { displayName?: string }) => {
             user.displayName = user.nick || user.name || user.username;
             return user;
         },

@@ -3,6 +3,7 @@
     import ErrorAlert from '../../../../components/ErrorAlert.svelte';
     import { register } from '../../../../stores/auth';
     import { goto } from '$app/navigation';
+    import { getErrorMessage } from '../../../../util';
 
     /**
      * Displays a spinner while registration is being performed.
@@ -12,7 +13,7 @@
     /**
      * Displays an error message to the user above the form if set to a string
      */
-    let error = null;
+    let error: string | null = null;
 
     /**
      * The username bound to the corresponding form field
@@ -44,7 +45,7 @@
             // redirect the user back to the login
             await goto('/auth/login');
         } catch (e) {
-            error = e.toString();
+            error = getErrorMessage(e);
         } finally {
             // stop displaying the spinner since we've finished attempting to register the
             // user

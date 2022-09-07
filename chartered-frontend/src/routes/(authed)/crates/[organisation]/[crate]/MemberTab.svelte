@@ -3,10 +3,11 @@
     import { page } from '$app/stores';
     import AddMember from '../AddMember.svelte';
     import Member from '../Member.svelte';
+    import type { CrateMembers, CrateMember } from '../../../../../types/crate';
 
-    let newMember = null;
+    let newMember: CrateMember | null = null;
 
-    let membersPromise;
+    let membersPromise: Promise<CrateMembers>;
     $: membersPromise = request(`/web/v1/crates/${$page.params.organisation}/${$page.params.crate}/members`);
 
     function reloadMembers() {
@@ -17,7 +18,7 @@
 
 {#await membersPromise then members}
     <div class="card-divide divide-y">
-        {#each members.members as member, i}
+        {#each members.members as member}
             <Member
                 {member}
                 organisation={$page.params.organisation}
