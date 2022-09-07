@@ -12,7 +12,12 @@
      */
     export let aliases: string[] = [];
 
+    /**
+     * Contains whether this link is currently considered active based on the current URL.
+     */
     let active: boolean;
+
+    // whenever the page name updates, check if the link (or its aliases) match up and set as active
     $: if (href === '/') {
         active = $page.url.pathname === href;
     } else {

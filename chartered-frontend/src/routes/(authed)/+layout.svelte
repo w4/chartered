@@ -4,6 +4,9 @@
     import Nav from '../../components/Nav.svelte';
     import NavItem from '../../components/NavItem.svelte';
 
+    // watch the `$auth` store for changes to authentication, if their `$auth` disappears
+    // (such as from expiry), redirect to the login page. this also covers the case where
+    // the user requests `/`, we'll redirect straight to login from this too.
     $: if (!$auth) {
         goto('/auth/login', { replaceState: true });
     }

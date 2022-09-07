@@ -4,6 +4,8 @@
     import Spinner from '../../../../components/Spinner.svelte';
     import ErrorAlert from '../../../../components/ErrorAlert.svelte';
 
+    // pass the payload onto the backend to verify and create a session, we'll just show a
+    // spinner in the meantime.
     const callback = handleOAuthCallback($page.url.search);
 </script>
 

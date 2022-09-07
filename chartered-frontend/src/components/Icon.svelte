@@ -2,11 +2,34 @@
     import feather from 'feather-icons';
     export const directions = ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'];
 
+    /**
+     * Name of the icon, can be found on https://feathericons.com/
+     */
     export let name: string;
+
+    /**
+     * Compass rotation of the icon
+     */
     export let direction = 'n';
+
+    /**
+     * Thickness of the icon
+     */
     export let strokeWidth: string | null = null;
+
+    /**
+     * Colour of the icon
+     */
     export let stroke: string | null = null;
+
+    /**
+     * Width of the icon
+     */
     export let width = '1em';
+
+    /**
+     * Height of the icon
+     */
     export let height = '1em';
 
     $: icon = feather.icons[name];

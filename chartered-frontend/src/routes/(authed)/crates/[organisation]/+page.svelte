@@ -9,9 +9,17 @@
     import AddMember from './AddMember.svelte';
     import type { CrateMembers, CrateMember } from '../../../../types/crate';
 
+    // Load the requested organisation from the URL
     let organisationPromise: Promise<OrganisationDetail & CrateMembers>;
     $: organisationPromise = request(`/web/v1/organisations/${$page.params.organisation}`);
 
+    /**
+     * Whenever a member is updated/added/deleted to this organisation, we'll want to reload to ensure we
+     * show the user exactly what the server currently sees.
+     *
+     * @param event a struct containing the updated member's UUID, so we can empty the newMember value if that member
+     *              has just been added to we don't show them twice.
+     */
     function reload(event: { detail: string }) {
         organisationPromise = request(`/web/v1/organisations/${$page.params.organisation}`);
 
@@ -20,11 +28,18 @@
         }
     }
 
+    /**
+     * Contains all the possible tabs, used for maintaining state on the current tab.
+     */
     enum Tab {
         CRATES,
         MEMBERS,
     }
 
+    /**
+     * Mapping of `Tab`s to their human-readable form alongside a friendly icon to show to the
+     * user.
+     */
     const allTabs = [
         {
             id: Tab.CRATES,
@@ -38,7 +53,11 @@
         },
     ];
 
+    // binding to the current tab the user has selected
     let currentTab = Tab.CRATES;
+
+    // contains the member the user is currently considering adding to the org & has not yet persisted to
+    // the server.
     let newMember: CrateMember | null = null;
 </script>
 

@@ -3,11 +3,22 @@
     import Icon from '../../../../../components/Icon.svelte';
     import RelativeTime from '../../../../../components/RelativeTime.svelte';
 
-    let clazz = '';
-
+    /**
+     * The crate version to draw.
+     */
     export let version: Version;
+
+    /**
+     * CSS classes to apply to the outer element.
+     */
+    let clazz = '';
     export { clazz as class };
 
+    /**
+     * Converts a number of bytes to a friendly human-readable form.
+     *
+     * @param size number of bytes
+     */
     function humanFileSize(size: number): string {
         const i = Math.floor(Math.log(size) / Math.log(1024));
         return Number((size / Math.pow(1024, i)).toFixed(2)) + ' ' + ['B', 'kB', 'MB', 'GB', 'TB'][i];

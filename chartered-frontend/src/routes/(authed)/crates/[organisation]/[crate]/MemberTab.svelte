@@ -5,11 +5,20 @@
     import Member from '../Member.svelte';
     import type { CrateMembers, CrateMember } from '../../../../../types/crate';
 
+    /**
+     * Binding to the latest user selected after a search, this is a "prospective member" that is not yet
+     * persisted to the backend until the user presses the save button.
+     */
     let newMember: CrateMember | null = null;
 
+    // Grab all the current crate's members
     let membersPromise: Promise<CrateMembers>;
     $: membersPromise = request(`/web/v1/crates/${$page.params.organisation}/${$page.params.crate}/members`);
 
+    /**
+     * When a member is updated/added/deleted to this crate, we'll want to reload to show the user exactly
+     * what the server sees the current state is.
+     */
     function reloadMembers() {
         newMember = null;
         membersPromise = request(`/web/v1/crates/${$page.params.organisation}/${$page.params.crate}/members`);

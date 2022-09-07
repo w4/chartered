@@ -2,6 +2,9 @@
     import { auth } from '../../stores/auth';
     import { goto } from '$app/navigation';
 
+    // watch the `$auth` store, if the user suddenly becomes authenticated (such as after login)
+    // then redirect to the homepage. this also covers the case where the user navigates directly
+    // to login despite already having a session
     $: if ($auth) {
         goto('/', { replaceState: true });
     }

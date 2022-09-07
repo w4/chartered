@@ -1,6 +1,10 @@
 <script type="typescript">
     import { DateTime } from 'luxon';
 
+    /**
+     * A time string to convert to relative time, can be anything that can be read by
+     * `Date.parse`.
+     */
     export let time: string;
 
     const date = DateTime.fromMillis(Date.parse(time));

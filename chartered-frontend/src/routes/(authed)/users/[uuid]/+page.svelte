@@ -5,6 +5,8 @@
     import Icon from '../../../../components/Icon.svelte';
     import type { User } from '../../../../types/user';
 
+    // grab the requested user from the backend and determine a `displayName` for them to show on their
+    // profile.
     let userPromise: Promise<User & { displayName?: string }>;
     $: userPromise = request<User>(`/web/v1/users/info/${$page.params.uuid}`).then(
         (user: User & { displayName?: string }) => {

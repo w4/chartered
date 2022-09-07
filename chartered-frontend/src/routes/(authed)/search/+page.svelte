@@ -4,6 +4,8 @@
     import Spinner from '../../../components/Spinner.svelte';
     import type { Search } from '../../../types/crate';
 
+    // whenever the `q` query parameter changes, send a request to the backend with that
+    // search term.
     let searchPromise: Promise<Search>;
     $: searchPromise = request(`/web/v1/crates/search?q=${$page.url.searchParams.get('q')}`);
 </script>

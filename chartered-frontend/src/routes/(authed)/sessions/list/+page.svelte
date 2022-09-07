@@ -6,16 +6,23 @@
     import Icon from '../../../../components/Icon.svelte';
     import DeleteSessionModal from './DeleteSessionModal.svelte';
 
-    let sessionPromise = loadSessions();
-
+    /**
+     * If not null, then the user is currently attempting to delete a session and a modal is being
+     * shown for them to confirm.
+     */
     let deleting: Session | null = null;
 
-    function loadSessions(): Promise<Sessions> {
-        return request<Sessions>('/web/v1/sessions');
-    }
+    /**
+     * Grab the list of current sessions from the user from the backend.
+     */
+    let sessionPromise: Promise<Sessions> = request<Sessions>('/web/v1/sessions');
 
+    /**
+     * Reload all the user's current sessions whenever a session is deleted so the user gets
+     * an up-to-date view of what the backend sees.
+     */
     function reloadSessions() {
-        sessionPromise = loadSessions();
+        sessionPromise = request<Sessions>('/web/v1/sessions');
     }
 </script>
 

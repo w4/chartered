@@ -9,12 +9,19 @@
     import VersionTab from './VersionTab.svelte';
     import MemberTab from './MemberTab.svelte';
 
+    /**
+     * Contains all the possible tabs, used for maintaining state on the current tab.
+     */
     enum Tab {
         README,
         VERSIONS,
         MEMBERS,
     }
 
+    /**
+     * Mapping of `Tab`s to their human-readable form alongside a friendly icon to show to the
+     * user.
+     */
     const allTabs = [
         {
             id: Tab.README,
@@ -33,9 +40,11 @@
         },
     ];
 
+    // lookup the crate currently requested by the user based on the URL
     let cratePromise: Promise<Crate>;
     $: cratePromise = request(`/web/v1/crates/${$page.params.organisation}/${$page.params.crate}`);
 
+    // binding to the current tab the user has selected
     let currentTab = Tab.README;
 </script>
 

@@ -6,20 +6,46 @@
     import { createEventDispatcher } from 'svelte';
     import type { UserSearch, UserSearchUser } from '../../../../types/user';
 
+    // Create the dispatcher to send an event whenever a new member is selected
+    // by the user.
     const dispatch = createEventDispatcher();
 
+    /**
+     * A list of UUIDs to hide from the search, so we can skip showing users that
+     * are already members.
+     */
     export let hideUuids: string[] = [];
 
+    /**
+     * Contains whether the search results are currently loading so a spinner
+     * can be shown.
+     */
     let loading = false;
 
+    /**
+     * Binding to the search terms the user has entered.
+     */
     let search = '';
+
+    /**
+     * A list of search results from the backend
+     */
     let searchResults: UserSearchUser[] = [];
+
+    // update `searchResults` whenever `search` is updated
     $: performSearch(search);
 
+    // debounce the user's input for 250ms, so we don't just spam the backend with search
+    // requests even though the user isn't finished yet.
     const onInput = debounce((event) => {
         search = event.target.value;
     }, 250);
 
+    /**
+     * Call the backend and fetch user results for the user's given search terms.
+     *
+     * @param search terms to search for
+     */
     async function performSearch(search: string) {
         if (search === '') {
             return;
@@ -29,7 +55,6 @@
 
         try {
             let result = await request<UserSearch>(`/web/v1/users/search?q=${search}`);
-
             searchResults = result.users || [];
         } catch (e: unknown) {
             console.log(e);
@@ -38,6 +63,11 @@
         }
     }
 
+    /**
+     * Send an event back to the parent component whenever a user is selected.
+     *
+     * @param member member to send to the parent component
+     */
     function dispatchNewMember(member: UserSearchUser) {
         dispatch('new', member);
         searchResults = [];

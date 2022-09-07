@@ -4,6 +4,7 @@
     import type { OrganisationList } from '../../../../types/organisations';
     import ErrorAlert from '../../../../components/ErrorAlert.svelte';
 
+    // fetch a list of all the current user's organisations from the backend
     const organisationsPromise = request<OrganisationList>('/web/v1/organisations');
 </script>
 
