@@ -1,0 +1,40 @@
+on: [push, pull_request]
+
+name: CI - Integration Tests
+
+jobs:
+  e2e-ui-test:
+    name: End-to-end UI tests
+    runs-on: ubuntu-22.04 # needed for recent sqlite version
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '18'
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: -p chartered-web -p chartered-db --features sqlite
+      - name: Install dependencies
+        working-directory: ./chartered-frontend
+        run: npm ci
+      - name: Install Playwright
+        working-directory: ./chartered-frontend
+        run: npx playwright install --with-deps
+      - name: Run tests
+        working-directory: ./chartered-frontend
+        run: |
+          ../target/debug/chartered-web -c ../chartered-web/config-example.toml &
+          sleep 5
+          npm test
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: playwright-report
+          path: playwright-report
