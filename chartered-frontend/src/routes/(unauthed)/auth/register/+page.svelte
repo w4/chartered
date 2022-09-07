@@ -78,7 +78,7 @@
     </form>
 </div>
 
-<style>
+<style lang="postcss">
     input {
         @apply w-full mb-2 px-2.5 pb-2.5 pt-5 bg-transparent border dark:border-slate-700 rounded border-inherit;
     }

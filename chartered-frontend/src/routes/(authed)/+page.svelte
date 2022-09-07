@@ -1,7 +1,7 @@
 <script type="typescript">
     import Icon from '../../components/Icon.svelte';
     import rustLogo from '../../img/rust.svg';
-    import { BASE_URL, auth, request } from '../../stores/auth';
+    import { request } from '../../stores/auth';
     import RelativeTime from '../../components/RelativeTime.svelte';
     import Spinner from '../../components/Spinner.svelte';
     import type { MostDownloaded, RecentlyCreated, RecentlyUpdated } from '../../types/featured_crate';
@@ -28,7 +28,7 @@
         </div>
 
         <div class="pr-6 order-first md:order-last pt-10 md:pt-0">
-            <img class="w-[8rem]" src={rustLogo} />️️
+            <img alt="Rust logo" class="w-[8rem]" src={rustLogo} />️️
         </div>
     </div>
 </header>

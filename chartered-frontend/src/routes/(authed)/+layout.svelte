@@ -1,5 +1,5 @@
 <script type="typescript">
-    import { auth, logout } from '../../stores/auth';
+    import { auth } from '../../stores/auth';
     import { goto } from '$app/navigation';
     import Nav from '../../components/Nav.svelte';
     import NavItem from '../../components/NavItem.svelte';

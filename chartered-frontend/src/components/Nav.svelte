@@ -69,11 +69,7 @@
                 >
                     <span class="sr-only">Open user menu</span>
                     {#if $auth.picture_url}
-                        <img
-                            alt="Your profile picture"
-                            src={$auth.picture_url}
-                            class="rounded-[50%] h-[2.4rem] inline mr-0.5"
-                        />
+                        <img alt="You" src={$auth.picture_url} class="rounded-[50%] h-[2.4rem] inline mr-0.5" />
                     {:else}
                         <div
                             class="h-[2.4rem] w-[2.4rem] rounded-[50%] inline mr-0.5 bg-gray-100 dark:bg-gray-800 overflow-hidden"

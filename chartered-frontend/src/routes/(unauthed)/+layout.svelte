@@ -22,7 +22,7 @@
     </div>
 {/if}
 
-<style>
+<style lang="postcss">
     main {
         @apply w-full mt-2 p-4 bg-white dark:bg-transparent border dark:border-slate-700 rounded relative;
     }

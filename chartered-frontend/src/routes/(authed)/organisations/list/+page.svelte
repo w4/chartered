@@ -47,7 +47,7 @@
                     </div>
 
                     <div class="min-w-[48px]">
-                        <img class="rounded-[50%]" src="http://placekitten.com/48/48" />
+                        <img alt="Placeholder" class="rounded-[50%]" src="http://placekitten.com/48/48" />
                     </div>
                 </a>
             {/each}

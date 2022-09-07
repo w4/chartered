@@ -2,7 +2,7 @@
     /**
      * Set whether this spinner should have `display: none`.
      */
-    export let hidden: boolean = false;
+    export let hidden = false;
 </script>
 
 <div class:hidden class="absolute top-0 left-0 w-full h-full flex items-center justify-center">

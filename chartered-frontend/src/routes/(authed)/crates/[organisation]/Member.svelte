@@ -78,7 +78,7 @@
         <a href={`/users/${member.uuid}`} class="flex-grow flex items-center mr-10 card-header mb-2 md:mb-0">
             {#if member.picture_url}
                 <img
-                    alt="Your profile picture"
+                    alt={member.display_name}
                     src={member.picture_url}
                     class="rounded-[50%] h-[2rem] mr-3 inline-block"
                 />
@@ -137,7 +137,7 @@
     </div>
 </div>
 
-<style>
+<style lang="postcss">
     .hide {
         @apply hidden md:block invisible;
     }

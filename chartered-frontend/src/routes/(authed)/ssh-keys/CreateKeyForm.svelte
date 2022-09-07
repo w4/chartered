@@ -13,7 +13,7 @@
     /**
      * Binding to the ssh key text field, contains anything currently in there
      */
-    let sshKey: string = '';
+    let sshKey = '';
 
     /**
      * Simple boolean flag to determine if a key is currently being submitted, so we can

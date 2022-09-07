@@ -131,6 +131,7 @@
                     Yes, I'm sure
                 </button>
 
+                <!-- svelte-ignore a11y-autofocus -->
                 <button
                     on:click={closeModal}
                     autofocus

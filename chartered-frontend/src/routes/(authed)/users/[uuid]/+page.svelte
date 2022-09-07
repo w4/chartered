@@ -57,7 +57,7 @@
 
             <div class="order-first md:order-last">
                 {#if user.picture_url}
-                    <img alt="Your profile picture" src={user.picture_url} class="rounded-[50%] h-[8rem] inline" />
+                    <img alt={user.displayName} src={user.picture_url} class="rounded-[50%] h-[8rem] inline" />
                 {:else}
                     <div
                         class="h-[8rem] w-[8rem] rounded-[50%] text-gray-300 bg-gray-100 dark:bg-gray-800 overflow-hidden"

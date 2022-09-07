@@ -12,7 +12,7 @@ export interface Version {
     name: string;
     deps: VersionDependency[];
     vers: string;
-    features: { [key: string]: any };
+    features: { [key: string]: string[] };
     size: number;
     created_at: string;
     uploader: VersionUploader;

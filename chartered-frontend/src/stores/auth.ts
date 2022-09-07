@@ -91,9 +91,9 @@ export async function extendSession() {
 }
 
 // start the cron loop to extend the session every minute
-if (!(window as any).extendSessionInterval) {
+if (!window.extendSessionInterval) {
     extendSession();
-    (window as any).extendSessionInterval = setInterval(extendSession, 60000);
+    window.extendSessionInterval = setInterval(extendSession, 60000);
 }
 
 /**
@@ -154,14 +154,14 @@ type LoginOAuthResult = LoginOAuthResponse & Error;
  * @param url url (without base) to send request to
  */
 export async function request<T>(url: string): Promise<T> {
-    let token = get(auth)?.auth_key;
+    const token = get(auth)?.auth_key;
 
     if (!token) {
         throw new Error('Not authenticated');
     }
 
-    let result = await fetch(`${BASE_URL}/a/${token}${url}`);
-    let json: T & Error = await result.json();
+    const result = await fetch(`${BASE_URL}/a/${token}${url}`);
+    const json: T & Error = await result.json();
 
     // TODO: handle 404s
     if (json.error) {
@@ -241,14 +241,14 @@ type RegisterResult = RegisterResponse & Error;
  */
 export async function register(username: string, password: string) {
     // send register request to backend
-    let result = await fetch(`${BASE_URL}/a/-/web/v1/auth/register/password`, {
+    const result = await fetch(`${BASE_URL}/a/-/web/v1/auth/register/password`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({ username, password }),
     });
-    let json: RegisterResult = await result.json();
+    const json: RegisterResult = await result.json();
 
     // throw an error if registration fails
     if (json.error) {

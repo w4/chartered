@@ -23,7 +23,7 @@
 
             {#if version.uploader.picture_url}
                 <img
-                    alt="Your profile picture"
+                    alt={version.uploader.display_name}
                     src={version.uploader.picture_url}
                     class="rounded-[50%] h-[1rem] w-[1rem]"
                 />

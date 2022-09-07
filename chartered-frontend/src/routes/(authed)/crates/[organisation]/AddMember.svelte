@@ -74,7 +74,7 @@
                 <button on:click={() => dispatchNewMember(result)} class="flex items-center">
                     {#if result.picture_url}
                         <img
-                            alt="Your profile picture"
+                            alt={result.display_name}
                             src={result.picture_url}
                             class="rounded-[50%] h-[4rem] w-[4rem] mr-4"
                         />

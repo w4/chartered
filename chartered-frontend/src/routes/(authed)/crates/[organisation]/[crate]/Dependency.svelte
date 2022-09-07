@@ -6,7 +6,7 @@
     export let dependency: VersionDependency;
     export { clazz as class };
 
-    function getLocalDependencyOrganisation(registry: string): string {
+    function getLocalDependencyOrganisation(): string {
         const s = dependency.registry.split('/');
 
         return s[s.length - 1];
@@ -19,7 +19,7 @@
             {dependency.name}
         </a>
     {:else if dependency.registry.indexOf('ssh://') === 0}
-        <a href={`/crates/${getLocalDependencyOrganisation(dependency.registry)}/${dependency.name}`} target="_blank">
+        <a href={`/crates/${getLocalDependencyOrganisation()}/${dependency.name}`} target="_blank">
             {dependency.name}
         </a>
     {:else}

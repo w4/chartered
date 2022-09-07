@@ -5,7 +5,7 @@
     /**
      * Sets whether the close button should be shown on this error alert.
      */
-    export let showClose: boolean = true;
+    export let showClose = true;
 
     // create the event dispatcher, so we can tell the caller when the user attempts
     // to close the prompt, so it can clear the message and hide us from display

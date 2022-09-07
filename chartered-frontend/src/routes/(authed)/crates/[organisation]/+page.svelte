@@ -64,7 +64,7 @@
         </div>
 
         <div class="order-first md:order-last">
-            <img src="http://placekitten.com/128/128" class="rounded-[50%]" />
+            <img src="http://placekitten.com/128/128" alt="Placeholder" class="rounded-[50%]" />
         </div>
     </div>
 </header>

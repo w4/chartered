@@ -1,5 +1,5 @@
 <script type="typescript">
-    import { auth, BASE_URL, request } from '../../../stores/auth';
+    import { request } from '../../../stores/auth';
     import Spinner from '../../../components/Spinner.svelte';
     import ErrorAlert from '../../../components/ErrorAlert.svelte';
     import SingleSshKey from './SingleSshKey.svelte';
