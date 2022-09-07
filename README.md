@@ -34,6 +34,5 @@ my-other-org = { index = "ssh://chart.rs:22/my-other-org" }
 
 #### screen shots
 
-<a href=".github/imgs/crate-view-light.png"><img src=".github/imgs/crate-view-light.png" alt="crate view (light)"></a>
-<a href=".github/imgs/crate-view-dark.png"><img src=".github/imgs/crate-view-dark.png" alt="crate view (dark)"></a>
-<a href=".github/imgs/org-members.png"><img src=".github/imgs/org-members.png" alt="organisation members"></a>
+<a href=".github/imgs/crate-view-light.webp"><img src=".github/imgs/crate-view-light.webp" alt="crate view (light)"></a>
+<a href=".github/imgs/crate-view-dark.webp"><img src=".github/imgs/crate-view-dark.webp" alt="crate view (dark)"></a>
