@@ -80,7 +80,7 @@ database_uri = "postgres://user:password@localhost/chartered" # can also be `sql
 
 storage_uri  = "s3://s3-eu-west-1.amazonaws.com/my-cool-crate-store/" # or file:///var/lib/chartered
 
-frontend_base_uri = "http://localhost:1234/"
+frontend_base_uri = "http://localhost:5173/"
 
 [auth.password]
 enabled = true # enables password auth 

@@ -34,7 +34,7 @@ Using the recommended setup, S3 & PostgreSQL:
 bind_address = "127.0.0.1:8080"
 database_uri = "postgres://user:password@localhost/chartered"
 storage_uri  = "s3://s3-eu-west-1.amazonaws.com/my-cool-crate-store/"
-frontend_base_uri = "http://localhost:1234/"
+frontend_base_uri = "http://localhost:5173/"
 
 [auth.password]
 enabled = true

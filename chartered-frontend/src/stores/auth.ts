@@ -140,6 +140,31 @@ export async function login(username: string, password: string) {
 }
 
 /**
+ * Attempt to log the user in using the OAuth callback throwing an error if an error occurred.
+ *
+ * @param params URL search parameters
+ */
+export async function handleOAuthCallback(params: string) {
+    // call the backend and attempt the authentication
+    const result = await fetch(`${BASE_URL}/a/-/web/v1/auth/login/oauth/complete${params}`);
+    const json: LoginResult = await result.json();
+
+    // server returned an error, forward it on - there's nothing else we
+    // can do here
+    if (json.error) {
+        throw new Error(json.error);
+    }
+
+    // we got a successful response back from the server, get in there son
+    auth.set({
+        auth_key: json.key,
+        expires: Date.parse(json.expires),
+        picture_url: json.picture_url,
+        uuid: json.user_uuid,
+    });
+}
+
+/**
  * Successful response type of /web/v1/auth/login/oauth/[provider]/begin, contains the URL
  * the user needs to visit to complete the OAuth flow.
  */
