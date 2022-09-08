@@ -10,6 +10,7 @@ use aws_sdk_s3::{
     model::ObjectCannedAcl,
     presigning::config::PresigningConfig,
     types::{ByteStream, SdkError},
+    Endpoint,
 };
 use bytes::Bytes;
 use itertools::Itertools;
@@ -36,8 +37,8 @@ pub enum Error {
     UuidParse(#[from] uuid::Error),
     #[error("path missing from uri")]
     MissingPath,
-    #[error("host missing from uri")]
-    MissingHost,
+    #[error("invalid uri: {0}")]
+    InvalidUri(http::uri::InvalidUri),
     #[error("bucket missing from uri")]
     MissingBucket,
     #[error("invalid aws presigning config: {0}")]
@@ -56,13 +57,23 @@ impl FileSystem {
 
         Ok(match uri.scheme() {
             "s3" => {
-                let shared_config = aws_config::load_from_env().await;
+                let mut shared_config = aws_config::from_env();
+
+                if let Some(host) = uri.host() {
+                    shared_config = shared_config.endpoint_resolver(Endpoint::immutable(
+                        format!("https://{}", host)
+                            .parse()
+                            .map_err(Error::InvalidUri)?,
+                    ));
+                }
+
+                let shared_config = shared_config.load().await;
+
                 let client = aws_sdk_s3::Client::new(&shared_config);
 
                 let mut path = uri.path_segments().ok_or(Error::MissingPath)?;
 
                 Self::S3(S3 {
-                    host: uri.host().ok_or(Error::MissingHost)?.to_string(),
                     bucket: path.next().ok_or(Error::MissingBucket)?.to_string(),
                     path: Itertools::intersperse(path, "/").collect(),
                     client,
@@ -198,7 +209,6 @@ impl FileSystemIo for Local {
 #[derive(Debug)]
 #[allow(dead_code)]
 pub struct S3 {
-    host: String,
     bucket: String,
     path: String,
     client: aws_sdk_s3::Client,
@@ -227,7 +237,7 @@ impl FileSystemIo for S3 {
         self.client
             .put_object()
             .key(format!("{}/{}", self.path, file_ref.reference))
-            .content_md5(format!("{:x}", md5::compute(&data)))
+            .content_md5(base64::encode(&*md5::compute(&data)))
             .body(ByteStream::new(data.into()))
             .bucket(&self.bucket)
             .acl(ObjectCannedAcl::Private)

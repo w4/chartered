@@ -2,3 +2,5 @@
 .idea/
 /chartered.db
 .DS_Store
+.env
+

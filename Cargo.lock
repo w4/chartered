@@ -669,6 +669,7 @@ dependencies = [
  "async-trait",
  "aws-config",
  "aws-sdk-s3",
+ "base64",
  "bytes",
  "http",
  "itertools",

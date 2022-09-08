@@ -8,7 +8,7 @@
     export let crate: Crate;
 </script>
 
-<a href={`/crates/${crate.organisation}/${crate.name}`} class="card flex items-center">
+<a href={`/crates/${crate.organisation}/${crate.name}`} class="card flex items-center mb-3">
     <div class="flex-grow">
         <div class="font-semibold">
             {crate.organisation}/<span class="text-highlight">{crate.name}</span>

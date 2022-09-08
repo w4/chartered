@@ -9,6 +9,7 @@ edition = "2021"
 async-trait = "0.1"
 aws-config = { git = "https://github.com/awslabs/aws-sdk-rust", tag = "release-2022-08-08", package = "aws-config" }
 aws-sdk-s3 = { git = "https://github.com/awslabs/aws-sdk-rust", tag = "release-2022-08-08", package = "aws-sdk-s3" }
+base64 = "0.13"
 bytes = "1.1"
 http = "0.2"
 itertools = "0.10"
