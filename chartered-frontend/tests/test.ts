@@ -8,7 +8,7 @@ test('redirect to login when unauthenticated', async ({ page }) => {
 
 test('register button takes user to register page', async ({ page }) => {
     await page.goto('/');
-    await page.locator('text=Register').click();
+    await page.locator('button:has-text("Register")').click();
     await expect(page).toHaveURL(/.*register/);
     expect(await page.textContent('h1')).toBe('chartered ✈️');
     expect(await page.textContent('button')).toBe('Register');
@@ -20,12 +20,12 @@ test('can successfully register and login', async ({ page }) => {
 
     // navigate to register page
     await page.goto('/');
-    await page.locator('text=Register').click();
+    await page.locator('button:has-text("Register")').click();
 
     // register user
     await page.locator('input[id="username"]').fill(username);
     await page.locator('input[id="password"]').fill(password);
-    await page.locator('text=Register').click();
+    await page.locator('button:has-text("Register")').click();
 
     // ensure there were no errors
     await expect(page.locator('[role="alert"]')).toHaveCount(0);
@@ -49,17 +49,17 @@ test('can create an organisation and add a user to it', async ({ page }) => {
     await page.goto('/');
 
     // create first user account
-    await page.locator('text=Register').click();
+    await page.locator('button:has-text("Register")').click();
     await page.locator('input[id="username"]').fill(username1);
     await page.locator('input[id="password"]').fill(password);
-    await page.locator('text=Register').click();
+    await page.locator('button:has-text("Register")').click();
     await expect(page).toHaveURL(/.*login/);
 
     // create second user account that we'll add to the organisation
-    await page.locator('text=Register').click();
+    await page.locator('button:has-text("Register")').click();
     await page.locator('input[id="username"]').fill(username2);
     await page.locator('input[id="password"]').fill(password);
-    await page.locator('text=Register').click();
+    await page.locator('button:has-text("Register")').click();
     await expect(page).toHaveURL(/.*login/);
 
     // login to first account
