@@ -7,8 +7,7 @@ RUN npm install -D && npm run build
 RUN echo '{"type": "module"}' > /app/build/package.json
 ENTRYPOINT [ "/bin/sh" ]
 
-FROM node
+FROM joseluisq/static-web-server
+ENV SERVER_LOG_LEVEL=info SERVER_ERROR_PAGE_404=./index.html SERVER_ROOT=. SERVER_SECURITY_HEADERS=true
 WORKDIR /app
 COPY --from=builder /app/build .
-EXPOSE 3000
-CMD [ "node", "/app/index.js" ]
