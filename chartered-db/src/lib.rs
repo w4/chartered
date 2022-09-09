@@ -73,7 +73,11 @@ pub type Connection = unimplemented!();
 pub type ConnectionPool = Arc<Pool<ConnectionManager<Connection>>>;
 pub type Result<T> = std::result::Result<T, Error>;
 
-embed_migrations!();
+#[cfg(feature = "postgres")]
+embed_migrations!("../migrations/postgres");
+
+#[cfg(feature = "sqlite")]
+embed_migrations!("../migrations/sqlite");
 
 pub fn init(connection_uri: &str) -> Result<ConnectionPool> {
     let connection_uri = parse_connection_uri(connection_uri)?;
