@@ -91,7 +91,7 @@ macro_rules! select_permissions {
             0,
         ))
         .bitwise_or(diesel::dsl::sql::<diesel::sql_types::Integer>(&format!(
-            "COALESCE(CASE WHEN {} THEN {} OR 0 END, 0)",
+            "COALESCE(CASE WHEN {} THEN {} ELSE 0 END, 0)",
             "organisations.public",
             UserPermission::VISIBLE.bits(),
         )))
