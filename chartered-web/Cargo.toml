@@ -40,3 +40,7 @@ toml = "0.5"
 tracing = "0.1"
 tracing-subscriber = "0.3"
 url = { version = "2.2", features = ["serde"] }
+
+[features]
+sqlite = ["chartered-db/sqlite"]
+postgres = ["chartered-db/postgres"]

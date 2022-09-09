@@ -1,0 +1,22 @@
+FROM lukemathwalker/cargo-chef:latest-rust-slim-bullseye AS chef
+WORKDIR /app
+
+FROM chef AS planner
+COPY . /app
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM chef AS builder
+RUN apt update && apt install -y pkg-config make libpq-dev libssl-dev
+ARG DEBIAN_FRONTEND=noninteractive
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
+COPY . /app
+RUN cargo build --release --features postgres --bin chartered-web
+
+FROM debian:bullseye-slim
+LABEL org.opencontainers.image.source https://github.com/w4/chartered
+WORKDIR /app
+ARG DEBIAN_FRONTEND=noninteractive
+RUN apt update && apt install -y libpq-dev libssl-dev && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /app/target/release/chartered-web /app/chartered-web
+ENTRYPOINT ["/app/chartered-web"]
