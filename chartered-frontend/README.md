@@ -19,5 +19,5 @@ npm run dev -- --open
 To create a production version of chartered-frontend:
 
 ```bash
-docker build . --build-arg CHARTERED_WEB_URL=http://127.0.0.1:3000
+docker build . --build-arg VITE_CHARTERED_WEB_URL=http://127.0.0.1:3000
 ```

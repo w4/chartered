@@ -5,7 +5,7 @@ import { getErrorMessage } from '../util';
 /**
  * The base URL of the chartered-web instance
  */
-export const BASE_URL = import.meta.env.CHARTERED_WEB_URL || 'http://127.0.0.1:8888';
+export const BASE_URL = import.meta.env.VITE_CHARTERED_WEB_URL || 'http://127.0.0.1:8888';
 
 /**
  * Key in localStorage to store authentication information in

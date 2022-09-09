@@ -1,6 +1,6 @@
 FROM node AS builder
-ARG CHARTERED_WEB_URL
-RUN ["/bin/bash", "-c", ": ${CHARTERED_WEB_URL:?CHARTERED_WEB_URL must be set to the public URL that chartered-web can be reached by passing --build-arg to docker build.}"]
+ARG VITE_CHARTERED_WEB_URL
+RUN ["/bin/bash", "-c", ": ${VITE_CHARTERED_WEB_URL:?VITE_CHARTERED_WEB_URL must be set to the public URL that chartered-web can be reached by passing --build-arg to docker build.}"]
 WORKDIR /app
 COPY . /app
 RUN npm install -D && npm run build
