@@ -17,6 +17,6 @@ FROM debian:bullseye-slim
 LABEL org.opencontainers.image.source https://github.com/w4/chartered
 WORKDIR /app
 ARG DEBIAN_FRONTEND=noninteractive
-RUN apt update && apt install -y libpq-dev libssl-dev && rm -rf /var/lib/apt/lists/*
+RUN apt update && apt install -y libpq-dev libssl-dev ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /app/target/release/chartered-git /app/chartered-git
 ENTRYPOINT ["/app/chartered-git"]
