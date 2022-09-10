@@ -42,7 +42,13 @@
     // binding to the current tab the user has selected
     let currentTab = Tab.README;
 
-    $: cratePromise.then((crate) => {
+    $: cratePromise.then(filterTabsForCrate);
+
+    /**
+     * Filters the tabs displayed to the user depending on their current permissions for the
+     * crate.
+     */
+    function filterTabsForCrate(crate: Crate) {
         if (crate.permissions.includes('MANAGE_USERS')) {
             // user has access to the member page but the tab isn't currently being shown, so we should
             // add it
@@ -67,7 +73,7 @@
                 currentTab = Tab.README;
             }
         }
-    });
+    }
 </script>
 
 <header>

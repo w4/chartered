@@ -50,7 +50,13 @@
     // binding to the current tab the user has selected
     let currentTab = Tab.CRATES;
 
-    $: organisationPromise.then((org) => {
+    $: organisationPromise.then(filterTabsForOrg);
+
+    /**
+     * Filters the tabs displayed to the user depending on their current permissions for the
+     * organisation.
+     */
+    function filterTabsForOrg(org: CrateMembers) {
         if (org.members) {
             // user has access to the member page but the tab isn't currently being shown, so we should
             // add it
@@ -75,7 +81,7 @@
                 currentTab = Tab.CRATES;
             }
         }
-    });
+    }
 
     // contains the member the user is currently considering adding to the org & has not yet persisted to
     // the server.
