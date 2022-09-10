@@ -57,7 +57,7 @@
      * organisation.
      */
     function filterTabsForOrg(org: CrateMembers) {
-        if (org.members) {
+        if (org.possible_permissions) {
             // user has access to the member page but the tab isn't currently being shown, so we should
             // add it
             if (!allTabs.some((tab) => tab.id === Tab.MEMBERS)) {
@@ -73,7 +73,7 @@
         } else {
             // user doesn't have access to the members page for this org, so remove it from the tab
             // list, if it exists
-            allTabs = allTabs.filter((tab) => tab.id !== Tab.CRATES);
+            allTabs = allTabs.filter((tab) => tab.id !== Tab.MEMBERS);
 
             // make sure the current tab is MEMBERS switch them off it, so we don't leave them with
             // an empty page
