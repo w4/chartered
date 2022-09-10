@@ -5,9 +5,13 @@ use super::{
     uuid::SqlUuid,
     ConnectionPool, Error, Result,
 };
-use diesel::result::DatabaseErrorKind;
+use chrono::{Duration, NaiveDateTime, Utc};
 use diesel::{
-    insert_into, prelude::*, result::Error as DieselError, Associations, Identifiable, Queryable,
+    dsl::sql,
+    insert_into,
+    prelude::*,
+    result::{DatabaseErrorKind, Error as DieselError},
+    Associations, Identifiable, Queryable,
 };
 use rand::{thread_rng, Rng};
 use std::sync::Arc;
@@ -313,6 +317,41 @@ impl User {
             .as_ref()
             .or(self.name.as_ref())
             .unwrap_or(&self.username)
+    }
+
+    pub async fn published_versions_by_date(
+        &self,
+        conn: ConnectionPool,
+    ) -> Result<Vec<(NaiveDateTime, i64)>> {
+        let id = self.id;
+
+        tokio::task::spawn_blocking(move || {
+            use crate::schema::crate_versions::dsl::{created_at, user_id};
+
+            let conn = conn.get()?;
+
+            let date_statement = if cfg!(feature = "sqlite") {
+                "strftime('%Y-%m-%d 00:00:00', created_at)"
+            } else {
+                "DATE_TRUNC('day', created_at)"
+            };
+
+            let selected = crate::schema::crate_versions::table
+                .group_by(sql::<diesel::sql_types::Timestamp>(date_statement))
+                .select((
+                    sql::<diesel::sql_types::Timestamp>(date_statement),
+                    sql::<diesel::sql_types::BigInt>("count(*)"),
+                ))
+                .filter(
+                    user_id
+                        .eq(id)
+                        .and(created_at.gt((Utc::now() - Duration::days(365)).naive_utc())),
+                )
+                .load(&conn)?;
+
+            Ok(selected)
+        })
+        .await?
     }
 }
 
