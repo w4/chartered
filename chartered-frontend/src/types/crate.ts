@@ -45,6 +45,7 @@ export interface SearchCrate {
 
 export interface CrateMembers {
     possible_permissions: string[];
+    implied_permissions: [string[], string[]][];
     members: CrateMember[];
 }
 

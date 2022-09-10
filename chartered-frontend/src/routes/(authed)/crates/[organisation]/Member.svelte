@@ -38,12 +38,36 @@
      * A list of possible permissions this user can be given.
      */
     export let possiblePermissions: string[];
-
     /**
      * A list of CSS classes to add to the outer div.
      */
     let clazz = '';
     export { clazz as class };
+
+    /**
+     * A list of permissions on the left that, when selected, imply that permissions on the other right will always
+     * apply to the user.
+     */
+    export let impliedPermissions: [string[], string[]][];
+
+    /**
+     * A list of permissions, currently set on the member, that are enforced by implied permissions.
+     */
+    let enforcedPermissions: string[] = [];
+
+    // whenever the selected permissions changes, enforce impliedPermissions over the set
+    $: {
+        enforcedPermissions = [];
+
+        for (const [expected, implied] of impliedPermissions) {
+            // if the selected permissions matches every expected permission...
+            if (expected.every((perm) => newPermissions.includes(perm))) {
+                /// ...apply all the implied permissions too
+                newPermissions = [...new Set(newPermissions.concat(implied))];
+                enforcedPermissions = enforcedPermissions.concat(implied);
+            }
+        }
+    }
 
     /**
      * Whether the member is currently being persisted to the backend and a spinner is showing.
@@ -150,8 +174,9 @@
                         id={`${member.uuid}-${permission}`}
                         bind:group={newPermissions}
                         value={permission}
+                        disabled={enforcedPermissions.includes(permission)}
                         type="checkbox"
-                        class="w-4 h-4 mr-2 rounded border border-gray-200 dark:border-gray-700 bg-transparent ring-blue-500 focus:border-blue-500 !ring-offset-0"
+                        class="w-4 h-4 mr-2 rounded disabled:bg-gray-300 disabled:hover:bg-gray-300 border border-gray-200 dark:border-gray-700 bg-transparent ring-blue-500 focus:border-blue-500 !ring-offset-0"
                     />
                     <label for={`${member.uuid}-${permission}`}>{permission}</label>
                 </div>

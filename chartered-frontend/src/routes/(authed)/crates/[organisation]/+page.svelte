@@ -183,6 +183,7 @@
                             {member}
                             organisation={$page.params.organisation}
                             possiblePermissions={organisation.possible_permissions}
+                            impliedPermissions={organisation.implied_permissions}
                             on:updated={reload}
                         />
                     {/each}
@@ -193,6 +194,7 @@
                             newPermissions={['VISIBLE']}
                             organisation={$page.params.organisation}
                             possiblePermissions={organisation.possible_permissions}
+                            impliedPermissions={organisation.implied_permissions}
                             on:updated={reload}
                         />
                     {/if}

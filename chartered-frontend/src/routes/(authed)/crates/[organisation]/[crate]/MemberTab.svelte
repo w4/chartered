@@ -33,6 +33,7 @@
                 organisation={$page.params.organisation}
                 crate={$page.params.crate}
                 possiblePermissions={members.possible_permissions}
+                impliedPermissions={members.implied_permissions}
                 on:updated={reloadMembers}
             />
         {/each}
@@ -44,6 +45,7 @@
                 organisation={$page.params.organisation}
                 crate={$page.params.crate}
                 possiblePermissions={members.possible_permissions}
+                impliedPermissions={members.implied_permissions}
                 on:updated={reloadMembers}
             />
         {/if}
