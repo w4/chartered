@@ -4,6 +4,7 @@
     import ErrorAlert from '../../../../components/ErrorAlert.svelte';
     import { goto } from '$app/navigation';
     import { getErrorMessage } from '../../../../util';
+    import Icon from '../../../../components/Icon.svelte';
 
     /**
      * Once OAuth providers are loaded this will contain whether password auth
@@ -84,6 +85,17 @@
         passwordAllowed = v.password;
         return v;
     });
+
+    const friendlyOauthMapping: { [s: string]: { name: string; icon: string } } = {
+        github: {
+            name: 'GitHub',
+            icon: 'github',
+        },
+        gitlab: {
+            name: 'GitLab',
+            icon: 'gitlab',
+        },
+    };
 </script>
 
 <Spinner hidden={!loginInProgress} />
@@ -113,8 +125,13 @@
         <div class:!hidden={!oauthProviders.password} class="side-lines">or</div>
 
         {#each oauthProviders.providers as provider}
-            <button on:click={() => doLoginOAuth(provider)}>
-                Login with {provider}
+            <button on:click={() => doLoginOAuth(provider)} class="flex items-center justify-center">
+                {#if friendlyOauthMapping[provider]?.icon}
+                    <span class="mr-2">
+                        <Icon name={friendlyOauthMapping[provider].icon} />
+                    </span>
+                {/if}
+                Login with {friendlyOauthMapping[provider]?.name || friendlyOauthMapping}
             </button>
         {/each}
     {/await}
