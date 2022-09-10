@@ -9,6 +9,10 @@
     import VersionTab from './VersionTab.svelte';
     import MemberTab from './MemberTab.svelte';
 
+    // lookup the crate currently requested by the user based on the URL
+    let cratePromise: Promise<Crate>;
+    $: cratePromise = request(`/web/v1/crates/${$page.params.organisation}/${$page.params.crate}`);
+
     /**
      * Contains all the possible tabs, used for maintaining state on the current tab.
      */
@@ -22,7 +26,7 @@
      * Mapping of `Tab`s to their human-readable form alongside a friendly icon to show to the
      * user.
      */
-    const allTabs = [
+    let allTabs = [
         {
             id: Tab.README,
             name: 'Readme',
@@ -33,19 +37,37 @@
             name: 'Versions',
             icon: 'archive',
         },
-        {
-            id: Tab.MEMBERS,
-            name: 'Members',
-            icon: 'user',
-        },
     ];
-
-    // lookup the crate currently requested by the user based on the URL
-    let cratePromise: Promise<Crate>;
-    $: cratePromise = request(`/web/v1/crates/${$page.params.organisation}/${$page.params.crate}`);
 
     // binding to the current tab the user has selected
     let currentTab = Tab.README;
+
+    $: cratePromise.then((crate) => {
+        if (crate.permissions.includes('MANAGE_USERS')) {
+            // user has access to the member page but the tab isn't currently being shown, so we should
+            // add it
+            if (!allTabs.some((tab) => tab.id === Tab.MEMBERS)) {
+                allTabs = [
+                    ...allTabs,
+                    {
+                        id: Tab.MEMBERS,
+                        name: 'Members',
+                        icon: 'user',
+                    },
+                ];
+            }
+        } else {
+            // user doesn't have access to the members page for this crate, so remove it from the tab
+            // list, if it exists
+            allTabs = allTabs.filter((tab) => tab.id !== Tab.MEMBERS);
+
+            // if the user's currently on the MEMBERS page, move them off it so they don't end up with
+            // a blank page
+            if (currentTab === Tab.MEMBERS) {
+                currentTab = Tab.README;
+            }
+        }
+    });
 </script>
 
 <header>

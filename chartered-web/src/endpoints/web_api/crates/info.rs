@@ -6,7 +6,7 @@
 //! need to have version-specific info responses - we'll just send an overview of each one.
 
 use axum::{extract, response::IntoResponse, Json};
-use chartered_db::{crates::Crate, users::User, ConnectionPool};
+use chartered_db::{crates::Crate, permissions::UserPermission, users::User, ConnectionPool};
 use chartered_types::cargo::CrateVersion;
 use chrono::TimeZone;
 use serde::Serialize;
@@ -42,6 +42,7 @@ pub async fn handle(
                 },
             })
             .collect(),
+        permissions: crate_with_permissions.permissions,
     })
     // returning a Response instead of Json here so we don't have to clone
     // every Crate/CrateVersion etc, would be easier if we just had an owned
@@ -56,6 +57,7 @@ pub struct Response<'a> {
     #[serde(flatten)]
     info: ResponseInfo<'a>,
     versions: Vec<ResponseVersion<'a>>,
+    permissions: UserPermission,
 }
 
 #[derive(Serialize)]

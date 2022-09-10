@@ -39,21 +39,43 @@
      * Mapping of `Tab`s to their human-readable form alongside a friendly icon to show to the
      * user.
      */
-    const allTabs = [
+    let allTabs: { id: Tab; name: string; icon: string }[] = [
         {
             id: Tab.CRATES,
             name: 'Crates',
             icon: 'package',
         },
-        {
-            id: Tab.MEMBERS,
-            name: 'Members',
-            icon: 'user',
-        },
     ];
 
     // binding to the current tab the user has selected
     let currentTab = Tab.CRATES;
+
+    $: organisationPromise.then((org) => {
+        if (org.members) {
+            // user has access to the member page but the tab isn't currently being shown, so we should
+            // add it
+            if (!allTabs.some((tab) => tab.id === Tab.MEMBERS)) {
+                allTabs = [
+                    ...allTabs,
+                    {
+                        id: Tab.MEMBERS,
+                        name: 'Members',
+                        icon: 'user',
+                    },
+                ];
+            }
+        } else {
+            // user doesn't have access to the members page for this org, so remove it from the tab
+            // list, if it exists
+            allTabs = allTabs.filter((tab) => tab.id !== Tab.CRATES);
+
+            // make sure the current tab is MEMBERS switch them off it, so we don't leave them with
+            // an empty page
+            if (currentTab === Tab.MEMBERS) {
+                currentTab = Tab.CRATES;
+            }
+        }
+    });
 
     // contains the member the user is currently considering adding to the org & has not yet persisted to
     // the server.

@@ -6,6 +6,8 @@ export interface Crate {
     homepage?: string;
     documentation?: string;
     versions: Version[];
+    /// The current user's permissions for this crate, taking org permissions into account
+    permissions: string;
 }
 
 export interface Version {
