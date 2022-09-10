@@ -2,5 +2,5 @@
     import { goto } from '$app/navigation';
 
     // redirect to list view
-    goto('/organisations/list');
+    goto('/organisations/list', { replaceState: true });
 </script>
