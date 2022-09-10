@@ -1,6 +1,5 @@
 <script type="typescript">
     import { request } from '../../../stores/auth';
-    import Spinner from '../../../components/Spinner.svelte';
     import ErrorAlert from '../../../components/ErrorAlert.svelte';
     import SingleSshKey from './SingleSshKey.svelte';
     import type { SshKeys, SshKey } from '../../../types/ssh_keys';
@@ -45,8 +44,12 @@
 
 <main class="container mx-auto p-10 pt-0">
     {#await sshKeysPromise}
-        <div class="relative h-4">
-            <Spinner />
+        <div class="card mb-4 p-2">
+            <div class="overflow-scroll">
+                <div class="w-fit min-w-full">
+                    <SingleSshKey sshKey={null} />
+                </div>
+            </div>
         </div>
     {:then sshKeys}
         <div class:hidden={sshKeys.keys.length === 0} class="card mb-4 p-2">
@@ -60,11 +63,11 @@
                 </div>
             </div>
         </div>
-
-        <CreateKeyForm on:complete={reloadSshKeys} />
     {:catch e}
         <ErrorAlert showClose={false}>{e}</ErrorAlert>
     {/await}
+
+    <CreateKeyForm on:complete={reloadSshKeys} />
 </main>
 
 {#if deleting}

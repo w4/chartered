@@ -3,7 +3,6 @@
     import rustLogo from '../../img/rust.svg';
     import { request } from '../../stores/auth';
     import RelativeTime from '../../components/RelativeTime.svelte';
-    import Spinner from '../../components/Spinner.svelte';
     import type { MostDownloaded, RecentlyCreated, RecentlyUpdated } from '../../types/featured_crate';
     import FeaturedCrate from '../../components/FeaturedCrate.svelte';
     import ErrorAlert from '../../components/ErrorAlert.svelte';
@@ -39,9 +38,14 @@
             <h3 class="text-3xl mb-2">Newly created</h3>
 
             {#await recentlyCreatedPromise}
-                <div class="relative h-12">
-                    <Spinner />
-                </div>
+                {#each [1, 2, 3, 4, 5] as _}
+                    <FeaturedCrate crate={null}>
+                        <div class="my-0.5 flex items-center space-x-1">
+                            <Icon name="calendar" />
+                            <div class="skeleton w-16" />
+                        </div>
+                    </FeaturedCrate>
+                {/each}
             {:then recentlyCreated}
                 {#each recentlyCreated.crates as crate}
                     <FeaturedCrate {crate}>
@@ -58,9 +62,11 @@
             <h3 class="text-3xl mb-2">Recently updated</h3>
 
             {#await recentlyUpdatedPromise}
-                <div class="relative h-12">
-                    <Spinner />
-                </div>
+                {#each [1, 2, 3, 4, 5] as _}
+                    <FeaturedCrate crate={null}>
+                        <div class="skeleton w-9 my-1" />
+                    </FeaturedCrate>
+                {/each}
             {:then recentlyUpdated}
                 {#each recentlyUpdated.versions as crate}
                     <FeaturedCrate {crate}>
@@ -76,9 +82,14 @@
             <h3 class="text-3xl mb-2">Most downloaded</h3>
 
             {#await mostDownloadedPromise}
-                <div class="relative h-12">
-                    <Spinner />
-                </div>
+                {#each [1, 2, 3, 4, 5] as _}
+                    <FeaturedCrate crate={null}>
+                        <div class="my-0.5 flex items-center space-x-1">
+                            <Icon name="download" />
+                            <div class="skeleton w-8" />
+                        </div>
+                    </FeaturedCrate>
+                {/each}
             {:then mostDownloaded}
                 {#each mostDownloaded.crates as crate}
                     <FeaturedCrate {crate}>

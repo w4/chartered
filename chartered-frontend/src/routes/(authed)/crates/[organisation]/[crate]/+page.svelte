@@ -57,7 +57,36 @@
                 >
             </h1>
 
-            {#await cratePromise then crate}
+            {#await cratePromise}
+                <div class="h-6">
+                    <div class="skeleton inline-block mr-2 w-12" />
+                    <div class="skeleton inline-block mr-2 w-24" />
+                    <div class="skeleton inline-block mr-2 w-16" />
+                    <div class="skeleton inline-block mr-2 w-32" />
+                    <div class="skeleton inline-block mr-2 w-12" />
+                    <div class="skeleton inline-block w-10" />
+                </div>
+
+                <div class="space-x-2">
+                    <div class="card-header-button btn-skeleton-outline">
+                        &nbsp;
+                        <div class="skeleton inline-block w-10" />
+                        &nbsp;
+                    </div>
+
+                    <div class="card-header-button btn-skeleton-outline">
+                        &nbsp;
+                        <div class="skeleton inline-block w-10" />
+                        &nbsp;
+                    </div>
+
+                    <div class="card-header-button btn-skeleton-outline">
+                        &nbsp;
+                        <div class="skeleton inline-block w-10" />
+                        &nbsp;
+                    </div>
+                </div>
+            {:then crate}
                 <h2>
                     {#if crate.description}
                         {crate.description}
@@ -94,57 +123,80 @@
 </header>
 
 <main class="container mx-auto p-10 pt-0 grid grid-cols-12 gap-6 relative">
-    {#await cratePromise}
-        <Spinner />
-    {:then crate}
-        <div class="card col-span-full lg:col-span-9 p-0">
-            <div class="border-b border-gray-200 dark:border-gray-700">
-                <ul class="flex flex-wrap -mb-px text-sm font-medium text-center text-gray-500 dark:text-gray-400">
-                    {#each allTabs as tab}
-                        <li class="mr-2">
-                            <button
-                                on:click={() => (currentTab = tab.id)}
-                                class:!border-blue-500={currentTab === tab.id}
-                                class:text-blue-500={currentTab === tab.id}
-                                aria-current={currentTab === tab.id ? 'page' : false}
-                                class="inline-flex items-center space-x-2 p-4 rounded-t-lg border-b-2 border-transparent"
-                            >
-                                <Icon name={tab.icon} /> <span>{tab.name}</span>
-                            </button>
-                        </li>
-                    {/each}
-                </ul>
-            </div>
+    <div class="card col-span-full lg:col-span-9 p-0">
+        <div class="border-b border-gray-200 dark:border-gray-700">
+            <ul class="flex flex-wrap -mb-px text-sm font-medium text-center text-gray-500 dark:text-gray-400">
+                {#each allTabs as tab}
+                    <li class="mr-2">
+                        <button
+                            on:click={() => (currentTab = tab.id)}
+                            class:!border-blue-500={currentTab === tab.id}
+                            class:text-blue-500={currentTab === tab.id}
+                            aria-current={currentTab === tab.id ? 'page' : false}
+                            class="inline-flex items-center space-x-2 p-4 rounded-t-lg border-b-2 border-transparent"
+                        >
+                            <Icon name={tab.icon} /> <span>{tab.name}</span>
+                        </button>
+                    </li>
+                {/each}
+            </ul>
+        </div>
 
-            {#if currentTab === Tab.README}
-                <article
-                    class="mt-8 px-6 pb-6 prose dark:prose-invert text-inherit max-w-full prose-headings:text-inherit hover:prose-a:text-blue-600 prose-a:text-blue-500 prose-code:p-1 prose-code:bg-slate-100 dark:prose-code:bg-slate-700 prose-code:rounded-lg prose-pre:bg-slate-100 dark:prose-pre:bg-slate-700 leading-6 before:prose-code:content-none after:prose-code:content-none prose-code:text-pink-400 prose-code:font-normal prose-strong:text-inherit prose-img:inline prose-img:my-0"
-                >
+        {#if currentTab === Tab.README}
+            <article
+                class="mt-8 px-6 pb-6 prose dark:prose-invert text-inherit max-w-full prose-headings:text-inherit hover:prose-a:text-blue-600 prose-a:text-blue-500 prose-code:p-1 prose-code:bg-slate-100 dark:prose-code:bg-slate-700 prose-code:rounded-lg prose-pre:bg-slate-100 dark:prose-pre:bg-slate-700 leading-6 before:prose-code:content-none after:prose-code:content-none prose-code:text-pink-400 prose-code:font-normal prose-strong:text-inherit prose-img:inline prose-img:my-0"
+            >
+                {#await cratePromise}
+                    <div class="skeleton inline-block mr-2 w-24" />
+                    <br /><br />
+                    {#each [...Array(200).keys()] as _}
+                        <div
+                            style={`width: ${Math.max(Math.random() * 24, 4)}rem`}
+                            class={`skeleton inline-block mr-2`}
+                        />
+                    {/each}
+                {:then crate}
                     <SvelteMarkdown source={crate.readme} />
-                </article>
-            {:else if currentTab === Tab.MEMBERS}
-                <MemberTab />
-            {:else if currentTab === Tab.VERSIONS}
-                <div class="divide-y divide-gray-200 dark:divide-gray-700">
+                {/await}
+            </article>
+        {:else if currentTab === Tab.MEMBERS}
+            <MemberTab />
+        {:else if currentTab === Tab.VERSIONS}
+            <div class="divide-y divide-gray-200 dark:divide-gray-700">
+                {#await cratePromise}
+                    <div class="relative h-20"><Spinner /></div>
+                {:then crate}
                     {#each crate.versions as version}
                         <VersionTab {version} class="p-6" />
                     {/each}
-                </div>
-            {/if}
-        </div>
+                {/await}
+            </div>
+        {/if}
+    </div>
 
-        <div class="col-span-full lg:col-span-3">
-            <div class="card p-0">
-                <h1 class="text-xl p-3 border-b border-gray-200 dark:border-gray-700 font-medium">Dependencies</h1>
+    <div class="col-span-full lg:col-span-3">
+        <div class="card p-0">
+            <h1 class="text-xl p-3 border-b border-gray-200 dark:border-gray-700 font-medium">Dependencies</h1>
 
-                <div class="divide-y divide-gray-200 dark:divide-gray-700">
+            <div class="divide-y divide-gray-200 dark:divide-gray-700">
+                {#await cratePromise}
+                    {#each [...Array(Math.floor(Math.random() * 8 + 5)).keys()] as _}
+                        <div class="flex items-center py-5">
+                            <div
+                                style={`width: ${Math.max(Math.random() * 12, 4)}rem`}
+                                class={`skeleton inline-block ml-3 mr-2`}
+                            />
+                            <div class={`skeleton inline-block mr-3 w-12`} />
+                        </div>
+                    {/each}
+                {:then crate}
                     {#each crate.versions[0].deps as dependency}
                         <Dependency {dependency} class="p-3" />
                     {/each}
-                </div>
+                {/await}
             </div>
         </div>
-    {/await}
+    </div>
 </main>
 
 <style lang="postcss">

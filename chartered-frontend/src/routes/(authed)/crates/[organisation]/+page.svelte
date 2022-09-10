@@ -1,7 +1,6 @@
 <script type="typescript">
     import { page } from '$app/stores';
     import { request } from '../../../../stores/auth';
-    import Spinner from '../../../../components/Spinner.svelte';
     import ErrorAlert from '../../../../components/ErrorAlert.svelte';
     import Icon from '../../../../components/Icon.svelte';
     import type { OrganisationDetail } from '../../../../types/organisations';
@@ -70,8 +69,13 @@
 
             <h2>
                 {#await organisationPromise}
-                    <div class="relative h-4 w-4">
-                        <Spinner />
+                    <div class="h-6">
+                        <div class="skeleton inline-block mr-2 w-24" />
+                        <div class="skeleton inline-block mr-2 w-8" />
+                        <div class="skeleton inline-block mr-2 w-16" />
+                        <div class="skeleton inline-block mr-2 w-12" />
+                        <div class="skeleton inline-block mr-2 w-9" />
+                        <div class="skeleton inline-block w-10" />
                     </div>
                 {:then organisation}
                     {#if organisation.description}
@@ -110,8 +114,24 @@
 
     <div class="mt-4">
         {#await organisationPromise}
-            <div class="relative h-14">
-                <Spinner />
+            <div class="grid gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                {#each [1, 2, 3] as _}
+                    <div class="card">
+                        <div class="card-header flex items-center my-4">
+                            <div class="skeleton mr-2 w-24" />
+                            <div class="skeleton-highlight w-16" />
+                        </div>
+
+                        <div class="card-body">
+                            <div class="skeleton inline-block mr-2 w-24" />
+                            <div class="skeleton inline-block mr-2 w-8" />
+                            <div class="skeleton inline-block mr-2 w-16" />
+                            <div class="skeleton inline-block mr-2 w-12" />
+                            <div class="skeleton inline-block mr-2 w-9" />
+                            <div class="skeleton inline-block w-10" />
+                        </div>
+                    </div>
+                {/each}
             </div>
         {:then organisation}
             {#if currentTab === Tab.CRATES}

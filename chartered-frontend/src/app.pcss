@@ -55,8 +55,20 @@ body {
     .btn-blue-outline {
         @apply w-fit mt-3 text-blue-700 dark:text-inherit hover:text-white border border-blue-700 hover:bg-blue-700 dark:bg-transparent focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:border-blue-600 dark:hover:bg-blue-600 focus:outline-none dark:focus:ring-blue-800 transition duration-150 ease-out;
     }
+
+    .btn-skeleton-outline {
+        @apply w-fit mt-3 border border-slate-700 bg-transparent font-medium rounded-lg text-sm px-5 py-2.5 pointer-events-none;
+    }
 }
 
 .text-highlight {
     @apply text-blue-700 dark:text-blue-600;
+}
+
+.skeleton {
+    @apply h-2 bg-slate-700 rounded animate-pulse;
+}
+
+.skeleton-highlight {
+    @apply h-2 bg-blue-700 rounded animate-pulse;
 }

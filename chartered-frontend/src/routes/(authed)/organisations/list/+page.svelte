@@ -1,5 +1,4 @@
 <script type="typescript">
-    import Spinner from '../../../../components/Spinner.svelte';
     import { request } from '../../../../stores/auth';
     import type { OrganisationList } from '../../../../types/organisations';
     import ErrorAlert from '../../../../components/ErrorAlert.svelte';
@@ -26,8 +25,29 @@
 
 <main class="container mx-auto p-10 pt-0">
     {#await organisationsPromise}
-        <div class="relative h-4">
-            <Spinner />
+        <div class="mb-4 grid md:grid-cols-2 lg:grid-cols-4 gap-2">
+            {#each [1, 2, 3] as _}
+                <div class="card flex space-x-2 items-center">
+                    <div class="flex-grow h-full">
+                        <div class="card-header">
+                            <div class="skeleton-highlight w-32" />
+                        </div>
+
+                        <div class="card-body">
+                            <div class="skeleton inline-block mr-2 w-24" />
+                            <div class="skeleton inline-block mr-2 w-8" />
+                            <div class="skeleton inline-block mr-2 w-16" />
+                            <div class="skeleton inline-block mr-2 w-12" />
+                            <div class="skeleton inline-block mr-2 w-9" />
+                            <div class="skeleton inline-block w-10" />
+                        </div>
+                    </div>
+
+                    <div class="min-w-[48px]">
+                        <img alt="Placeholder" class="rounded-[50%]" src="http://placekitten.com/48/48" />
+                    </div>
+                </div>
+            {/each}
         </div>
     {:then organisations}
         <div
@@ -60,9 +80,9 @@
                 one.
             </div>
         {/if}
-
-        <a href="/organisations/create" class="inline-flex items-center btn-blue-outline"> + Create </a>
     {:catch e}
         <ErrorAlert showClose={false}>{e}</ErrorAlert>
     {/await}
+
+    <a href="/organisations/create" class="inline-flex items-center btn-blue-outline"> + Create </a>
 </main>
