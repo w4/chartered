@@ -81,7 +81,10 @@ fn get_crate_folder(crate_name: &str) -> ArrayVec<&str, 2> {
         0 => {}
         1 => folders.push("1"),
         2 => folders.push("2"),
-        3 => folders.push("3"),
+        3 => {
+            folders.push("3");
+            folders.push(&crate_name[..1]);
+        }
         _ => {
             folders.push(&crate_name[..2]);
             folders.push(&crate_name[2..4]);
@@ -112,7 +115,7 @@ mod test {
         let folder = super::get_crate_folder("abc");
         let mut folder = folder.iter();
         assert_eq!(folder.next(), Some(&"3"));
-        assert_eq!(folder.next(), None);
+        assert_eq!(folder.next(), Some(&"a"));
 
         let folder = super::get_crate_folder("abcd");
         let mut folder = folder.iter();
