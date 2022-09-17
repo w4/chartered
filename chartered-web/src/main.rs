@@ -6,6 +6,7 @@ mod config;
 mod endpoints;
 mod middleware;
 
+use crate::middleware::ip::AddIp;
 use crate::middleware::rate_limit::RateLimit;
 use axum::{
     http::{header, Method},
@@ -127,7 +128,8 @@ async fn main() -> Result<(), InitError> {
         .layer(Extension(Arc::new(config.create_oidc_clients().await?)))
         .layer(Extension(Arc::new(config.get_file_system().await?)))
         .layer(Extension(config.clone()))
-        .layer(Extension(http_client));
+        .layer(Extension(http_client))
+        .layer(AddIp::new(config.trusted_ip_header.clone()));
 
     info!("HTTP server listening on {}", bind_address);
 

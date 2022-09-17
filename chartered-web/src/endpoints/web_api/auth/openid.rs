@@ -3,6 +3,7 @@
 //! the authentication.
 
 use crate::config::{Config, OidcClient, OidcClients};
+
 use axum::{extract, Json};
 use chacha20poly1305::{aead::Aead, ChaCha20Poly1305, KeyInit, Nonce as ChaCha20Poly1305Nonce};
 use chartered_db::{users::User, ConnectionPool};
@@ -12,9 +13,10 @@ use oauth2::{
 };
 use openid::{Options, Token, Userinfo};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use thiserror::Error;
 use url::Url;
+
+use std::{net::IpAddr, sync::Arc};
 
 pub type Nonce = [u8; 16];
 
@@ -82,7 +84,7 @@ pub async fn complete_oidc(
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(http_client): extract::Extension<reqwest::Client>,
     user_agent: Option<extract::TypedHeader<headers::UserAgent>>,
-    addr: extract::ConnectInfo<std::net::SocketAddr>,
+    addr: extract::Extension<IpAddr>,
 ) -> Result<Json<super::LoginResponse>, Error> {
     // decrypt the state that we created in `begin_oidc` and parse it as json
     let state: State = serde_json::from_slice(&decrypt_url_safe(&params.state, &config)?)?;

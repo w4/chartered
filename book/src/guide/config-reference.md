@@ -81,6 +81,7 @@ database_uri = "postgres://user:password@localhost/chartered" # can also be `sql
 storage_uri  = "s3://s3-eu-west-1.amazonaws.com/my-cool-crate-store/" # or file:///var/lib/chartered
 
 frontend_base_uri = "http://localhost:5173/"
+trusted_ip_header = "x-forwarded-for"
 
 [auth.password]
 enabled = true # enables password auth 
@@ -118,6 +119,12 @@ A URI in which crates should be stored, this can either be an `s3://` connection
 - Type: `string`
 
 The base URL at which the frontend is being hosted.
+
+#### `trusted_ip_header`
+- Type: `string`
+- Default: null
+
+Allows a header to override the socket address as the end user's IP address
 
 #### `[auth.password]`
 The `[auth.password]` table controls the username/password-based authentication method.

@@ -1,8 +1,10 @@
-use axum::handler::Handler;
+use crate::middleware::rate_limit::RateLimit;
+
 use axum::{
     extract,
+    handler::Handler,
     routing::{get, post},
-    Router,
+    Extension, Router,
 };
 use chartered_db::{
     users::{User, UserSession},
@@ -11,7 +13,7 @@ use chartered_db::{
 };
 use serde::Serialize;
 
-use crate::middleware::rate_limit::RateLimit;
+use std::net::IpAddr;
 
 pub mod extend;
 pub mod logout;
@@ -68,7 +70,7 @@ pub async fn login(
     db: ConnectionPool,
     user: User,
     user_agent: Option<extract::TypedHeader<headers::UserAgent>>,
-    extract::ConnectInfo(addr): extract::ConnectInfo<std::net::SocketAddr>,
+    Extension(addr): Extension<IpAddr>,
 ) -> Result<LoginResponse, chartered_db::Error> {
     let user_agent = if let Some(extract::TypedHeader(user_agent)) = user_agent {
         Some(user_agent.as_str().to_string())

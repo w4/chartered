@@ -25,6 +25,7 @@ pub struct Config {
     pub database_uri: String,
     pub storage_uri: String,
     pub frontend_base_uri: Url,
+    pub trusted_ip_header: Option<String>,
     pub auth: AuthConfig,
     #[serde(deserialize_with = "deserialize_encryption_key")]
     pub encryption_key: ChaCha20Poly1305Key,

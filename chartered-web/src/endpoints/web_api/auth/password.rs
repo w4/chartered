@@ -1,11 +1,13 @@
 //! Password-based authentication, including registration and login.
 
 use crate::config::Config;
+
 use axum::{extract, Json};
 use chartered_db::{users::User, ConnectionPool};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use thiserror::Error;
+
+use std::{net::IpAddr, sync::Arc};
 
 pub async fn handle_register(
     extract::Extension(config): extract::Extension<Arc<Config>>,
@@ -35,7 +37,7 @@ pub async fn handle_login(
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Json(req): extract::Json<LoginRequest>,
     user_agent: Option<extract::TypedHeader<headers::UserAgent>>,
-    addr: extract::ConnectInfo<std::net::SocketAddr>,
+    addr: extract::Extension<IpAddr>,
 ) -> Result<Json<super::LoginResponse>, LoginError> {
     // some basic validation before we attempt a login
     if !config.auth.password.enabled {

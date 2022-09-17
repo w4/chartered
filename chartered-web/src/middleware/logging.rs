@@ -7,12 +7,14 @@ use axum::{
 use futures::future::BoxFuture;
 use once_cell::sync::Lazy;
 use regex::Regex;
-use std::{
-    fmt::Debug,
-    task::{Context, Poll},
-};
 use tower::Service;
 use tracing::{error, info, Instrument};
+
+use std::{
+    fmt::Debug,
+    net::IpAddr,
+    task::{Context, Poll},
+};
 
 pub trait GenericError: std::error::Error + Debug + Send + Sync {}
 
@@ -54,9 +56,9 @@ where
             let uri = replace_sensitive_path(req.uri().path());
 
             let mut req = RequestParts::new(req);
-            let socket_addr = extract::ConnectInfo::<std::net::SocketAddr>::from_request(&mut req)
+            let ip_addr = extract::Extension::<IpAddr>::from_request(&mut req)
                 .await
-                .map_or_else(|_| "0.0.0.0:0".parse().unwrap(), |v| v.0);
+                .map_or_else(|_| "0.0.0.0".parse().unwrap(), |v| v.0);
 
             // this is infallible because of the type of S::Error
             let response = inner.call(req.try_into_request().unwrap()).await?;
@@ -64,7 +66,7 @@ where
             if response.status().is_server_error() {
                 error!(
                     "{ip} - \"{method} {uri}\" {status} {duration:?} \"{user_agent}\" \"{error:?}\"",
-                    ip = socket_addr,
+                    ip = ip_addr,
                     method = method,
                     uri = uri,
                     status = response.status().as_u16(),
@@ -81,7 +83,7 @@ where
             } else {
                 info!(
                     "{ip} - \"{method} {uri}\" {status} {duration:?} \"{user_agent}\" \"{error:?}\"",
-                    ip = socket_addr,
+                    ip = ip_addr,
                     method = method,
                     uri = uri,
                     status = response.status().as_u16(),

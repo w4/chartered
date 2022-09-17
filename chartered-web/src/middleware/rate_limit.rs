@@ -90,14 +90,11 @@ where
 
         Box::pin(async move {
             let mut req = RequestParts::new(req);
-            let socket_addr = extract::ConnectInfo::<std::net::SocketAddr>::from_request(&mut req)
+            let ip_addr = extract::Extension::<IpAddr>::from_request(&mut req)
                 .await
                 .map(|v| v.0);
 
-            if let Ok(socket_addr) = socket_addr {
-                // TODO: cloudflare?
-                let addr = socket_addr.ip();
-
+            if let Ok(addr) = ip_addr {
                 if let Err(_e) = this.governor.check_key_n(&addr, this.cost) {
                     return Ok(Response::builder()
                         .status(StatusCode::TOO_MANY_REQUESTS)
