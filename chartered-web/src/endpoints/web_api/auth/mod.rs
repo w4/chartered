@@ -1,3 +1,4 @@
+use axum::handler::Handler;
 use axum::{
     extract,
     routing::{get, post},
@@ -8,27 +9,49 @@ use chartered_db::{
     uuid::Uuid,
     ConnectionPool,
 };
-
 use serde::Serialize;
+
+use crate::middleware::rate_limit::RateLimit;
 
 pub mod extend;
 pub mod logout;
 pub mod openid;
 pub mod password;
 
-pub fn authenticated_routes() -> Router {
+pub fn authenticated_routes(rate_limit: &RateLimit) -> Router {
     Router::new()
-        .route("/logout", get(logout::handle))
-        .route("/extend", get(extend::handle))
+        .route(
+            "/logout",
+            get(logout::handle.layer(rate_limit.with_cost(5))),
+        )
+        .route(
+            "/extend",
+            get(extend::handle.layer(rate_limit.with_cost(1))),
+        )
 }
 
-pub fn unauthenticated_routes() -> Router {
+pub fn unauthenticated_routes(rate_limit: &RateLimit) -> Router {
     Router::new()
-        .route("/register/password", post(password::handle_register))
-        .route("/login/password", post(password::handle_login))
-        .route("/login/oauth/:provider/begin", get(openid::begin_oidc))
-        .route("/login/oauth/complete", get(openid::complete_oidc))
-        .route("/login/oauth/providers", get(openid::list_providers))
+        .route(
+            "/register/password",
+            post(password::handle_register.layer(rate_limit.with_cost(200))),
+        )
+        .route(
+            "/login/password",
+            post(password::handle_login.layer(rate_limit.with_cost(100))),
+        )
+        .route(
+            "/login/oauth/:provider/begin",
+            get(openid::begin_oidc.layer(rate_limit.with_cost(1))),
+        )
+        .route(
+            "/login/oauth/complete",
+            get(openid::complete_oidc.layer(rate_limit.with_cost(75))),
+        )
+        .route(
+            "/login/oauth/providers",
+            get(openid::list_providers.layer(rate_limit.with_cost(1))),
+        )
 }
 
 #[derive(Serialize)]

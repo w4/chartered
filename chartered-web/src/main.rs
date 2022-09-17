@@ -6,12 +6,15 @@ mod config;
 mod endpoints;
 mod middleware;
 
+use crate::middleware::rate_limit::RateLimit;
 use axum::{
     http::{header, Method},
     routing::get,
     Extension, Router,
 };
 use clap::{crate_name, crate_version, Parser};
+use governor::Quota;
+use nonzero_ext::nonzero;
 use std::{fmt::Formatter, path::PathBuf, sync::Arc};
 use thiserror::Error;
 use tower::ServiceBuilder;
@@ -68,11 +71,13 @@ async fn main() -> Result<(), InitError> {
         .user_agent(format!("{}/{}", crate_name!(), crate_version!()))
         .build()?;
 
+    let rate_limit = RateLimit::new(Quota::per_hour(nonzero!(5000_u32)));
+
     let app = Router::new()
         .route("/", get(hello_world))
         .nest(
             "/web/v1",
-            endpoints::web_api::authenticated_routes().layer(
+            endpoints::web_api::authenticated_routes(&rate_limit).layer(
                 ServiceBuilder::new()
                     .layer_fn(crate::middleware::web_auth::WebAuthMiddleware)
                     .into_inner(),
@@ -80,11 +85,11 @@ async fn main() -> Result<(), InitError> {
         )
         .nest(
             "/web/v1/public",
-            endpoints::web_api::unauthenticated_routes(),
+            endpoints::web_api::unauthenticated_routes(&rate_limit),
         )
         .nest(
             "/a/:key/o/:organisation/api/v1",
-            endpoints::cargo_api::routes().layer(
+            endpoints::cargo_api::routes(&rate_limit).layer(
                 ServiceBuilder::new()
                     .layer_fn(crate::middleware::cargo_auth::CargoAuthMiddleware)
                     .into_inner(),

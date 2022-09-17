@@ -19,8 +19,10 @@ chacha20poly1305 = { version = "0.10", features = ["std"] }
 chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "3", features = ["cargo", "derive", "std", "suggestions", "color"] }
 futures = "0.3"
+governor = "0.4"
 headers = "0.3"
 hex = "0.4"
+nonzero_ext = "0.3.0"
 nom = "7"
 nom-bytes = { git = "https://github.com/w4/nom-bytes" }
 oauth2 = "4.2"

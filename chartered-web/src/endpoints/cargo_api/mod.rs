@@ -11,20 +11,37 @@ mod owners;
 mod publish;
 mod yank;
 
+use crate::RateLimit;
 use axum::{
+    handler::Handler,
     routing::{delete, get, put},
     Router,
 };
 
 // requests are already authenticated before this router
-pub fn routes() -> Router {
+pub fn routes(rate_limit: &RateLimit) -> Router {
     Router::new()
-        .route("/crates/new", put(publish::handle))
+        .route(
+            "/crates/new",
+            put(publish::handle.layer(rate_limit.with_cost(200))),
+        )
         // .route("/crates/search", get(hello_world))
-        .route("/crates/:crate/owners", get(owners::handle_get))
+        .route(
+            "/crates/:crate/owners",
+            get(owners::handle_get.layer(rate_limit.with_cost(1))),
+        )
         // .route("/crates/:crate/owners", put(hello_world))
         // .route("/crates/:crate/owners", delete(hello_world))
-        .route("/crates/:crate/:version/yank", delete(yank::handle_yank))
-        .route("/crates/:crate/:version/unyank", put(yank::handle_unyank))
-        .route("/crates/:crate/:version/download", get(download::handle))
+        .route(
+            "/crates/:crate/:version/yank",
+            delete(yank::handle_yank.layer(rate_limit.with_cost(50))),
+        )
+        .route(
+            "/crates/:crate/:version/unyank",
+            put(yank::handle_unyank.layer(rate_limit.with_cost(50))),
+        )
+        .route(
+            "/crates/:crate/:version/download",
+            get(download::handle.layer(rate_limit.with_cost(1))),
+        )
 }
