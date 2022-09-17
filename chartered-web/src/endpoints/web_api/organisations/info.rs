@@ -11,7 +11,7 @@ use std::sync::Arc;
 use thiserror::Error;
 
 pub async fn handle_get(
-    extract::Path((_session_key, organisation)): extract::Path<(String, String)>,
+    extract::Path(organisation): extract::Path<String>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(user): extract::Extension<Arc<User>>,
 ) -> Result<Json<Response>, Error> {

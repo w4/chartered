@@ -13,7 +13,7 @@ use crate::endpoints::ErrorResponse;
 
 /// Updates an organisation member's permissions
 pub async fn handle_patch(
-    extract::Path((_session_key, organisation)): extract::Path<(String, String)>,
+    extract::Path(organisation): extract::Path<String>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(user): extract::Extension<Arc<User>>,
     extract::Json(req): extract::Json<PutOrPatchRequest>,
@@ -37,7 +37,7 @@ pub async fn handle_patch(
 
 /// Adds a new member to the organisation with a given set of permissions.
 pub async fn handle_put(
-    extract::Path((_session_key, organisation)): extract::Path<(String, String)>,
+    extract::Path(organisation): extract::Path<String>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(user): extract::Extension<Arc<User>>,
     extract::Json(req): extract::Json<PutOrPatchRequest>,
@@ -58,7 +58,7 @@ pub async fn handle_put(
 
 /// Deletes a member from the organisation entirely
 pub async fn handle_delete(
-    extract::Path((_session_key, organisation)): extract::Path<(String, String)>,
+    extract::Path(organisation): extract::Path<String>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(user): extract::Extension<Arc<User>>,
     extract::Json(req): extract::Json<DeleteRequest>,

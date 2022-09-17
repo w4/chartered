@@ -49,8 +49,12 @@
 
         try {
             // submit deletion request to backend
-            let res = await fetch(`${BASE_URL}/a/${$auth?.auth_key}/web/v1/ssh-key/${deleting.uuid}`, {
+            let res = await fetch(`${BASE_URL}/web/v1/ssh-key/${deleting.uuid}`, {
                 method: 'DELETE',
+                headers: {
+                    Authorization: `Bearer ${$auth?.auth_key}`,
+                },
+                credentials: 'include',
             });
             let json: DeleteSshKeyResult = await res.json();
 

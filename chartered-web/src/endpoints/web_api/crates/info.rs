@@ -14,7 +14,7 @@ use std::sync::Arc;
 use thiserror::Error;
 
 pub async fn handle(
-    extract::Path((_session_key, organisation, name)): extract::Path<(String, String, String)>,
+    extract::Path((organisation, name)): extract::Path<(String, String)>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(user): extract::Extension<Arc<User>>,
 ) -> Result<axum::response::Response, Error> {

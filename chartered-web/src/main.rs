@@ -71,19 +71,22 @@ async fn main() -> Result<(), InitError> {
     let app = Router::new()
         .route("/", get(hello_world))
         .nest(
-            "/a/:key/web/v1",
+            "/web/v1",
             endpoints::web_api::authenticated_routes().layer(
                 ServiceBuilder::new()
-                    .layer_fn(crate::middleware::auth::AuthMiddleware)
+                    .layer_fn(crate::middleware::web_auth::WebAuthMiddleware)
                     .into_inner(),
             ),
         )
-        .nest("/a/-/web/v1", endpoints::web_api::unauthenticated_routes())
+        .nest(
+            "/web/v1/public",
+            endpoints::web_api::unauthenticated_routes(),
+        )
         .nest(
             "/a/:key/o/:organisation/api/v1",
             endpoints::cargo_api::routes().layer(
                 ServiceBuilder::new()
-                    .layer_fn(crate::middleware::auth::AuthMiddleware)
+                    .layer_fn(crate::middleware::cargo_auth::CargoAuthMiddleware)
                     .into_inner(),
             ),
         )
@@ -98,7 +101,11 @@ async fn main() -> Result<(), InitError> {
                     Method::PUT,
                     Method::OPTIONS,
                 ])
-                .allow_headers(vec![header::CONTENT_TYPE, header::USER_AGENT])
+                .allow_headers(vec![
+                    header::CONTENT_TYPE,
+                    header::USER_AGENT,
+                    header::AUTHORIZATION,
+                ])
                 .allow_origin(AllowOrigin::predicate({
                     let config = config.clone();
                     move |url, _| {
@@ -109,7 +116,7 @@ async fn main() -> Result<(), InitError> {
                             .unwrap_or_default()
                     }
                 }))
-                .allow_credentials(false),
+                .allow_credentials(true),
         )
         .layer(Extension(pool))
         .layer(Extension(Arc::new(config.create_oidc_clients().await?)))

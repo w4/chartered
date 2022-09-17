@@ -53,7 +53,7 @@ pub async fn handle_put(
 pub async fn handle_delete(
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(user): extract::Extension<Arc<User>>,
-    extract::Path((_session_key, ssh_key_id)): extract::Path<(String, Uuid)>,
+    extract::Path(ssh_key_id): extract::Path<Uuid>,
 ) -> Result<Json<ErrorResponse>, Error> {
     let deleted = user.delete_user_ssh_key_by_uuid(db, ssh_key_id).await?;
 

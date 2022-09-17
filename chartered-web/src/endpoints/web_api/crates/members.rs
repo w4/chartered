@@ -16,7 +16,7 @@ use crate::endpoints::ErrorResponse;
 ///
 /// These members could be specific to the crate or they could be overrides ontop of the org.
 pub async fn handle_get(
-    extract::Path((_session_key, organisation, name)): extract::Path<(String, String, String)>,
+    extract::Path((organisation, name)): extract::Path<(String, String)>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(user): extract::Extension<Arc<User>>,
 ) -> Result<Json<GetResponse>, Error> {
@@ -44,7 +44,7 @@ pub async fn handle_get(
 
 /// Updates a crate member's permissions
 pub async fn handle_patch(
-    extract::Path((_session_key, organisation, name)): extract::Path<(String, String, String)>,
+    extract::Path((organisation, name)): extract::Path<(String, String)>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(user): extract::Extension<Arc<User>>,
     extract::Json(req): extract::Json<PutOrPatchRequest>,
@@ -68,7 +68,7 @@ pub async fn handle_patch(
 
 /// Inserts an permissions override for this crate for a specific user
 pub async fn handle_put(
-    extract::Path((_session_key, organisation, name)): extract::Path<(String, String, String)>,
+    extract::Path((organisation, name)): extract::Path<(String, String)>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(user): extract::Extension<Arc<User>>,
     extract::Json(req): extract::Json<PutOrPatchRequest>,
@@ -89,7 +89,7 @@ pub async fn handle_put(
 
 /// Deletes a member override from this crate
 pub async fn handle_delete(
-    extract::Path((_session_key, organisation, name)): extract::Path<(String, String, String)>,
+    extract::Path((organisation, name)): extract::Path<(String, String)>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
     extract::Extension(user): extract::Extension<Arc<User>>,
     extract::Json(req): extract::Json<DeleteRequest>,

@@ -67,8 +67,7 @@ export async function extendSession() {
 
     try {
         // call chartered-web to attempt to extend the session
-        const result = await fetch(`${BASE_URL}/a/${currentAuth.auth_key}/web/v1/auth/extend`);
-        const json: ExtendResult = await result.json();
+        const json = await request<ExtendResult>(`/web/v1/auth/extend`);
 
         // backend returned an error, nothing we can do here
         if (json.error) {
@@ -124,7 +123,7 @@ type LoginResult = LoginResponse & Error;
  */
 export async function login(username: string, password: string) {
     // call the backend and attempt the authentication
-    const result = await fetch(`${BASE_URL}/a/-/web/v1/auth/login/password`, {
+    const result = await fetch(`${BASE_URL}/web/v1/public/auth/login/password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
@@ -153,7 +152,7 @@ export async function login(username: string, password: string) {
  */
 export async function handleOAuthCallback(params: string) {
     // call the backend and attempt the authentication
-    const result = await fetch(`${BASE_URL}/a/-/web/v1/auth/login/oauth/complete${params}`);
+    const result = await fetch(`${BASE_URL}/web/v1/public/auth/login/oauth/complete${params}`);
     const json: LoginResult = await result.json();
 
     // server returned an error, forward it on - there's nothing else we
@@ -192,7 +191,12 @@ export async function request<T>(url: string): Promise<T> {
         throw new Error('Not authenticated');
     }
 
-    const result = await fetch(`${BASE_URL}/a/${token}${url}`);
+    const result = await fetch(`${BASE_URL}${url}`, {
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+        credentials: 'include',
+    });
     const json: T & Error = await result.json();
 
     // TODO: handle 404s
@@ -209,7 +213,7 @@ export async function request<T>(url: string): Promise<T> {
  * @param provider OAuth provider as configured on the backend to grab an auth link for
  */
 export async function loginOAuth(provider: string) {
-    const result = await fetch(`${BASE_URL}/a/-/web/v1/auth/login/oauth/${provider}/begin`);
+    const result = await fetch(`${BASE_URL}/web/v1/public/auth/login/oauth/${provider}/begin`);
     const json: LoginOAuthResult = await result.json();
 
     if (json.error) {
@@ -231,7 +235,7 @@ export async function logout() {
         const authKey = get(auth)?.auth_key;
 
         if (authKey) {
-            await fetch(`${BASE_URL}/a/${authKey}/web/v1/auth/logout`);
+            await request<boolean>(`/web/v1/auth/logout`);
         }
     } catch (e) {
         console.error('Failed to fully log user out of session', e);
@@ -253,7 +257,7 @@ interface OAuthProviders {
  * Grab all the possible authentication methods from the backend.
  */
 export async function fetchOAuthProviders(): Promise<OAuthProviders> {
-    const result = await fetch(`${BASE_URL}/a/-/web/v1/auth/login/oauth/providers`);
+    const result = await fetch(`${BASE_URL}/web/v1/public/auth/login/oauth/providers`);
     return await result.json();
 }
 
@@ -274,7 +278,7 @@ type RegisterResult = RegisterResponse & Error;
  */
 export async function register(username: string, password: string) {
     // send register request to backend
-    const result = await fetch(`${BASE_URL}/a/-/web/v1/auth/register/password`, {
+    const result = await fetch(`${BASE_URL}/web/v1/public/auth/register/password`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

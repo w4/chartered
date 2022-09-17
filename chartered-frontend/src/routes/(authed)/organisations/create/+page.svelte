@@ -44,12 +44,14 @@
 
         try {
             // attempt the actual creation of the organisation
-            let result = await fetch(`${BASE_URL}/a/${$auth?.auth_key}/web/v1/organisations`, {
+            let result = await fetch(`${BASE_URL}/web/v1/organisations`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
+                    Authorization: `Bearer ${$auth?.auth_key}`,
                 },
                 body: JSON.stringify({ name, description, public: isPublic }),
+                credentials: 'include',
             });
             let json = await result.json();
 

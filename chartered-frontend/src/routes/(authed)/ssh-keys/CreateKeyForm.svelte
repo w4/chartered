@@ -41,12 +41,14 @@
 
         try {
             // submit the key to the backend
-            let result = await fetch(`${BASE_URL}/a/${$auth?.auth_key}/web/v1/ssh-key`, {
+            let result = await fetch(`${BASE_URL}/web/v1/ssh-key`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
+                    Authorization: `Bearer ${$auth?.auth_key}`,
                 },
                 body: JSON.stringify({ key: sshKey }),
+                credentials: 'include',
             });
             let json: AddSshKeyResult = await result.json();
 

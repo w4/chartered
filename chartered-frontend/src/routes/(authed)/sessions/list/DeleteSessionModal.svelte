@@ -48,12 +48,14 @@
 
         try {
             // submit deletion request to backend
-            let res = await fetch(`${BASE_URL}/a/${$auth?.auth_key}/web/v1/sessions`, {
+            let res = await fetch(`${BASE_URL}/web/v1/sessions`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
+                    Authorization: `Bearer ${$auth?.auth_key}`,
                 },
                 body: JSON.stringify({ uuid: deleting.uuid }),
+                credentials: 'include',
             });
             let json: { error?: string } = await res.json();
 

@@ -6,12 +6,11 @@ use axum::{
     extract::{self, FromRequest, RequestParts},
     http::{Request, Response, StatusCode},
 };
-use chartered_db::users::User;
-use chartered_db::ConnectionPool;
+use chartered_db::{users::User, ConnectionPool};
 use futures::future::BoxFuture;
-use std::sync::Arc;
 use std::{
     collections::HashMap,
+    sync::Arc,
     task::{Context, Poll},
 };
 use tower::Service;
@@ -19,9 +18,9 @@ use tower::Service;
 use crate::endpoints::ErrorResponse;
 
 #[derive(Clone)]
-pub struct AuthMiddleware<S>(pub S);
+pub struct CargoAuthMiddleware<S>(pub S);
 
-impl<S, ReqBody> Service<Request<ReqBody>> for AuthMiddleware<S>
+impl<S, ReqBody> Service<Request<ReqBody>> for CargoAuthMiddleware<S>
 where
     S: Service<Request<ReqBody>, Response = Response<BoxBody>> + Clone + Send + 'static,
     S::Future: Send + 'static,
@@ -74,6 +73,19 @@ where
                         .unwrap())
                 }
             };
+
+            if session.user_ssh_key_id.is_none() {
+                // Web sessions can't be used for the Cargo API
+                return Ok(Response::builder()
+                    .status(StatusCode::UNAUTHORIZED)
+                    .body(boxed(Body::from(
+                        serde_json::to_vec(&ErrorResponse {
+                            error: Some("Invalid auth token".into()),
+                        })
+                        .unwrap(),
+                    )))
+                    .unwrap());
+            }
 
             // insert both the user and the session into extensions so handlers can
             // get their hands on them

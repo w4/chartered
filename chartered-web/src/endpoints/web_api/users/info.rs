@@ -9,7 +9,7 @@ use serde::Serialize;
 use thiserror::Error;
 
 pub async fn handle(
-    extract::Path((_session_key, uuid)): extract::Path<(String, chartered_db::uuid::Uuid)>,
+    extract::Path(uuid): extract::Path<chartered_db::uuid::Uuid>,
     extract::Extension(db): extract::Extension<ConnectionPool>,
 ) -> Result<Json<Response>, Error> {
     let user = User::find_by_uuid(db, uuid).await?.ok_or(Error::NotFound)?;

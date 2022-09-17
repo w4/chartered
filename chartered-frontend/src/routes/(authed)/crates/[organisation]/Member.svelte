@@ -106,22 +106,24 @@
             // out which one we need to persist the changes to...
             let url;
             if (crate) {
-                url = `web/v1/crates/${organisation}/${crate}`;
+                url = `crates/${organisation}/${crate}`;
             } else {
-                url = `web/v1/organisations/${organisation}`;
+                url = `organisations/${organisation}`;
             }
 
             // send the membership update to the backend
-            let result = await fetch(`${BASE_URL}/a/${$auth?.auth_key}/${url}/members`, {
+            let result = await fetch(`${BASE_URL}/web/v1/${url}/members`, {
                 method,
                 headers: {
                     Accept: 'application/json',
                     'Content-Type': 'application/json',
+                    Authorization: `Bearer ${$auth?.auth_key}`,
                 },
                 body: JSON.stringify({
                     user_uuid: member.uuid,
                     permissions: newPermissions,
                 }),
+                credentials: 'include',
             });
 
             let json = await result.json();
