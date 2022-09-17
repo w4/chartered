@@ -49,7 +49,7 @@ like so:
 
 ```toml
 [registries]
-my-organisation = { index = "ssh://ssh.your.instance.of.chart.rs/my-organisation" }
+my-organisation = { index = "ssh://ssh.chart.rs/my-organisation" }
 ```
 
 (You should create this file if it doesn't already exist)

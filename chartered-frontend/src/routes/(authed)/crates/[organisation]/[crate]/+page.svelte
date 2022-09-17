@@ -8,6 +8,8 @@
     import Dependency from './Dependency.svelte';
     import VersionTab from './VersionTab.svelte';
     import MemberTab from './MemberTab.svelte';
+    import RegistryDefinition from './RegistryDefinition.svelte';
+    import DependencyDefinition from './DependencyDefinition.svelte';
 
     // lookup the crate currently requested by the user based on the URL
     let cratePromise: Promise<Crate>;
@@ -203,6 +205,30 @@
     </div>
 
     <div class="col-span-full lg:col-span-3">
+        {#if import.meta.env.VITE_CHARTERED_SSH_URL}
+            <div class="card p-0 mb-6">
+                <h1 class="text-xl p-3 border-b border-gray-200 dark:border-gray-700 font-medium">Get Started</h1>
+
+                <div class="divide-y divide-gray-200 dark:divide-gray-700">
+                    <div class="p-3 pb-0">
+                        <strong class="text-xs pointer-events-none select-none">.cargo/config.toml</strong>
+
+                        <div class="overflow-scroll pb-3">
+                            <pre><code><RegistryDefinition /></code></pre>
+                        </div>
+                    </div>
+
+                    <div class="p-3 pb-0">
+                        <strong class="text-xs pointer-events-none select-none">Cargo.toml</strong>
+
+                        <div class="overflow-scroll pb-3">
+                            <pre><code><DependencyDefinition {cratePromise} /></code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {/if}
+
         <div class="card p-0">
             <h1 class="text-xl p-3 border-b border-gray-200 dark:border-gray-700 font-medium">Dependencies</h1>
 
