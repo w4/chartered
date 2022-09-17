@@ -19,6 +19,7 @@ pub async fn handle_get(
             .map(|v| ResponseOrganisation {
                 name: v.name,
                 description: v.description,
+                public: v.public,
             })
             .collect(),
     }))
@@ -33,6 +34,7 @@ pub struct Response {
 pub struct ResponseOrganisation {
     name: String,
     description: String,
+    public: bool,
 }
 
 #[derive(Error, Debug)]

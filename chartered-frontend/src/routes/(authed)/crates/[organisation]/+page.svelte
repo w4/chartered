@@ -91,8 +91,15 @@
 <header>
     <div class="container flex flex-col md:flex-row items-center md:items-start mx-auto p-10 mb-3">
         <div class="flex-grow text-center md:text-left">
-            <h1 class="text-5xl text-highlight font-bold tracking-tight">
-                {$page.params.organisation}
+            <h1 class="text-5xl text-highlight font-bold tracking-tight inline-flex">
+                <span class="mr-2">{$page.params.organisation}</span>
+                {#await organisationPromise then organisation}
+                    {#if organisation.public}
+                        <span title="Public organisation">
+                            <Icon name="users" />
+                        </span>
+                    {/if}
+                {/await}
             </h1>
 
             <h2>

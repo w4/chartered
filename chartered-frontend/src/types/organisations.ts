@@ -5,11 +5,13 @@ export interface OrganisationList {
 export interface OrganisationListItem {
     name: string;
     description: string;
+    public: boolean;
 }
 
 export interface OrganisationDetail {
     description: string;
     crates: OrganisationCrate[];
+    public: boolean;
 }
 
 export interface OrganisationCrate {

@@ -51,6 +51,7 @@ pub async fn handle_get(
                 permissions: can_manage_users.then(|| perms),
             })
             .collect(),
+        public: organisation.organisation().public,
     }))
 }
 
@@ -61,6 +62,7 @@ pub struct Response {
     implied_permissions: Option<&'static [[UserPermission; 2]]>,
     crates: Vec<ResponseCrate>,
     members: Vec<ResponseUser>,
+    public: bool,
 }
 
 #[derive(Serialize)]

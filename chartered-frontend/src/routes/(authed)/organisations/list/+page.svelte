@@ -2,6 +2,7 @@
     import { request } from '../../../../stores/auth';
     import type { OrganisationList } from '../../../../types/organisations';
     import ErrorAlert from '../../../../components/ErrorAlert.svelte';
+    import Icon from '../../../../components/Icon.svelte';
 
     // fetch a list of all the current user's organisations from the backend
     const organisationsPromise = request<OrganisationList>('/web/v1/organisations');
@@ -57,7 +58,14 @@
             {#each organisations.organisations as organisation}
                 <a class="card flex space-x-2 items-center" href={`/crates/${organisation.name}`}>
                     <div class="flex-grow h-full">
-                        <h5 class="text-highlight card-header">{organisation.name}</h5>
+                        <h5 class="text-highlight card-header inline-flex items-center">
+                            <span class="mr-2">{organisation.name}</span>
+                            {#if organisation.public}
+                                <span title="Public organisation">
+                                    <Icon name="users" />
+                                </span>
+                            {/if}
+                        </h5>
                         <p class="card-body">
                             {#if organisation.description}
                                 {organisation.description}
