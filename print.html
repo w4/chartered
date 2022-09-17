@@ -386,6 +386,7 @@ database_uri = &quot;postgres://user:password@localhost/chartered&quot; # can al
 storage_uri  = &quot;s3://s3-eu-west-1.amazonaws.com/my-cool-crate-store/&quot; # or file:///var/lib/chartered
 
 frontend_base_uri = &quot;http://localhost:5173/&quot;
+trusted_ip_header = &quot;x-forwarded-for&quot;
 
 [auth.password]
 enabled = true # enables password auth 
@@ -420,6 +421,12 @@ format of <code>postgres://user:password@localhost/chartered</code> (a <a href="
 <li>Type: <code>string</code></li>
 </ul>
 <p>The base URL at which the frontend is being hosted.</p>
+<h4 id="trusted_ip_header"><a class="header" href="#trusted_ip_header"><code>trusted_ip_header</code></a></h4>
+<ul>
+<li>Type: <code>string</code></li>
+<li>Default: null</li>
+</ul>
+<p>Allows a header to override the socket address as the end user's IP address</p>
 <h4 id="authpassword"><a class="header" href="#authpassword"><code>[auth.password]</code></a></h4>
 <p>The <code>[auth.password]</code> table controls the username/password-based authentication method.</p>
 <h5 id="enable"><a class="header" href="#enable"><code>enable</code></a></h5>
