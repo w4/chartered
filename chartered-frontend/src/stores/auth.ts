@@ -1,6 +1,5 @@
 import { get, writable } from 'svelte/store';
 import { goto } from '$app/navigation';
-import { getErrorMessage } from '../util';
 
 /**
  * The base URL of the chartered-web instance
@@ -79,14 +78,7 @@ export async function extendSession() {
         currentAuth.expires = Date.parse(json.expires);
         auth.set(currentAuth);
     } catch (e) {
-        // if the user's token is invalid for whatever reason after trying to refresh it,
-        // we should log them out. otherwise, we don't really know how to handle the error,
-        // and we should just print the error out to the console
-        if (getErrorMessage(e) === 'Expired auth token') {
-            auth.set(null);
-        } else {
-            console.error('Failed to extend user session', e);
-        }
+        console.error('Failed to extend user session', e);
     }
 }
 
@@ -200,7 +192,10 @@ export async function request<T>(url: string): Promise<T> {
     const json: T & Error = await result.json();
 
     // TODO: handle 404s
-    if (json.error) {
+    if (json.error === 'Expired auth token') {
+        auth.set(null);
+        throw new Error(json.error);
+    } else if (json.error) {
         throw new Error(json.error);
     }
 
