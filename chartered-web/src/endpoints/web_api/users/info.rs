@@ -23,7 +23,7 @@ pub struct Response {
     username: String,
     name: Option<String>,
     nick: Option<String>,
-    email: Option<String>,
+    // email: Option<String>,
     external_profile_url: Option<String>,
     picture_url: Option<String>,
 }
@@ -35,7 +35,7 @@ impl From<chartered_db::users::User> for Response {
             username: user.username,
             name: user.name,
             nick: user.nick,
-            email: user.email,
+            // email: user.email,
             external_profile_url: user.external_profile_url,
             picture_url: user.picture_url,
         }
