@@ -186,7 +186,11 @@
                         />
                     {/each}
                 {:then crate}
-                    <SvelteMarkdown source={crate.readme} />
+                    {#if crate.readme}
+                        <SvelteMarkdown source={crate.readme} />
+                    {:else}
+                        <em>No README exists for the current crate version.</em>
+                    {/if}
                 {/await}
             </article>
         {:else if currentTab === Tab.MEMBERS}
