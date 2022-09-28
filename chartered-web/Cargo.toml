@@ -11,7 +11,7 @@ chartered-db = { path = "../chartered-db" }
 chartered-fs = { path = "../chartered-fs" }
 chartered-types = { path = "../chartered-types" }
 
-axum = { version = "0.5", features = ["headers"] }
+axum = { version = "0.5.16", features = ["headers"] }
 base64 = "0.13"
 bcrypt = "0.13"
 bytes = "1"
