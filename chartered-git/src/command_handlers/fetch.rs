@@ -1,20 +1,18 @@
 use bytes::Bytes;
+use packfile::{
+    low_level::{PackFile, PackFileEntry},
+    PktLine,
+};
 use thrussh::{server::Session, ChannelId};
 
-use crate::{
-    git::{
-        packfile::low_level::{PackFile, PackFileEntry},
-        PktLine,
-    },
-    Handler,
-};
+use crate::Handler;
 
 pub(crate) fn handle(
     handle: &mut Handler,
     session: &mut Session,
     channel: ChannelId,
     metadata: Vec<Bytes>,
-    packfile_entries: Vec<PackFileEntry<'_>>,
+    packfile_entries: Vec<PackFileEntry>,
 ) -> Result<(), anyhow::Error> {
     // the client sending us `done` in the metadata means they know there's no negotiation
     // required for which commits we need to send, they just want us to send whatever we
@@ -37,7 +35,7 @@ pub(crate) fn handle(
     handle.flush(session, channel);
 
     // send the complete packfile
-    let packfile = PackFile::new(packfile_entries);
+    let packfile = PackFile::new(&packfile_entries);
     handle.write(PktLine::SidebandData(packfile))?;
     handle.write(PktLine::Flush)?;
     handle.flush(session, channel);

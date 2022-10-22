@@ -24,6 +24,7 @@ hex = "0.4"
 indexmap = "1"
 indoc = "1.0"
 itoa = "1"
+packfile = "0.1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 shlex = "1"
@@ -36,6 +37,7 @@ toml = "0.5"
 tracing = "0.1"
 tracing-subscriber = "0.3"
 url = "2"
+ustr = "0.9"
 
 [features]
 sqlite = ["chartered-db/sqlite"]

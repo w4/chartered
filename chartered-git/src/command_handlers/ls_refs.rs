@@ -5,12 +5,10 @@
 //! [lsr]: https://git-scm.com/docs/protocol-v2/2.19.0#_ls_refs
 
 use bytes::Bytes;
+use packfile::{low_level::HashOutput, PktLine};
 use thrussh::{server::Session, ChannelId};
 
-use crate::{
-    git::{packfile::low_level::HashOutput, PktLine},
-    Handler,
-};
+use crate::Handler;
 
 pub(crate) fn handle(
     handle: &mut Handler,

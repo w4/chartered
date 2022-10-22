@@ -2,10 +2,13 @@
 //! containing the config & crate manifests. Only contains crates that
 //! the user has access to.
 
-use crate::git::packfile::high_level::GitRepository;
+use std::{collections::BTreeMap, sync::Arc};
+
 use arrayvec::ArrayVec;
+use bytes::Bytes;
 use chartered_db::crates::Crate;
-use std::collections::BTreeMap;
+use packfile::high_level::GitRepository;
+use ustr::ustr;
 
 #[derive(serde::Serialize)]
 pub struct CrateFileEntry<'a> {
@@ -16,7 +19,7 @@ pub struct CrateFileEntry<'a> {
 }
 
 pub struct Tree {
-    crates: BTreeMap<String, String>,
+    crates: BTreeMap<Arc<str>, Bytes>,
 }
 
 impl Tree {
@@ -50,20 +53,17 @@ impl Tree {
             }
 
             // insert the crate into `self.crates`
-            crates.insert(crate_def.name, file);
+            crates.insert(crate_def.name.into(), file.into());
         }
 
         Self { crates }
     }
 
     /// Writes all the crate manifests from `self.crates` out to the given `GitRepository`.
-    pub fn write_to_packfile<'a>(
-        &'a self,
-        repo: &mut GitRepository<'a>,
-    ) -> Result<(), anyhow::Error> {
+    pub fn write_to_packfile(&self, repo: &mut GitRepository) -> Result<(), anyhow::Error> {
         for (name, content) in &self.crates {
             let crate_folder = get_crate_folder(name);
-            repo.insert(crate_folder, name, content.as_bytes())?;
+            repo.insert(&crate_folder, name.clone(), content.clone())?;
         }
 
         Ok(())
@@ -74,7 +74,7 @@ impl Tree {
 /// 1, 2 or 3 respectively as per the cargo spec. Anything else we'll build out a normal tree for
 /// using the frist four characters of the crate name, 2 for the first directory and the other 2
 /// for the second.
-fn get_crate_folder(crate_name: &str) -> ArrayVec<&str, 2> {
+fn get_crate_folder(crate_name: &str) -> ArrayVec<&'static str, 2> {
     let mut folders = ArrayVec::new();
 
     match crate_name.len() {
@@ -83,11 +83,11 @@ fn get_crate_folder(crate_name: &str) -> ArrayVec<&str, 2> {
         2 => folders.push("2"),
         3 => {
             folders.push("3");
-            folders.push(&crate_name[..1]);
+            folders.push(ustr(&crate_name[..1]).as_str());
         }
         _ => {
-            folders.push(&crate_name[..2]);
-            folders.push(&crate_name[2..4]);
+            folders.push(ustr(&crate_name[..2]).as_str());
+            folders.push(ustr(&crate_name[2..4]).as_str());
         }
     }
 

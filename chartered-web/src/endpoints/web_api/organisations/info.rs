@@ -48,7 +48,7 @@ pub async fn handle_get(
                 uuid: user.uuid.0,
                 display_name: user.display_name().to_string(),
                 picture_url: user.picture_url,
-                permissions: can_manage_users.then(|| perms),
+                permissions: can_manage_users.then_some(perms),
             })
             .collect(),
         public: organisation.organisation().public,

@@ -5,24 +5,17 @@ mod config;
 mod generators;
 mod tree;
 
-#[allow(clippy::missing_errors_doc)]
-pub mod git;
+use crate::{generators::CargoConfig, tree::Tree};
 
-use crate::{
-    generators::CargoConfig,
-    git::{
-        codec::{Encoder, GitCodec},
-        packfile::high_level::GitRepository,
-        PktLine,
-    },
-    tree::Tree,
-};
-
-use arrayvec::ArrayVec;
 use bytes::BytesMut;
 use chartered_db::server_private_key::ServerPrivateKey;
 use clap::Parser;
 use futures::future::Future;
+use packfile::{
+    codec::{Encoder, GitCodec},
+    high_level::GitRepository,
+    PktLine,
+};
 use std::{fmt::Write, path::PathBuf, pin::Pin, sync::Arc};
 use thrussh::{
     server::{self, Auth, Session},
@@ -85,7 +78,7 @@ async fn main() -> anyhow::Result<()> {
 
     let server = Server {
         db,
-        config: Arc::new(config),
+        config: Box::leak(Box::new(config)),
     };
 
     info!("SSH server listening on {}", bind_address);
@@ -98,7 +91,7 @@ async fn main() -> anyhow::Result<()> {
 #[derive(Clone)]
 struct Server {
     db: chartered_db::ConnectionPool,
-    config: Arc<config::Config>,
+    config: &'static config::Config,
 }
 
 impl server::Server for Server {
@@ -113,7 +106,7 @@ impl server::Server for Server {
         Handler {
             ip,
             span,
-            config: self.config.clone(),
+            config: self.config,
             codec: GitCodec::default(),
             input_bytes: BytesMut::default(),
             output_bytes: BytesMut::default(),
@@ -129,7 +122,7 @@ struct Handler {
     ip: Option<std::net::SocketAddr>,
     span: tracing::Span,
     codec: GitCodec,
-    config: Arc<config::Config>,
+    config: &'static config::Config,
     input_bytes: BytesMut,
     output_bytes: BytesMut,
     db: chartered_db::ConnectionPool,
@@ -145,7 +138,7 @@ struct Authed {
 
 impl Handler {
     fn write(&mut self, packet: PktLine<'_>) -> Result<(), anyhow::Error> {
-        Encoder {}.encode(packet, &mut self.output_bytes)
+        Ok(Encoder.encode(packet, &mut self.output_bytes)?)
     }
 
     fn flush(&mut self, session: &mut Session, channel: ChannelId) {
@@ -275,7 +268,7 @@ impl server::Handler for Handler {
                     let config =
                         CargoConfig::new(&self.config.web_base_uri, &authed.auth_key, org_name);
                     let config = serde_json::to_vec(&config)?;
-                    packfile.insert(ArrayVec::<_, 0>::new(), "config.json", &config)?;
+                    packfile.insert(&[], "config.json", config.into())?;
 
                     // build the tree of all the crates the user has access to, then write them
                     // to the in-memory repository.
@@ -285,14 +278,12 @@ impl server::Handler for Handler {
                         Tree::build(self.db.clone(), authed.user.id, org_name.to_string()).await;
                     tree.write_to_packfile(&mut packfile)?;
 
-                    let config = self.config.clone();
-
                     // finalises the git repository, creating a commit and fetching the finalised
                     // packfile and commit hash to return in `ls-refs` calls.
                     let (commit_hash, packfile_entries) = packfile.commit(
-                        &config.committer.name,
-                        &config.committer.email,
-                        &config.committer.message,
+                        &self.config.committer.name,
+                        &self.config.committer.email,
+                        &self.config.committer.message,
                     )?;
 
                     match frame.command.as_ref() {
